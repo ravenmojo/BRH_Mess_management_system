@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum FacilityType {
+  REGULAR_MESS
+  NIGHT_CANTEEN
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  NIGHT_SNACK
+}
+
+model Item {
+  id           String       @id @default(uuid())
+  name         String
+  price        Float
+  category     String       // e.g. "Breakfast", "Lunch Veg", "Lunch Non-Veg", "Salad", "Beverage"
+  facilityType FacilityType @default(REGULAR_MESS)
+  isMandatory  Boolean      @default(false)
+  isSalad      Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  menuItems    MenuItem[]
+}
+
+model DailyMenu {
+  id           String       @id @default(uuid())
+  dayOfWeek    String       // MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY
+  facilityType FacilityType @default(REGULAR_MESS)
+  totalCost    Float        @default(0.0)
+  items        MenuItem[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@unique([dayOfWeek, facilityType])
+}
+
+model MenuItem {
+  id          String     @id @default(uuid())
+  dailyMenuId String
+  dailyMenu   DailyMenu  @relation(fields: [dailyMenuId], references: [id], onDelete: Cascade)
+  itemId      String
+  item        Item       @relation(fields: [itemId], references: [id])
+  mealType    MealType
+  price       Float      // Price snapshot for this meal item
+  createdAt   DateTime   @default(now())
+}
+
+model Feedback {
+  id           String       @id @default(uuid())
+  studentName  String
+  hallRoll     String?
+  comment      String
+  facilityType FacilityType @default(REGULAR_MESS)
+  status       String       @default("PENDING") // PENDING, RESOLVED
+  remark       String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  role      String   @default("STUDENT") // STUDENT, ADMIN
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
