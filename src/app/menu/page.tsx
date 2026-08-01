@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Utensils, CheckCircle, ShieldAlert, DollarSign, Salad } from 'lucide-react';
+import { Utensils, CheckCircle, ShieldAlert, Salad, ShieldCheck, Coffee, Sun, Moon } from 'lucide-react';
+import Link from 'next/link';
 
 export default function RegularMessMenuPage() {
   const [menuData, setMenuData] = useState<any>(null);
@@ -25,52 +26,13 @@ export default function RegularMessMenuPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold text-gray-900 dark:text-white">Regular Mess Weekly Schedule</h2>
-          <p className="text-xs text-gray-500">Official BRH Hall Comprehensive Menu</p>
+          <p className="text-xs text-gray-500">Official BROS Comprehensive Menu</p>
         </div>
-        <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
+        <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
           <Utensils className="w-5 h-5" />
         </div>
       </div>
 
-      {/* Rules & Compliance Summary Banner */}
-      {validation && (
-        <div
-          className={`p-3.5 rounded-xl border text-xs space-y-1.5 ${
-            validation.isValid
-              ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/50 text-emerald-900 dark:text-emerald-300'
-              : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/50 text-red-900 dark:text-red-300'
-          }`}
-        >
-          <div className="flex items-center space-x-2 font-bold">
-            {validation.isValid ? (
-              <>
-                <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                <span>All BRH Mess Rules Satisfied</span>
-              </>
-            ) : (
-              <>
-                <ShieldAlert className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
-                <span>Mess Rule Violations Detected ({validation.errors.length})</span>
-              </>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-current/10">
-            <div className="flex items-center space-x-1">
-              <DollarSign className="w-3.5 h-3.5" />
-              <span>
-                Cost: <strong>₹{validation.metrics.totalWeeklyCost}</strong> / ₹826
-              </span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <Salad className="w-3.5 h-3.5" />
-              <span>
-                Salad: <strong>{validation.metrics.saladCount}</strong> / 12 min
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 7 Day Menu Breakdown */}
       {loading ? (
@@ -78,11 +40,23 @@ export default function RegularMessMenuPage() {
       ) : (
         <div className="space-y-4">
           {menuData?.menu?.map((day: any) => {
-            const dayCost = day.meals.reduce(
-              (sum: number, m: any) =>
-                sum + m.items.reduce((itemSum: number, i: any) => itemSum + (Number(i.price) || 0), 0),
-              0
-            );
+            let dayCost = 0;
+            for (const m of day.meals) {
+              let c = 0, o1 = 0, o2 = 0, v = 0, nv = 0;
+              for (const i of m.items) {
+                const p = Number(i.price) || 0;
+                const g = i.optionGroup || 'Common';
+                if (g === 'Option 1') o1 += p;
+                else if (g === 'Option 2') o2 += p;
+                else if (g === 'Veg') v += p;
+                else if (g === 'Non-Veg') nv += p;
+                else c += p;
+              }
+              const avgBreakfastOpt = (o1 > 0 && o2 > 0) ? (o1 + o2) / 2 : (o1 || o2);
+              const avgLunchDinnerOpt = (v > 0 && nv > 0) ? (v + nv) / 2 : (v || nv);
+              dayCost += c + avgBreakfastOpt + avgLunchDinnerOpt;
+            }
+            dayCost = Math.round(dayCost * 100) / 100;
 
             return (
               <div
@@ -93,30 +67,40 @@ export default function RegularMessMenuPage() {
                   <span className="text-xs font-bold text-gray-900 dark:text-white">
                     {day.dayOfWeek}
                   </span>
-                  <span className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 px-2 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-800">
-                    Day Total: ₹{Math.round(dayCost * 100) / 100}
-                  </span>
                 </div>
 
                 <div className="p-3 space-y-3">
                   {day.meals.map((meal: any, idx: number) => (
                     <div key={idx} className="space-y-1">
-                      <div className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        {meal.mealType}
+                      <div className="flex items-center space-x-1.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        {meal.mealType === 'BREAKFAST' && <Coffee className="w-3.5 h-3.5 text-blue-500" />}
+                        {meal.mealType === 'LUNCH' && <Sun className="w-3.5 h-3.5 text-blue-500" />}
+                        {meal.mealType === 'DINNER' && <Moon className="w-3.5 h-3.5 text-blue-500" />}
+                        <span>{meal.mealType}</span>
                       </div>
-                      <ul className="divide-y divide-gray-100 dark:divide-gray-800/50">
-                        {meal.items.map((item: any, iIdx: number) => (
-                          <li
-                            key={iIdx}
-                            className="py-1 flex items-center justify-between text-xs"
-                          >
-                            <span className="text-gray-800 dark:text-gray-200">{item.name}</span>
-                            <span className="text-gray-500 font-mono text-[11px]">
-                              ₹{item.price}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="space-y-1.5 pt-1">
+                        {['Common', 'Option 1', 'Option 2', 'Veg', 'Non-Veg'].map((group) => {
+                          const groupItems = meal.items.filter((i: any) => (i.optionGroup || 'Common') === group);
+                          if (groupItems.length === 0) return null;
+                          return (
+                            <div key={group} className="bg-gray-50 dark:bg-gray-800/40 p-1.5 rounded">
+                              {group !== 'Common' && (
+                                <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400 mb-1 uppercase tracking-wide">{group}</div>
+                              )}
+                              <ul className="space-y-1">
+                                {groupItems.map((item: any, iIdx: number) => (
+                                  <li key={iIdx} className="flex items-center text-xs">
+                                    <span className="text-gray-800 dark:text-gray-200 flex items-center space-x-1.5">
+                                      <span className="w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-600"></span>
+                                      <span>{item.name}</span>
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -125,6 +109,14 @@ export default function RegularMessMenuPage() {
           })}
         </div>
       )}
+
+      {/* Admin Link */}
+      <div className="pt-2 flex justify-center">
+        <Link href="/admin" className="px-4 py-2 rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold flex items-center space-x-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+          <ShieldCheck className="w-4 h-4" />
+          <span>Access Mess Admin Panel</span>
+        </Link>
+      </div>
     </div>
   );
 }

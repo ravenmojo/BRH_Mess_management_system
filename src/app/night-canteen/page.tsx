@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Moon, Utensils, MessageSquare, Send, CheckCircle, Clock } from 'lucide-react';
+import { Moon, Utensils, MessageSquare, Send, CheckCircle, Clock, ShieldCheck } from 'lucide-react';
+import Link from 'next/link';
 
 export default function NightCanteenPage() {
   // CRITICAL REQUIREMENT: Strictly TWO tabs ONLY
@@ -72,17 +73,17 @@ export default function NightCanteenPage() {
   return (
     <div className="space-y-4 pb-8">
       {/* Header Banner */}
-      <div className="rounded-xl bg-gradient-to-r from-slate-900 to-indigo-950 p-4 text-white shadow-md flex items-center justify-between">
+      <div className="rounded-xl bg-gradient-to-r from-slate-900 to-blue-950 p-4 text-white shadow-md flex items-center justify-between">
         <div>
-          <div className="flex items-center space-x-1.5 text-xs text-indigo-300 font-semibold mb-1">
+          <div className="flex items-center space-x-1.5 text-xs text-blue-300 font-semibold mb-1">
             <Moon className="w-3.5 h-3.5" />
-            <span>BRH NIGHT CANTEEN</span>
+            <span>BROS NIGHT CANTEEN</span>
           </div>
           <h2 className="text-base font-bold">Independent Canteen Services</h2>
           <p className="text-[11px] text-slate-300">Open 09:30 PM - 02:00 AM Daily</p>
         </div>
         <div className="text-right">
-          <span className="inline-block px-2 py-1 rounded bg-indigo-600/50 text-[10px] font-mono border border-indigo-400/30">
+          <span className="inline-block px-2 py-1 rounded bg-blue-600/50 text-[10px] font-mono border border-blue-400/30">
             No Budget Cap
           </span>
         </div>
@@ -94,7 +95,7 @@ export default function NightCanteenPage() {
           onClick={() => setActiveTab('menu')}
           className={`flex items-center justify-center space-x-2 py-2 rounded-lg text-xs font-bold transition-all ${
             activeTab === 'menu'
-              ? 'bg-white dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+              ? 'bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 shadow-sm'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
           }`}
         >
@@ -106,7 +107,7 @@ export default function NightCanteenPage() {
           onClick={() => setActiveTab('feedback')}
           className={`flex items-center justify-center space-x-2 py-2 rounded-lg text-xs font-bold transition-all ${
             activeTab === 'feedback'
-              ? 'bg-white dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+              ? 'bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 shadow-sm'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
           }`}
         >
@@ -131,7 +132,7 @@ export default function NightCanteenPage() {
               >
                 <div>
                   <h4 className="text-xs font-bold text-gray-900 dark:text-white">{item.name}</h4>
-                  <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium">
+                  <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
                     {item.category}
                   </span>
                 </div>
@@ -139,7 +140,7 @@ export default function NightCanteenPage() {
                   <span className="text-sm font-extrabold text-gray-900 dark:text-white font-mono">
                     ₹{item.price}
                   </span>
-                  <div className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center justify-end space-x-0.5">
+                  <div className="text-[10px] text-blue-600 dark:text-blue-400 flex items-center justify-end space-x-0.5">
                     <CheckCircle className="w-3 h-3" />
                     <span>Available</span>
                   </div>
@@ -159,12 +160,12 @@ export default function NightCanteenPage() {
             className="p-4 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 space-y-3 shadow-sm"
           >
             <h3 className="text-xs font-bold text-gray-900 dark:text-white flex items-center space-x-1.5">
-              <MessageSquare className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <span>Submit Night Canteen Feedback / Complaint</span>
             </h3>
 
             {message && (
-              <div className="p-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 text-xs font-medium">
+              <div className="p-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 text-xs font-medium">
                 {message}
               </div>
             )}
@@ -176,14 +177,14 @@ export default function NightCanteenPage() {
                 value={studentName}
                 onChange={(e) => setStudentName(e.target.value)}
                 required
-                className="w-full px-3 py-1.5 rounded-lg text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full px-3 py-1.5 rounded-lg text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
               <input
                 type="text"
                 placeholder="Roll No. (Optional)"
                 value={hallRoll}
                 onChange={(e) => setHallRoll(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full px-3 py-1.5 rounded-lg text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
 
@@ -193,13 +194,13 @@ export default function NightCanteenPage() {
               onChange={(e) => setComment(e.target.value)}
               rows={3}
               required
-              className="w-full px-3 py-2 rounded-lg text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full px-3 py-2 rounded-lg text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
 
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors flex items-center justify-center space-x-1.5"
+              className="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors flex items-center justify-center space-x-1.5"
             >
               <Send className="w-3.5 h-3.5" />
               <span>{submitting ? 'Submitting...' : 'Submit Canteen Feedback'}</span>
@@ -229,8 +230,8 @@ export default function NightCanteenPage() {
                     <span
                       className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                         fb.status === 'RESOLVED'
-                          ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
-                          : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300'
+                          ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
+                          : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
                       }`}
                     >
                       {fb.status}
@@ -240,7 +241,7 @@ export default function NightCanteenPage() {
                   <p className="text-gray-700 dark:text-gray-300">{fb.comment}</p>
 
                   {fb.remark && (
-                    <div className="p-2 rounded bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/50 text-[11px] text-indigo-900 dark:text-indigo-200">
+                    <div className="p-2 rounded bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/50 text-[11px] text-blue-900 dark:text-blue-200">
                       <strong>Admin Remark:</strong> {fb.remark}
                     </div>
                   )}
@@ -250,6 +251,14 @@ export default function NightCanteenPage() {
           </div>
         </div>
       )}
+
+      {/* Admin Link */}
+      <div className="pt-2 flex justify-center">
+        <Link href="/night-canteen/admin" className="px-4 py-2 rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold flex items-center space-x-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+          <ShieldCheck className="w-4 h-4" />
+          <span>Access Canteen Admin Panel</span>
+        </Link>
+      </div>
     </div>
   );
 }

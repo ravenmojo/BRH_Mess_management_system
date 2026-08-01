@@ -2,17 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Utensils, Moon, MessageSquare, ShieldCheck } from 'lucide-react';
+import { Home, Wrench } from 'lucide-react';
 
 export function BottomNav() {
   const pathname = usePathname();
 
   const navItems = [
-    { label: 'Home', href: '/', icon: Home },
-    { label: 'Menu', href: '/menu', icon: Utensils },
-    { label: 'Canteen', href: '/night-canteen', icon: Moon },
-    { label: 'Feedback', href: '/feedback', icon: MessageSquare },
-    { label: 'Admin', href: '/admin', icon: ShieldCheck },
+    { label: 'Mess', href: '/', icon: Home },
+    { label: 'Maintenance', href: '/maintenance', icon: Wrench },
   ];
 
   return (
@@ -27,7 +24,7 @@ export function BottomNav() {
               href={item.href}
               className={`flex flex-col items-center justify-center flex-1 py-1 text-xs font-medium transition-colors ${
                 isActive
-                  ? 'text-indigo-600 dark:text-indigo-400 font-semibold'
+                  ? 'text-blue-600 dark:text-blue-400 font-semibold'
                   : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'
               }`}
             >

@@ -11,6 +11,11 @@ datasource db {
 enum FacilityType {
   REGULAR_MESS
   NIGHT_CANTEEN
+  MAINTENANCE_WASHROOM
+  MAINTENANCE_WATER
+  MAINTENANCE_ELECTRICAL
+  MAINTENANCE_CIVIL
+  MAINTENANCE_CLEANING
 }
 
 enum MealType {
@@ -53,13 +58,14 @@ model MenuItem {
   item        Item       @relation(fields: [itemId], references: [id])
   mealType    MealType
   price       Float      // Price snapshot for this meal item
+  optionGroup String     @default("Common") // Common, Option 1, Option 2, Veg, Non-Veg
   createdAt   DateTime   @default(now())
 }
 
 model Feedback {
   id           String       @id @default(uuid())
   studentName  String
-  hallRoll     String?
+  hallRoll     String
   comment      String
   facilityType FacilityType @default(REGULAR_MESS)
   status       String       @default("PENDING") // PENDING, RESOLVED

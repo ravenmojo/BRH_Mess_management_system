@@ -5,240 +5,570 @@ import { validateWeeklyMenu, DailyMenuInput } from '@/lib/mess-rules';
 // Initial Mock Data populated from April Menu 2026 PDF
 const mockWeeklyMenu: DailyMenuInput[] = [
   {
-    dayOfWeek: 'MONDAY',
+    dayOfWeek: "MONDAY",
     meals: [
       {
-        mealType: 'BREAKFAST',
+        mealType: "BREAKFAST",
         items: [
-          { name: 'Tea', price: 3 },
-          { name: 'Banana', price: 3 },
-          { name: 'UPMA/POHA + Chutney', price: 16 },
-        ],
+          {
+            name: "Tea + 01 pc Banana",
+            price: 6,
+            optionGroup: "Common",
+            isMandatory: true
+          },
+          {
+            name: "UPMA/POHA + CHUTNEY",
+            price: 16,
+            optionGroup: "Option 1"
+          },
+          {
+            name: "MILK 150ml",
+            price: 9,
+            optionGroup: "Option 1"
+          },
+          {
+            name: "Bread (White/Brown), Butter/Jam",
+            price: 15.3,
+            optionGroup: "Option 2"
+          },
+          {
+            name: "MILK 150ml (Opt 2)",
+            price: 9,
+            optionGroup: "Option 2"
+          }
+        ]
       },
       {
-        mealType: 'LUNCH',
+        mealType: "LUNCH",
         items: [
-          { name: 'Rice', price: 7 },
-          { name: 'Dal (Moong Dal)', price: 9.5 },
-          { name: 'Pickle', price: 1 },
-          { name: 'Salad', price: 2 },
-          { name: 'Mx Veg / Alu Posto', price: 16 },
-        ],
+          {
+            name: "Rice, Roti, Dal, Pickle & Salad",
+            price: 16.5,
+            optionGroup: "Common",
+            isMandatory: true
+          },
+          {
+            name: "Alu posto",
+            price: 14,
+            optionGroup: "Common"
+          },
+          {
+            name: "Mx Veg",
+            price: 16,
+            optionGroup: "Veg"
+          },
+          {
+            name: "01 Pcs Fish Curry 50 gm",
+            price: 17,
+            optionGroup: "Non-Veg"
+          }
+        ]
       },
       {
-        mealType: 'DINNER',
+        mealType: "DINNER",
         items: [
-          { name: 'Rice', price: 7 },
-          { name: 'Roti', price: 4 },
-          { name: 'Dal (Musur Dal)', price: 5.5 },
-          { name: 'Pickle', price: 1 },
-          { name: 'Salad', price: 2 },
-          { name: 'Paneer Kolhapuri', price: 32 },
-        ],
-      },
-    ],
+          {
+            name: "Rice, Roti, Dal, Pickle & Salad",
+            price: 16.5,
+            optionGroup: "Common",
+            isMandatory: true
+          },
+          {
+            name: "Paneer Kolhapuri",
+            price: 32,
+            optionGroup: "Veg"
+          },
+          {
+            name: "Kadhai Chicken (100gm)",
+            price: 32,
+            optionGroup: "Non-Veg"
+          }
+        ]
+      }
+    ]
   },
   {
-    dayOfWeek: 'TUESDAY',
+    dayOfWeek: "TUESDAY",
     meals: [
       {
-        mealType: 'BREAKFAST',
+        mealType: "BREAKFAST",
         items: [
-          { name: 'Tea', price: 3 },
-          { name: 'Banana', price: 3 },
-          { name: 'Alu Paratha + Green Chutney', price: 20 },
-        ],
+          {
+            name: "Tea + 01 pc Banana",
+            price: 6,
+            optionGroup: "Common",
+            isMandatory: true
+          },
+          {
+            name: "02 PCS ALU PARATHA + Green CHUTNEY",
+            price: 20,
+            optionGroup: "Option 1"
+          },
+          {
+            name: "Curd (100g)",
+            price: 8,
+            optionGroup: "Option 1"
+          },
+          {
+            name: "Bread (White/Brown), Butter/Jam",
+            price: 15.3,
+            optionGroup: "Option 2"
+          },
+          {
+            name: "MILK 150ml (Opt 2)",
+            price: 9,
+            optionGroup: "Option 2"
+          }
+        ]
       },
       {
-        mealType: 'LUNCH',
+        mealType: "LUNCH",
         items: [
-          { name: 'Rice', price: 7 },
-          { name: 'Dal (Chana Dal)', price: 9.5 },
-          { name: 'Pickle', price: 1 },
-          { name: 'Salad', price: 2 },
-          { name: 'Curd + Alu Kathal Curry', price: 20 },
-        ],
+          {
+            name: "Rice, Roti, Dal, Pickle & Salad",
+            price: 16.5,
+            optionGroup: "Common",
+            isMandatory: true
+          },
+          {
+            name: "Dal Makhni",
+            price: 12,
+            optionGroup: "Common"
+          },
+          {
+            name: "Curd + Alu Kathal Curry",
+            price: 12,
+            optionGroup: "Veg"
+          },
+          {
+            name: "Curd (Rs. 8)",
+            price: 8,
+            optionGroup: "Veg"
+          }
+        ]
       },
       {
-        mealType: 'DINNER',
+        mealType: "DINNER",
         items: [
-          { name: 'Rice', price: 7 },
-          { name: 'Roti', price: 4 },
-          { name: 'Dal Makhni (Arhar Dal)', price: 12 },
-          { name: 'Pickle', price: 1 },
-          { name: 'Salad', price: 2 },
-          { name: 'Alu Soyabeen Curry', price: 12 },
-        ],
-      },
-    ],
+          {
+            name: "Rice, Roti, Dal, Pickle & Salad",
+            price: 16.5,
+            optionGroup: "Common",
+            isMandatory: true
+          },
+          {
+            name: "Alu Soyabeen Curry/Capsicum Chilli Nutrella",
+            price: 12,
+            optionGroup: "Veg"
+          },
+          {
+            name: "1 Pcs egg curry",
+            price: 10,
+            optionGroup: "Non-Veg"
+          }
+        ]
+      }
+    ]
   },
   {
-    dayOfWeek: 'WEDNESDAY',
+    dayOfWeek: "WEDNESDAY",
     meals: [
       {
-        mealType: 'BREAKFAST',
+        mealType: "BREAKFAST",
         items: [
-          { name: 'Tea', price: 3 },
-          { name: 'Banana', price: 3 },
-          { name: 'Uttapam + Chutney', price: 16 },
-        ],
+          {
+            name: "Tea + 01 pc Banana",
+            price: 6,
+            optionGroup: "Common",
+            isMandatory: true
+          },
+          {
+            name: "02 PCS UTTAPAM + CHUTNEY",
+            price: 16,
+            optionGroup: "Option 1"
+          },
+          {
+            name: "MILK 150ml",
+            price: 9,
+            optionGroup: "Option 1"
+          },
+          {
+            name: "Bread (White/Brown), Butter/Jam",
+            price: 15.3,
+            optionGroup: "Option 2"
+          },
+          {
+            name: "MILK 150ml (Opt 2)",
+            price: 9,
+            optionGroup: "Option 2"
+          }
+        ]
       },
       {
-        mealType: 'LUNCH',
+        mealType: "LUNCH",
         items: [
-          { name: 'Rice', price: 7 },
-          { name: 'Dal (Arhar Dal)', price: 9.5 },
-          { name: 'Pickle', price: 1 },
-          { name: 'Salad', price: 2 },
-          { name: 'Rajma Curry + Curd', price: 20 },
-        ],
+          {
+            name: "Rice, Roti, Dal, Pickle & Salad",
+            price: 16.5,
+            optionGroup: "Common",
+            isMandatory: true
+          },
+          {
+            name: "Alu Karela Fry",
+            price: 12,
+            optionGroup: "Common"
+          },
+          {
+            name: "Rajma Curry",
+            price: 12,
+            optionGroup: "Veg"
+          },
+          {
+            name: "Curd (100g)",
+            price: 8,
+            optionGroup: "Veg"
+          },
+          {
+            name: "01 Pcs Doi Fish Curry 50gm",
+            price: 19,
+            optionGroup: "Non-Veg"
+          }
+        ]
       },
       {
-        mealType: 'DINNER',
+        mealType: "DINNER",
         items: [
-          { name: 'Rice', price: 7 },
-          { name: 'Roti', price: 4 },
-          { name: 'Dal', price: 5.5 },
-          { name: 'Salad', price: 2 },
-          { name: 'Veg Biryani + Paneer Butter Masala', price: 55 },
-          { name: 'Ice Cream', price: 10 },
-        ],
-      },
-    ],
+          {
+            name: "Veg Briyani + Paneer butter masala (50 gm) Raita + Ice Cream",
+            price: 65,
+            optionGroup: "Veg"
+          },
+          {
+            name: "Chicken Biriyani 01 Pcs (100 gm) + Half egg + Raita + Ice Cream",
+            price: 65,
+            optionGroup: "Non-Veg"
+          }
+        ]
+      }
+    ]
   },
   {
-    dayOfWeek: 'THURSDAY',
+    dayOfWeek: "THURSDAY",
     meals: [
       {
-        mealType: 'BREAKFAST',
+        mealType: "BREAKFAST",
         items: [
-          { name: 'Tea', price: 3 },
-          { name: 'Banana', price: 3 },
-          { name: 'Idly/Vada + Sambhar', price: 15 },
-        ],
+          {
+            name: "Tea + 01 pc Banana",
+            price: 6,
+            optionGroup: "Common",
+            isMandatory: true
+          },
+          {
+            name: "(3 PCS) IDLY/VADA + SAMBHAR + CHUTNEY",
+            price: 15,
+            optionGroup: "Option 1"
+          },
+          {
+            name: "MILK 150ml",
+            price: 9,
+            optionGroup: "Option 1"
+          },
+          {
+            name: "Bread (White/Brown), Butter/Jam",
+            price: 15.3,
+            optionGroup: "Option 2"
+          },
+          {
+            name: "MILK 150ml (Opt 2)",
+            price: 9,
+            optionGroup: "Option 2"
+          }
+        ]
       },
       {
-        mealType: 'LUNCH',
+        mealType: "LUNCH",
         items: [
-          { name: 'Rice', price: 7 },
-          { name: 'Dal (Musur Dal)', price: 9.5 },
-          { name: 'Pickle', price: 1 },
-          { name: 'Salad', price: 2 },
-          { name: 'Kadhi Pakoda', price: 16 },
-        ],
+          {
+            name: "Rice, Roti, Dal, Pickle & Salad",
+            price: 16.5,
+            optionGroup: "Common",
+            isMandatory: true
+          },
+          {
+            name: "Kadhi Pakoda",
+            price: 16,
+            optionGroup: "Veg"
+          },
+          {
+            name: "01 Pcs Mustard Fish Curry 50 gm",
+            price: 17,
+            optionGroup: "Non-Veg"
+          }
+        ]
       },
       {
-        mealType: 'DINNER',
+        mealType: "DINNER",
         items: [
-          { name: 'Rice', price: 7 },
-          { name: 'Roti', price: 4 },
-          { name: 'Dal (Chana Dal)', price: 5.5 },
-          { name: 'Pickle', price: 1 },
-          { name: 'Salad', price: 2 },
-          { name: 'Veg Korma', price: 16 },
-        ],
-      },
-    ],
+          {
+            name: "Rice, Roti, Dal, Pickle & Salad",
+            price: 16.5,
+            optionGroup: "Common",
+            isMandatory: true
+          },
+          {
+            name: "Alu Parwal Curry",
+            price: 12,
+            optionGroup: "Common"
+          },
+          {
+            name: "Veg Korma",
+            price: 16,
+            optionGroup: "Veg"
+          }
+        ]
+      }
+    ]
   },
   {
-    dayOfWeek: 'FRIDAY',
+    dayOfWeek: "FRIDAY",
     meals: [
       {
-        mealType: 'BREAKFAST',
+        mealType: "BREAKFAST",
         items: [
-          { name: 'Tea', price: 3 },
-          { name: 'Banana', price: 3 },
-          { name: 'Sattu Paratha + Green Chutney', price: 20 },
-        ],
+          {
+            name: "Tea + 01 pc Banana",
+            price: 6,
+            optionGroup: "Common",
+            isMandatory: true
+          },
+          {
+            name: "02 PCS SATTU PARATHA + GREEN CHUTNEY",
+            price: 20,
+            optionGroup: "Option 1"
+          },
+          {
+            name: "MILK 150ml",
+            price: 9,
+            optionGroup: "Option 1"
+          },
+          {
+            name: "Bread (White/Brown), Butter/Jam",
+            price: 15.3,
+            optionGroup: "Option 2"
+          },
+          {
+            name: "MILK 150ml (Opt 2)",
+            price: 9,
+            optionGroup: "Option 2"
+          }
+        ]
       },
       {
-        mealType: 'LUNCH',
+        mealType: "LUNCH",
         items: [
-          { name: 'Rice', price: 7 },
-          { name: 'Dal (Moong Dal)', price: 9.5 },
-          { name: 'Pickle', price: 1 },
-          { name: 'Salad', price: 2 },
-          { name: 'Black Channa Masala + Curd', price: 20 },
-        ],
+          {
+            name: "Rice, Roti, Dal, Pickle & Salad",
+            price: 16.5,
+            optionGroup: "Common",
+            isMandatory: true
+          },
+          {
+            name: "Sukto",
+            price: 12,
+            optionGroup: "Common"
+          },
+          {
+            name: "Black Channa Masala + curd(100ml)",
+            price: 20,
+            optionGroup: "Veg"
+          },
+          {
+            name: "01 Pcs Fish Curry (50 gm)",
+            price: 17,
+            optionGroup: "Non-Veg"
+          }
+        ]
       },
       {
-        mealType: 'DINNER',
+        mealType: "DINNER",
         items: [
-          { name: 'Rice (Fried Rice)', price: 12.5 },
-          { name: 'Roti', price: 4 },
-          { name: 'Dal', price: 5.5 },
-          { name: 'Salad', price: 2 },
-          { name: 'Paneer Do Pyaza', price: 30 },
-        ],
-      },
-    ],
+          {
+            name: "Fried Rice (NO BASIC DAL)",
+            price: 16.5,
+            optionGroup: "Common",
+            isMandatory: true
+          },
+          {
+            name: "Paneer Do Pyaza/Kadhai Paneer (50gm)",
+            price: 30,
+            optionGroup: "Veg"
+          },
+          {
+            name: "Chilli Chicken (100gm)",
+            price: 32,
+            optionGroup: "Non-Veg"
+          }
+        ]
+      }
+    ]
   },
   {
-    dayOfWeek: 'SATURDAY',
+    dayOfWeek: "SATURDAY",
     meals: [
       {
-        mealType: 'BREAKFAST',
+        mealType: "BREAKFAST",
         items: [
-          { name: 'Tea', price: 3 },
-          { name: 'Banana', price: 3 },
-          { name: 'Masala Dosa + Sambhar', price: 18 },
-        ],
+          {
+            name: "Tea + 01 pc Banana",
+            price: 6,
+            optionGroup: "Common",
+            isMandatory: true
+          },
+          {
+            name: "01 PCS MASALA DOSA + SAMBAR + CHUTNEY",
+            price: 18,
+            optionGroup: "Option 1"
+          },
+          {
+            name: "MILK 150ml",
+            price: 9,
+            optionGroup: "Option 1"
+          },
+          {
+            name: "Bread (White/Brown), Butter/Jam",
+            price: 15.3,
+            optionGroup: "Option 2"
+          },
+          {
+            name: "MILK 150ml (Opt 2)",
+            price: 9,
+            optionGroup: "Option 2"
+          }
+        ]
       },
       {
-        mealType: 'LUNCH',
+        mealType: "LUNCH",
         items: [
-          { name: 'Rice', price: 7 },
-          { name: 'Dal (Arhar Dal)', price: 9.5 },
-          { name: 'Pickle', price: 1 },
-          { name: 'Salad', price: 2 },
-          { name: 'Alu Cabbage Green Peas + Curd', price: 20 },
-        ],
+          {
+            name: "Rice, Roti, Dal, Pickle & Salad",
+            price: 16.5,
+            optionGroup: "Common",
+            isMandatory: true
+          },
+          {
+            name: "Alu Cabbage Green Peas",
+            price: 12,
+            optionGroup: "Veg"
+          },
+          {
+            name: "Curd (Rs. 8)",
+            price: 8,
+            optionGroup: "Veg"
+          }
+        ]
       },
       {
-        mealType: 'DINNER',
+        mealType: "DINNER",
         items: [
-          { name: 'Rice', price: 7 },
-          { name: 'Roti', price: 4 },
-          { name: 'Channa Dal Fry', price: 10 },
-          { name: 'Salad', price: 2 },
-          { name: 'Gulab Jamun Sweet', price: 15 },
-        ],
-      },
-    ],
+          {
+            name: "Rice + Channa Dal Fry + Sweet",
+            price: 25,
+            optionGroup: "Common",
+            isMandatory: true
+          }
+        ]
+      }
+    ]
   },
   {
-    dayOfWeek: 'SUNDAY',
+    dayOfWeek: "SUNDAY",
     meals: [
       {
-        mealType: 'BREAKFAST',
+        mealType: "BREAKFAST",
         items: [
-          { name: 'Tea', price: 3 },
-          { name: 'Banana', price: 3 },
-          { name: 'Chole Bhature / Luchi Ghughni', price: 18 },
-        ],
+          {
+            name: "Tea + 01 pc Banana",
+            price: 6,
+            optionGroup: "Common",
+            isMandatory: true
+          },
+          {
+            name: "02 PCS CHOLE BHATURE or 04 PCS MAIDA LUCHI GHUGHNI",
+            price: 18,
+            optionGroup: "Option 1"
+          },
+          {
+            name: "MILK 150ml",
+            price: 9,
+            optionGroup: "Option 1"
+          },
+          {
+            name: "Bread (White/Brown), Butter/Jam",
+            price: 15.3,
+            optionGroup: "Option 2"
+          },
+          {
+            name: "MILK 150ml (Opt 2)",
+            price: 9,
+            optionGroup: "Option 2"
+          }
+        ]
       },
       {
-        mealType: 'LUNCH',
+        mealType: "LUNCH",
         items: [
-          { name: 'Rice', price: 7 },
-          { name: 'Dal (Moong Dal)', price: 9.5 },
-          { name: 'Pickle', price: 1 },
-          { name: 'Salad', price: 2 },
-          { name: 'Chana Masala + Curd', price: 20 },
-        ],
+          {
+            name: "Rice, Roti, Dal, Pickle & Salad",
+            price: 16.5,
+            optionGroup: "Common",
+            isMandatory: true
+          },
+          {
+            name: "Alu Kumro Pui Sag",
+            price: 12,
+            optionGroup: "Common"
+          },
+          {
+            name: "Chana Masala",
+            price: 12,
+            optionGroup: "Veg"
+          },
+          {
+            name: "Curd (Rs. 8)",
+            price: 8,
+            optionGroup: "Veg"
+          },
+          {
+            name: "01 Pcs Doi Fish Curry 50gm",
+            price: 19,
+            optionGroup: "Non-Veg"
+          }
+        ]
       },
       {
-        mealType: 'DINNER',
+        mealType: "DINNER",
         items: [
-          { name: 'Rice', price: 7 },
-          { name: 'Roti', price: 4 },
-          { name: 'Dal (Musur Dal)', price: 5.5 },
-          { name: 'Salad', price: 2 },
-          { name: 'Matar Paneer', price: 30 },
-        ],
-      },
-    ],
-  },
+          {
+            name: "Rice, Roti, Dal, Pickle & Salad",
+            price: 16.5,
+            optionGroup: "Common",
+            isMandatory: true
+          },
+          {
+            name: "Matar Paneer (50gm)",
+            price: 30,
+            optionGroup: "Veg"
+          },
+          {
+            name: "Chicken Kasha (100 gm)",
+            price: 32,
+            optionGroup: "Non-Veg"
+          }
+        ]
+      }
+    ]
+  }
 ];
 
 let inMemoryWeeklyMenu: DailyMenuInput[] = [...mockWeeklyMenu];
@@ -278,19 +608,26 @@ export async function GET() {
           category: mi.item.category,
           isSalad: mi.item.isSalad,
           isMandatory: mi.item.isMandatory,
+          optionGroup: mi.optionGroup,
         });
       });
 
-      const meals: any[] = Array.from(mealsMap.entries()).map(([mealType, items]) => ({
-        mealType,
-        items,
-      }));
+      const MEAL_ORDER = ['BREAKFAST', 'LUNCH', 'DINNER', 'NIGHT_SNACK'];
+      const meals: any[] = Array.from(mealsMap.entries())
+        .map(([mealType, items]) => ({
+          mealType,
+          items,
+        }))
+        .sort((a, b) => MEAL_ORDER.indexOf(a.mealType) - MEAL_ORDER.indexOf(b.mealType));
 
       return {
         dayOfWeek: dm.dayOfWeek as any,
         meals,
       };
     });
+
+    const DAY_ORDER = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+    formattedMenu.sort((a, b) => DAY_ORDER.indexOf(a.dayOfWeek) - DAY_ORDER.indexOf(b.dayOfWeek));
 
     const validation = validateWeeklyMenu(formattedMenu);
     return NextResponse.json({
@@ -338,11 +675,23 @@ export async function POST(request: Request) {
     // Try saving to DB if connected
     try {
       for (const day of weeklyMenu) {
-        const dayCost = day.meals.reduce(
-          (sum: number, m: any) =>
-            sum + m.items.reduce((itemSum: number, i: any) => itemSum + (Number(i.price) || 0), 0),
-          0
-        );
+        let dayCost = 0;
+        for (const meal of day.meals) {
+          let commonCost = 0, opt1Cost = 0, opt2Cost = 0, vegCost = 0, nonVegCost = 0;
+          for (const item of meal.items) {
+            const p = Number(item.price) || 0;
+            const group = item.optionGroup || 'Common';
+            if (group === 'Common') commonCost += p;
+            else if (group === 'Option 1') opt1Cost += p;
+            else if (group === 'Option 2') opt2Cost += p;
+            else if (group === 'Veg') vegCost += p;
+            else if (group === 'Non-Veg') nonVegCost += p;
+            else commonCost += p;
+          }
+          const avgBreakfastOpt = (opt1Cost > 0 && opt2Cost > 0) ? (opt1Cost + opt2Cost) / 2 : (opt1Cost || opt2Cost);
+          const avgLunchDinnerOpt = (vegCost > 0 && nonVegCost > 0) ? (vegCost + nonVegCost) / 2 : (vegCost || nonVegCost);
+          dayCost += commonCost + avgBreakfastOpt + avgLunchDinnerOpt;
+        }
 
         const dailyMenu = await prisma.dailyMenu.upsert({
           where: {
@@ -378,8 +727,17 @@ export async function POST(request: Request) {
                   price: Number(item.price) || 0,
                   category: meal.mealType,
                   facilityType: 'REGULAR_MESS',
-                  isSalad: item.isSalad || item.name.toLowerCase().includes('salad'),
+                  isSalad: item.isSalad !== undefined ? item.isSalad : item.name.toLowerCase().includes('salad'),
                   isMandatory: item.isMandatory || false,
+                },
+              });
+            } else {
+              dbItem = await prisma.item.update({
+                where: { id: dbItem.id },
+                data: {
+                  price: Number(item.price) || 0,
+                  isSalad: item.isSalad !== undefined ? item.isSalad : dbItem.isSalad,
+                  isMandatory: item.isMandatory !== undefined ? item.isMandatory : dbItem.isMandatory,
                 },
               });
             }
@@ -390,6 +748,7 @@ export async function POST(request: Request) {
                 itemId: dbItem.id,
                 mealType: meal.mealType as any,
                 price: Number(item.price) || 0,
+                optionGroup: item.optionGroup || 'Common',
               },
             });
           }

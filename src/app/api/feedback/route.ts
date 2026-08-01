@@ -22,6 +22,16 @@ let inMemoryFeedbacks: any[] = [
     remark: null,
     createdAt: new Date().toISOString(),
   },
+  {
+    id: 'fb-3',
+    studentName: 'Amit Kumar',
+    hallRoll: '20BRH3045',
+    comment: 'The flush in C-Block 2nd floor left washroom is leaking.',
+    facilityType: 'MAINTENANCE_WASHROOM',
+    status: 'PENDING',
+    remark: null,
+    createdAt: new Date().toISOString(),
+  },
 ];
 
 export async function GET(request: Request) {
@@ -60,19 +70,26 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { studentName, hallRoll, comment, facilityType } = body;
 
-    if (!studentName || !comment) {
+    if (!studentName || !hallRoll || !comment) {
       return NextResponse.json(
-        { error: 'Student Name and Comment are required fields.' },
+        { error: 'Student Name, Roll Number, and Comment are required fields.' },
         { status: 400 }
       );
     }
 
+    const validFacilities = [
+      'REGULAR_MESS', 'NIGHT_CANTEEN',
+      'MAINTENANCE_WASHROOM', 'MAINTENANCE_WATER',
+      'MAINTENANCE_ELECTRICAL', 'MAINTENANCE_CIVIL', 'MAINTENANCE_CLEANING'
+    ];
+    const finalFacility = validFacilities.includes(facilityType) ? facilityType : 'REGULAR_MESS';
+
     const newFeedback = {
       id: `fb-${Date.now()}`,
       studentName,
-      hallRoll: hallRoll || 'N/A',
+      hallRoll: hallRoll,
       comment,
-      facilityType: facilityType === 'NIGHT_CANTEEN' ? 'NIGHT_CANTEEN' : 'REGULAR_MESS',
+      facilityType: finalFacility,
       status: 'PENDING',
       remark: null,
       createdAt: new Date().toISOString(),
@@ -86,7 +103,7 @@ export async function POST(request: Request) {
           studentName,
           hallRoll,
           comment,
-          facilityType: facilityType === 'NIGHT_CANTEEN' ? 'NIGHT_CANTEEN' : 'REGULAR_MESS',
+          facilityType: finalFacility,
         },
       });
     } catch (dbErr) {
