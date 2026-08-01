@@ -1,6 +1,6 @@
 # BRH Mess Management System
 
-A comprehensive Next.js web application built for managing the B.C. Roy Hall (BRH) Mess at IIT Kharagpur. The system handles weekly mess menu scheduling, rigorous mess guideline validation (budgeting, mandatory item checks, and dietary constraints), student feedback, and maintenance requests.
+A comprehensive Next.js web application built for managing the student's side of BR Ambedkar Hall (BRH) at IIT Kharagpur. The system handles weekly mess menu scheduling, rigorous mess guideline validation (budgeting, mandatory item checks, and dietary constraints), student feedback, and maintenance requests.
 
 ## Features
 
