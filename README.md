@@ -1,6 +1,12 @@
+<<<<<<< HEAD
 # BRH Hall Management System
 
 A comprehensive Next.js web application built as a centralized solution for the students of B.R. Ambedkar Hall (BRH) at IIT Kharagpur. The system handles weekly mess menu scheduling, rigorous mess guideline validation (budgeting, mandatory item checks, and dietary constraints), student feedback, and hall maintenance requests.
+=======
+# Hall Management System
+
+A comprehensive Next.js web application built for managing the student's side of BR Ambedkar Hall (BRH) (currently) at IIT Kharagpur. The system handles weekly mess menu scheduling, rigorous mess guideline validation (budgeting, mandatory item checks, and dietary constraints), student feedback, and maintenance requests.
+>>>>>>> c82ed93a0d8049fd50806c405bceb6a7185dd5bd
 
 ## Features
 
