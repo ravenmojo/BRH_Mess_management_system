@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Footer } from '@/components/footer';
 import {
   Calendar,
   CheckCircle2,
@@ -17,6 +18,7 @@ import {
   ShieldCheck,
   Coffee,
   Sun,
+  BookOpen,
 } from 'lucide-react';
 
 export default function StudentDashboard() {
@@ -56,7 +58,7 @@ export default function StudentDashboard() {
             <span>BROS Mess</span>
           </h2>
           <p className="text-[11px] text-indigo-100 font-medium max-w-[280px]">
-            View daily menus, lodge complaints, and more.
+            View mess menus, log complaints, and more.
           </p>
         </div>
       </div>
@@ -189,7 +191,7 @@ export default function StudentDashboard() {
           href="/menu"
           className="p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm hover:border-blue-500 transition-colors flex flex-col justify-center items-center space-y-1.5 h-20 text-center group"
         >
-          <Utensils className="w-5 h-5 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
+          <BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
           <span className="text-[11px] font-bold text-gray-900 dark:text-white leading-tight">Full Menu</span>
         </Link>
 
@@ -217,6 +219,8 @@ export default function StudentDashboard() {
           <span>Access Mess Admin Panel</span>
         </Link>
       </div>
+
+      <Footer />
     </div>
   );
 }

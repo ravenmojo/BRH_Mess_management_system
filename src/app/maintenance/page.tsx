@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Send, CheckCircle2, Clock, ShieldCheck, ShowerHead, Droplet, Zap, Hammer, Sparkles, Wrench, AlertTriangle } from 'lucide-react';
+import { Footer } from '@/components/footer';
 
 type MaintenanceCategory = 
   | 'MAINTENANCE_WASHROOM'
@@ -253,6 +254,8 @@ export default function MaintenancePage() {
           <span>Access Maintenance Admin Panel</span>
         </Link>
       </div>
+      
+      <Footer />
     </div>
   );
 }
