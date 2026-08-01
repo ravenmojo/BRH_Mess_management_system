@@ -662,7 +662,7 @@ export async function POST(request: Request) {
     if (!validation.isValid) {
       return NextResponse.json(
         {
-          error: 'Menu publication blocked due to business rule violations.',
+          error: 'Menu publication blocked due to mess guideline violations.',
           validation,
         },
         { status: 400 }
