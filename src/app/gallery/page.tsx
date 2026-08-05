@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Camera, Loader2, Video, Upload, X, AlertTriangle } from 'lucide-react';
 import { Footer } from '@/components/footer';
+import { OtpVerificationModal } from '@/components/otp-modal';
 
 const CATEGORIES = [
   { id: 'ALL', label: 'All Media' },
@@ -28,8 +29,12 @@ export default function PublicGalleryPage() {
   const [file, setFile] = useState<File | null>(null);
   const [uploaderName, setUploaderName] = useState('');
   const [uploaderRollNo, setUploaderRollNo] = useState('');
+  const [uploaderEmail, setUploaderEmail] = useState('');
   const [category, setCategory] = useState('GENERAL');
   const [caption, setCaption] = useState('');
+
+  // OTP Modal state
+  const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
 
   const fetchImages = () => {
     fetch('/api/gallery')
@@ -48,23 +53,39 @@ export default function PublicGalleryPage() {
 
   useEffect(() => {
     fetchImages();
+    const savedEmail = localStorage.getItem('bros_last_email');
+    if (savedEmail) {
+      setUploaderEmail(savedEmail);
+    }
   }, []);
 
-  const handleUploadSubmit = async (e: React.FormEvent) => {
+  const handleUploadSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) return;
 
-    // 5 MB limit
+    // 5 MB limit check
     if (file.size > 5 * 1024 * 1024) {
       setUploadError('File size exceeds the 5 MB limit.');
       return;
     }
 
+    if (!uploaderName || !uploaderRollNo || !uploaderEmail) {
+      setUploadError('Please fill in your Name, Roll Number, and Institute Email.');
+      return;
+    }
+
+    setUploadError(null);
+    setIsOtpModalOpen(true);
+  };
+
+  const handleExecuteSubmit = async (verifiedEmail: string) => {
+    if (!file) return;
+
     setUploading(true);
     setUploadError(null);
 
     try {
-      // 1. Upload to Cloudinary
+      // 1. Upload to Cloudinary ONLY AFTER email OTP verification succeeds
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || '');
@@ -80,7 +101,7 @@ export default function PublicGalleryPage() {
         throw new Error(cloudinaryData.error?.message || 'Failed to upload to Cloudinary');
       }
 
-      // 2. Save to our database
+      // 2. Save to database
       const dbRes = await fetch('/api/gallery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -90,6 +111,7 @@ export default function PublicGalleryPage() {
           category,
           uploaderName,
           uploaderRollNo,
+          email: verifiedEmail,
         })
       });
 
@@ -101,15 +123,13 @@ export default function PublicGalleryPage() {
       setUploadSuccess(true);
       setFile(null);
       setCaption('');
-      // Reset form but keep name/rollno for convenience if they upload multiple
       setTimeout(() => {
         setShowUpload(false);
         setUploadSuccess(false);
-        // We don't fetchImages() here because it's pending approval anyway!
       }, 3000);
       
     } catch (err: any) {
-      setUploadError(err.message);
+      setUploadError(err.message || 'An error occurred during submission.');
     } finally {
       setUploading(false);
     }
@@ -257,6 +277,11 @@ export default function PublicGalleryPage() {
                   </div>
 
                   <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Institute Email</label>
+                    <input type="email" required value={uploaderEmail} onChange={e => setUploaderEmail(e.target.value)} className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" placeholder="yourname@iitkgp.ac.in" />
+                  </div>
+
+                  <div>
                     <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Category</label>
                     <select value={category} onChange={e => setCategory(e.target.value)} className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500">
                       {CATEGORIES.filter(c => c.id !== 'ALL').map(c => (
@@ -293,6 +318,13 @@ export default function PublicGalleryPage() {
           </div>
         </div>
       )}
+
+      <OtpVerificationModal
+        isOpen={isOtpModalOpen}
+        onClose={() => setIsOtpModalOpen(false)}
+        initialEmail={uploaderEmail}
+        onVerified={handleExecuteSubmit}
+      />
     </div>
   );
 }

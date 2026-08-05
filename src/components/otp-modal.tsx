@@ -208,7 +208,7 @@ export function OtpVerificationModal({
                   <span>📁 Check Spam / Junk Folder!</span>
                 </p>
                 <p className="text-[10px] text-amber-700 dark:text-amber-300 font-medium">
-                  If OTP does not appear in Primary Inbox in about 30s, check your Spam or Junk folder.
+                  If OTP does not appear in Primary Inbox in about 30s, check your Spam or Junk folder and report it not spam.
                 </p>
               </div>
             </div>
@@ -250,13 +250,12 @@ export function OtpVerificationModal({
                     return (
                       <div
                         key={index}
-                        className={`h-11 rounded-xl border flex items-center justify-center font-black text-sm transition-all ${
-                          isFilled
+                        className={`h-11 rounded-xl border flex items-center justify-center font-black text-sm transition-all ${isFilled
                             ? 'bg-blue-50/90 dark:bg-blue-950/70 border-blue-500 text-blue-600 dark:text-blue-400 shadow-sm shadow-blue-500/20'
                             : isCurrent
-                            ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-500/30 bg-white dark:bg-slate-900 animate-pulse'
-                            : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/80 text-slate-300 dark:text-slate-600'
-                        }`}
+                              ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-500/30 bg-white dark:bg-slate-900 animate-pulse'
+                              : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/80 text-slate-300 dark:text-slate-600'
+                          }`}
                       >
                         {isFilled ? (
                           char

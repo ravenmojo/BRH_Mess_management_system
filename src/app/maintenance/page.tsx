@@ -65,7 +65,7 @@ export default function MaintenancePage() {
     loadFeedbacks();
   }, []);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       // Check 20MB limit
@@ -74,21 +74,6 @@ export default function MaintenancePage() {
         return;
       }
       setFile(selectedFile);
-
-      // Auto-upload to Cloudinary
-      setIsUploading(true);
-      setUploadProgress(0);
-      try {
-        const url = await uploadToCloudinary(selectedFile, (percent) => {
-          setUploadProgress(percent);
-        });
-        setMediaUrl(url);
-      } catch (err: any) {
-        alert("Upload failed: " + err.message);
-        setFile(null);
-      } finally {
-        setIsUploading(false);
-      }
     }
   };
 
@@ -106,6 +91,27 @@ export default function MaintenancePage() {
     setStatusMessage('');
 
     try {
+      let uploadedMediaUrl = '';
+
+      // Upload media to Cloudinary ONLY AFTER email OTP verification is complete
+      if (file) {
+        setIsUploading(true);
+        setUploadProgress(0);
+        try {
+          uploadedMediaUrl = await uploadToCloudinary(file, (percent) => {
+            setUploadProgress(percent);
+          });
+          setMediaUrl(uploadedMediaUrl);
+        } catch (err: any) {
+          alert('Media upload failed: ' + (err.message || 'Error uploading file'));
+          setSubmitting(false);
+          setIsUploading(false);
+          return;
+        } finally {
+          setIsUploading(false);
+        }
+      }
+
       const res = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -116,7 +122,7 @@ export default function MaintenancePage() {
           email: verifiedEmail,
           comment,
           facilityType,
-          mediaUrl,
+          mediaUrl: uploadedMediaUrl,
         }),
       });
 
