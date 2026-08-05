@@ -7,6 +7,7 @@ import { PwaInstallButton } from '@/components/pwa-install-button';
 import { BottomNav } from '@/components/bottom-nav';
 import { BackButton } from '@/components/back-button';
 import { InstallPwaPrompt } from '@/components/install-pwa-prompt';
+import { Analytics } from '@vercel/analytics/next';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -63,6 +64,7 @@ export default function RootLayout({
           <main className="max-w-md mx-auto px-4 pt-4 pb-8 page-transition">{children}</main>
           <BottomNav />
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
