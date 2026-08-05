@@ -19,7 +19,11 @@ import {
   Coffee,
   Sun,
   BookOpen,
+  Camera,
+  Trophy,
 } from 'lucide-react';
+
+import { SplashScreen } from '@/components/splash-screen';
 
 export default function StudentDashboard() {
   const [weeklyData, setWeeklyData] = useState<any>(null);
@@ -47,6 +51,7 @@ export default function StudentDashboard() {
 
   return (
     <div className="space-y-5 pb-8">
+      <SplashScreen />
       {/* Top Banner Card */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-sky-600 to-blue-800 p-4 text-white shadow-lg group">
         <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white opacity-10 blur-2xl group-hover:scale-[1.2] group-hover:opacity-20 transition-all duration-1000 ease-in-out"></div>
@@ -54,18 +59,13 @@ export default function StudentDashboard() {
 
         <div className="relative z-10 space-y-0.5">
           <h2 className="text-lg font-black tracking-tight drop-shadow-sm flex items-center space-x-2">
-            <span className="text-2xl drop-shadow-lg">🗿</span>
             <span>BROS Mess</span>
           </h2>
           <p className="text-[11px] text-indigo-100 font-medium max-w-[280px]">
-            View mess menus, log complaints, and more.
+            Who are we to Mess with you, bros! 🗿
           </p>
         </div>
       </div>
-
-      <h1 className="text-xl font-bold text-gray-900 dark:text-white pt-2">Mess</h1>
-
-
 
       {/* Day Selector */}
       <div className="space-y-2">
@@ -186,7 +186,7 @@ export default function StudentDashboard() {
       )}
 
       {/* Quick Access Navigation Grid */}
-      <div className="grid grid-cols-3 gap-2 pt-2">
+      <div className="grid grid-cols-2 gap-2 pt-2">
         <Link
           href="/menu"
           className="p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm hover:border-blue-500 transition-colors flex flex-col justify-center items-center space-y-1.5 h-20 text-center group"
@@ -208,7 +208,25 @@ export default function StudentDashboard() {
           className="p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm hover:border-blue-500 transition-colors flex flex-col justify-center items-center space-y-1.5 h-20 text-center group"
         >
           <MessageSquare className="w-5 h-5 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
-          <span className="text-[11px] font-bold text-gray-900 dark:text-white leading-tight">Complaints & Feedback</span>
+          <span className="text-[11px] font-bold text-gray-900 dark:text-white leading-tight">Feedback</span>
+        </Link>
+
+        <Link
+          href="/poll"
+          className="p-3 rounded-xl bg-white dark:bg-gray-900 border border-indigo-200 dark:border-indigo-800 shadow-sm hover:border-indigo-500 transition-colors flex flex-col justify-center items-center space-y-1.5 h-20 text-center group"
+        >
+          <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
+          <span className="text-[11px] font-bold text-gray-900 dark:text-white leading-tight">Mess Poll</span>
+        </Link>
+
+        <Link
+          href="/gallery"
+          className="p-3 rounded-xl bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 shadow-sm hover:border-emerald-500 transition-colors flex flex-col justify-center items-center space-y-1.5 h-20 text-center col-span-2 group"
+        >
+          <div className="flex items-center space-x-2">
+            <Camera className="w-5 h-5 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
+            <span className="text-[12px] font-bold text-gray-900 dark:text-white leading-tight">Mess Duty Gallery</span>
+          </div>
         </Link>
       </div>
 

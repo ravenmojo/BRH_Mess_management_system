@@ -13,6 +13,7 @@ import {
   Trash2,
   Lock,
   ChevronDown,
+  Camera,
 } from 'lucide-react';
 import { validateWeeklyMenu, DailyMenuInput } from '@/lib/mess-rules';
 
@@ -25,6 +26,9 @@ export default function AdminDashboard() {
   // Feedback Management State
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [remarkInputs, setRemarkInputs] = useState<{ [id: string]: string }>({});
+
+  // Gallery Management State
+  const [pendingGallery, setPendingGallery] = useState<any[]>([]);
 
   const fetchMenu = () => {
     fetch('/api/menu')
@@ -46,9 +50,19 @@ export default function AdminDashboard() {
       .catch(() => {});
   };
 
+  const fetchPendingGallery = () => {
+    fetch('/api/gallery/approve')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setPendingGallery(data);
+      })
+      .catch(() => {});
+  };
+
   useEffect(() => {
     fetchMenu();
     fetchFeedbacks();
+    fetchPendingGallery();
   }, []);
 
   // Live Real-Time Validation Engine
@@ -137,6 +151,19 @@ export default function AdminDashboard() {
     } catch (err) {}
   };
 
+  const handleUpdateGallery = async (id: string, status: string) => {
+    try {
+      const res = await fetch('/api/gallery/approve', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      });
+      if (res.ok) {
+        fetchPendingGallery();
+      }
+    } catch (err) {}
+  };
+
   return (
     <div className="space-y-5 pb-12">
       {/* Header */}
@@ -148,10 +175,13 @@ export default function AdminDashboard() {
           </h2>
           <p className="text-xs text-gray-500">Live Rule Validation & Menu Editor</p>
         </div>
+        <a href="/admin/poll" className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 rounded-lg text-xs font-bold transition-colors hover:bg-indigo-100 flex items-center space-x-1">
+          <span>Poll Manager</span>
+        </a>
       </div>
 
       {/* LIVE VALIDATION WIDGETS SECTION */}
-      <details className="group space-y-2" open>
+      <details className="group space-y-2">
         <summary className="flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
           <h3 className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
             Live Compliance Widgets
@@ -236,7 +266,7 @@ export default function AdminDashboard() {
       </details>
 
       {/* Save Action Header & Menu Builder */}
-      <details className="group space-y-2" open>
+      <details className="group space-y-2">
         <summary className="flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
           <h3 className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
             Weekly Menu Builder
@@ -442,6 +472,55 @@ export default function AdminDashboard() {
               </div>
             </div>
           ))}
+        </div>
+      </details>
+
+      {/* PENDING GALLERY UPLOADS */}
+      <details className="group space-y-2">
+        <summary className="flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
+          <h3 className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider flex items-center space-x-1.5">
+            <Camera className="w-4 h-4 text-emerald-600" />
+            <span>Pending Gallery Uploads ({pendingGallery.length})</span>
+          </h3>
+          <ChevronDown className="w-4 h-4 text-gray-500 transition-transform group-open:rotate-180" />
+        </summary>
+
+        <div className="pt-2 grid grid-cols-2 gap-3">
+          {pendingGallery.map((img) => (
+            <div key={img.id} className="p-2 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 space-y-2 text-xs shadow-sm">
+              <div className="aspect-square relative rounded-lg overflow-hidden bg-black mb-2">
+                {img.url.match(/\.(mp4|webm|ogg)$/i) ? (
+                  <video src={img.url} className="w-full h-full object-cover" controls />
+                ) : (
+                  <a href={img.url} target="_blank" rel="noreferrer">
+                    <img src={img.url} className="w-full h-full object-cover" />
+                  </a>
+                )}
+              </div>
+              <div>
+                <div className="font-bold">{img.uploaderName} <span className="font-mono text-gray-500">({img.uploaderRollNo})</span></div>
+                <div className="text-gray-500 text-[10px] uppercase font-bold">{img.category}</div>
+                {img.caption && <div className="text-gray-700 dark:text-gray-300 italic mt-1">"{img.caption}"</div>}
+              </div>
+              <div className="flex space-x-2 pt-2">
+                <button
+                  onClick={() => handleUpdateGallery(img.id, 'REJECTED')}
+                  className="flex-1 py-1.5 rounded text-[11px] font-semibold bg-red-100 hover:bg-red-200 text-red-700 transition-colors"
+                >
+                  Reject
+                </button>
+                <button
+                  onClick={() => handleUpdateGallery(img.id, 'APPROVED')}
+                  className="flex-1 py-1.5 rounded text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
+                >
+                  Approve
+                </button>
+              </div>
+            </div>
+          ))}
+          {pendingGallery.length === 0 && (
+            <div className="col-span-2 text-center py-6 text-gray-500 text-xs">No pending uploads.</div>
+          )}
         </div>
       </details>
     </div>

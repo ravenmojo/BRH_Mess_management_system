@@ -66,10 +66,13 @@ model Feedback {
   id           String       @id @default(uuid())
   studentName  String
   hallRoll     String
+  roomNo       String?
+  email        String?
   comment      String
   facilityType FacilityType @default(REGULAR_MESS)
   status       String       @default("PENDING") // PENDING, RESOLVED
   remark       String?
+  mediaUrl     String?      // Cloudinary URL for uploaded photos/videos
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 }
@@ -81,4 +84,96 @@ model User {
   role      String   @default("STUDENT") // STUDENT, ADMIN
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// --- NEW MODELS FOR BRH HALL MANAGEMENT ---
+
+model Poll {
+  id        String       @id @default(uuid())
+  month     Int
+  year      Int
+  isActive  Boolean      @default(true)
+  options   PollOption[]
+  votes     PollVote[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([month, year])
+}
+
+model PollOption {
+  id        String     @id @default(uuid())
+  pollId    String
+  poll      Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  itemName  String
+  votes     PollVote[]
+}
+
+model PollVote {
+  id           String     @id @default(uuid())
+  pollId       String
+  poll         Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  pollOptionId String
+  pollOption   PollOption @relation(fields: [pollOptionId], references: [id], onDelete: Cascade)
+  rollNo       String     // To prevent multiple votes per student
+  createdAt    DateTime   @default(now())
+
+  @@unique([pollId, rollNo]) // One vote per poll per student
+}
+
+model GalleryImage {
+  id             String   @id @default(uuid())
+  url            String
+  caption        String?
+  category       String   @default("GENERAL") // e.g. "CLEANING", "RAW_MATERIALS", "WEIGHT_CHECK", "PACKAGING"
+  uploaderName   String?
+  uploaderRollNo String?
+  status         String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  createdAt      DateTime @default(now())
+}
+
+model MovieScreening {
+  id        String   @id @default(uuid())
+  title     String
+  posterUrl String
+  showTime  DateTime
+  venue     String   @default("Common Room")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Suggestion {
+  id          String   @id @default(uuid())
+  studentName String
+  hallRoll    String
+  category    String   // MESS, MAINTENANCE, ACTIVITIES, OTHER
+  content     String
+  createdAt   DateTime @default(now())
+}
+
+model ActivityParticipant {
+  id          String   @id @default(uuid())
+  studentName String
+  hallRoll    String
+  activity    String   // MUSIC, ARTS, SPORTS, etc.
+  createdAt   DateTime @default(now())
+}
+
+model WingFeedback {
+  id               String   @id @default(uuid())
+  wing             String
+  representative   String
+  feedbackContent  String
+  createdAt        DateTime @default(now())
+}
+
+model Achievement {
+  id          String   @id @default(uuid())
+  studentName String
+  hallRoll    String?
+  title       String
+  description String
+  category    String   // ACADEMICS, SPORTS, CULTURAL, etc.
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
 }

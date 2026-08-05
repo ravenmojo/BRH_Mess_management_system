@@ -28,6 +28,14 @@
   .page-transition {
     animation: fadeIn 0.4s ease-out forwards;
   }
+  
+  .text-glow {
+    text-shadow: 0 0 20px rgba(56, 189, 248, 0.5), 0 0 40px rgba(99, 102, 241, 0.3);
+  }
+
+  .text-glow-lg {
+    text-shadow: 0 0 30px rgba(56, 189, 248, 0.7), 0 0 60px rgba(129, 140, 248, 0.5), 0 0 90px rgba(168, 85, 247, 0.3);
+  }
 }
 
 details[open] summary ~ * {
@@ -43,6 +51,35 @@ details[open] summary ~ * {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-glow-pulse {
+  animation: glowPulse 4s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background-size: 200% auto;
+  animation: shimmer 3s linear infinite;
 }
 
 ::view-transition-old(root), ::view-transition-new(root) {
