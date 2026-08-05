@@ -4,20 +4,28 @@ import { createClient } from '@/utils/supabase/server';
 
 export async function POST(request: Request) {
   try {
-    const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    if (!user.email?.endsWith('.iitkgp.ac.in') && user.email !== 'soura7@gmail.com') {
-      return NextResponse.json({ error: 'Only .iitkgp.ac.in emails or the super admin are allowed.' }, { status: 403 });
-    }
-
-    const rollNo = user.email.split('@')[0].toUpperCase();
-
     const body = await request.json();
-    const { pollId, pollOptionId } = body;
+    const { pollId, pollOptionId, email: bodyEmail } = body;
+
+    let voterEmail = bodyEmail;
+
+    if (!voterEmail) {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        voterEmail = user.email;
+      }
+    }
+
+    if (!voterEmail) {
+      return NextResponse.json({ error: 'Email verification is required to vote.' }, { status: 401 });
+    }
+
+    if (!voterEmail.endsWith('.iitkgp.ac.in') && voterEmail !== 'soura7@gmail.com') {
+      return NextResponse.json({ error: 'Only .iitkgp.ac.in emails are allowed.' }, { status: 403 });
+    }
+
+    const rollNo = voterEmail.split('@')[0].toUpperCase();
 
     if (!pollId || !pollOptionId) {
       return NextResponse.json({ error: 'pollId and pollOptionId are required.' }, { status: 400 });
@@ -29,7 +37,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'This poll is no longer active.' }, { status: 400 });
     }
 
-    // Check if user already voted
+    // Check if user already voted with this email for the current poll options
     const existingVote = await prisma.pollVote.findUnique({
       where: {
         pollId_rollNo: {
@@ -40,13 +48,7 @@ export async function POST(request: Request) {
     });
 
     if (existingVote) {
-      // User already voted, update it? Or reject?
-      // Let's allow them to change their vote if it's active.
-      const updatedVote = await prisma.pollVote.update({
-        where: { id: existingVote.id },
-        data: { pollOptionId }
-      });
-      return NextResponse.json({ message: 'Vote updated', vote: updatedVote });
+      return NextResponse.json({ error: 'You have already cast your vote for this poll using this email ID!' }, { status: 400 });
     }
 
     const newVote = await prisma.pollVote.create({
@@ -57,7 +59,7 @@ export async function POST(request: Request) {
       }
     });
 
-    return NextResponse.json({ message: 'Vote cast successfully', vote: newVote }, { status: 201 });
+    return NextResponse.json({ message: 'Vote cast successfully!', vote: newVote }, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

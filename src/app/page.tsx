@@ -217,7 +217,7 @@ export default function StudentDashboard() {
           href="/poll"
           className="p-3.5 rounded-2xl glass-card border border-indigo-200/80 dark:border-indigo-800/80 hover:border-indigo-500/50 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 transition-all flex flex-col justify-center items-center space-y-1.5 h-20 text-center group"
         >
-          <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
+          <span className="text-xl group-hover:scale-110 transition-transform">📊</span>
           <span className="text-xs font-bold text-slate-900 dark:text-white leading-tight">Mess Poll</span>
         </Link>
 
