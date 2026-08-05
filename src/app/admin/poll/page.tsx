@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Settings, Plus, Lock, Unlock, Trash2 } from 'lucide-react';
+import { Loader2, Settings, Plus, Lock, Unlock, Trash2, Vote } from 'lucide-react';
 
 const SEASONAL_CURRIES = [
   "Alu Bhindi", "Palak Paneer", "Lauki Curry",
@@ -97,7 +97,7 @@ function AdminPollContent() {
     <div className="p-6 max-w-4xl mx-auto space-y-8">
       <div>
         <h1 className="text-2xl font-black flex items-center space-x-2 text-gray-900 dark:text-white mb-2">
-          <span className="text-2xl">📊</span>
+          <Vote className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
           <span>Mess Poll Admin</span>
         </h1>
         <p className="text-sm text-gray-500">Manage monthly seasonal veg curry polls. The system automatically locks voting after the 15th on the public side, but you can manually override it here.</p>
