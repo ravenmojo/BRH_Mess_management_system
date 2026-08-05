@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Footer } from '@/components/footer';
 import { OtpVerificationModal } from '@/components/otp-modal';
-import { Loader2, ShieldCheck, CheckCircle2, Lock, Unlock, BarChart3, AlertCircle } from 'lucide-react';
+import { Loader2, ShieldCheck, CheckCircle2, Lock, Unlock, Vote, AlertCircle } from 'lucide-react';
 
 export default function PublicPollPage() {
   const [poll, setPoll] = useState<any>(null);
@@ -87,7 +87,7 @@ export default function PublicPollPage() {
   if (!poll) {
     return (
       <div className="space-y-5 pb-8 text-center pt-10">
-        <div className="text-4xl mb-2">📊</div>
+        <Vote className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">No Active Polls</h2>
         <p className="text-sm text-slate-500">There are currently no polls running for the upcoming month.</p>
         <Footer />
@@ -108,7 +108,7 @@ export default function PublicPollPage() {
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-800 to-purple-900 p-5 text-white shadow-lg">
         <div className="relative z-10 space-y-1">
           <h2 className="text-xl font-black tracking-tight drop-shadow-sm flex items-center space-x-2">
-            <span className="text-xl">📊</span>
+            <Vote className="w-5 h-5 text-indigo-300" />
             <span>Monthly Mess Poll</span>
           </h2>
           <p className="text-xs text-indigo-200 font-medium max-w-sm">

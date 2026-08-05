@@ -14,6 +14,7 @@ import {
   Lock,
   ChevronDown,
   Camera,
+  Vote,
 } from 'lucide-react';
 import { validateWeeklyMenu, DailyMenuInput } from '@/lib/mess-rules';
 import { AdminAuthGate } from '@/components/admin-auth-gate';
@@ -188,8 +189,9 @@ function AdminDashboardContent() {
           <a href="/hub/admin" className="px-3 py-1.5 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 rounded-lg text-xs font-bold transition-colors hover:bg-purple-100 flex items-center space-x-1">
             <span>Hall Info Admin</span>
           </a>
-          <a href="/admin/poll" className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 rounded-lg text-xs font-bold transition-colors hover:bg-indigo-100 flex items-center space-x-1">
-            <span>📊 Poll Manager</span>
+          <a href="/admin/poll" className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 rounded-lg text-xs font-bold transition-colors hover:bg-indigo-100 flex items-center space-x-1.5">
+            <Vote className="w-3.5 h-3.5" />
+            <span>Poll Manager</span>
           </a>
         </div>
       </div>
