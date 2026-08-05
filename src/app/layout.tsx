@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { PwaInstallButton } from '@/components/pwa-install-button';
 import { BottomNav } from '@/components/bottom-nav';
 import { BackButton } from '@/components/back-button';
 import { InstallPwaPrompt } from '@/components/install-pwa-prompt';
@@ -54,6 +55,7 @@ export default function RootLayout({
                 </div>
               </div>
               <div className="flex items-center shrink-0">
+                <PwaInstallButton />
                 <ThemeToggle />
               </div>
             </div>

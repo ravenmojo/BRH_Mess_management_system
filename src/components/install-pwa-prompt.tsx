@@ -9,38 +9,48 @@ export function InstallPwaPrompt() {
   const [isIos, setIsIos] = useState(false);
 
   useEffect(() => {
-    // Check if dismissed previously
-    const dismissed = localStorage.getItem('bros_pwa_dismissed');
-    if (dismissed === 'true') return;
-
-    // Check if already running in standalone (installed) mode
-    const isStandalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as any).standalone === true;
-    if (isStandalone) return;
-
     // Detect iOS
     const ua = window.navigator.userAgent.toLowerCase();
     const isIosDevice = /iphone|ipad|ipod/.test(ua);
     setIsIos(isIosDevice);
 
-    if (isIosDevice) {
-      // Show iOS instruction prompt
+    // Custom event listener to open prompt manually anytime (e.g. from header '+' button)
+    const handleManualOpen = () => {
       setShowPrompt(true);
-      return;
+    };
+    window.addEventListener('open-pwa-install-prompt', handleManualOpen);
+
+    // Check if already running in standalone (installed) mode
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true;
+    if (isStandalone) {
+      return () => window.removeEventListener('open-pwa-install-prompt', handleManualOpen);
     }
+
+    // Auto-show ONLY ONCE per user
+    const hasBeenShownOnce = localStorage.getItem('bros_pwa_shown_once');
 
     // Android / Chrome / Chromium event
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      setShowPrompt(true);
+      if (!hasBeenShownOnce) {
+        setShowPrompt(true);
+        localStorage.setItem('bros_pwa_shown_once', 'true');
+      }
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
+    if (isIosDevice && !hasBeenShownOnce) {
+      setShowPrompt(true);
+      localStorage.setItem('bros_pwa_shown_once', 'true');
+    }
+
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('open-pwa-install-prompt', handleManualOpen);
     };
   }, []);
 
