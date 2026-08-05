@@ -189,7 +189,7 @@ function AdminDashboardContent() {
             <span>Hall Info Admin</span>
           </a>
           <a href="/admin/poll" className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 rounded-lg text-xs font-bold transition-colors hover:bg-indigo-100 flex items-center space-x-1">
-            <span>Poll Manager</span>
+            <span>📊 Poll Manager</span>
           </a>
         </div>
       </div>
