@@ -28,14 +28,15 @@ export function InstallPwaPrompt() {
       return () => window.removeEventListener('open-pwa-install-prompt', handleManualOpen);
     }
 
-    // Auto-show ONLY ONCE per user
+    // Auto-show ONLY ONCE per user AND ONLY on Landing Page ('/')
     const hasBeenShownOnce = localStorage.getItem('bros_pwa_shown_once');
+    const isLandingPage = window.location.pathname === '/';
 
     // Android / Chrome / Chromium event
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      if (!hasBeenShownOnce) {
+      if (!hasBeenShownOnce && isLandingPage) {
         setShowPrompt(true);
         localStorage.setItem('bros_pwa_shown_once', 'true');
       }
@@ -43,7 +44,7 @@ export function InstallPwaPrompt() {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    if (isIosDevice && !hasBeenShownOnce) {
+    if (isIosDevice && !hasBeenShownOnce && isLandingPage) {
       setShowPrompt(true);
       localStorage.setItem('bros_pwa_shown_once', 'true');
     }
