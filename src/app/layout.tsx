@@ -1,17 +1,27 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { BottomNav } from '@/components/bottom-nav';
 import { BackButton } from '@/components/back-button';
-import { UtensilsCrossed } from 'lucide-react';
+import { InstallPwaPrompt } from '@/components/install-pwa-prompt';
 
 const inter = Inter({ subsets: ['latin'] });
 
+export const viewport: Viewport = {
+  themeColor: '#2563eb',
+};
+
 export const metadata: Metadata = {
-  title: 'BR Ambedkar hall Operations and Services (BROS)',
-  description: 'BROS - BR Ambedkar hall Operations and Services System',
+  title: 'BR Ambedkar Hall Operations and Services (BROS)',
+  description: 'BROS - BR Ambedkar Hall Operations and Services System',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'BROS',
+  },
 };
 
 export default function RootLayout({
@@ -21,8 +31,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#2563eb" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+      </head>
       <body className={`${inter.className} pb-20 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <InstallPwaPrompt />
           <header className="sticky top-0 z-40 glass-header">
             <div className="max-w-md mx-auto px-4 h-14 flex items-center justify-between">
               <div className="flex items-center space-x-2.5">
