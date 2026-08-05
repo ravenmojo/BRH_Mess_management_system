@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Mail, KeyRound, Loader2, X, ShieldCheck, RefreshCw } from 'lucide-react';
+import { Mail, KeyRound, Loader2, X, ShieldCheck, RefreshCw, MailCheck, AlertTriangle, Inbox } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 
 interface OtpVerificationModalProps {
@@ -138,7 +138,7 @@ export function OtpVerificationModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md transition-opacity">
-      <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4 animate-in fade-in zoom-in-95 duration-200">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -147,14 +147,13 @@ export function OtpVerificationModal({
           <X className="w-4 h-4" />
         </button>
 
-        <div className="flex flex-col items-center text-center space-y-2 pt-2">
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400">
-            <ShieldCheck className="w-6 h-6" />
+        <div className="flex flex-col items-center text-center space-y-1.5 pt-1">
+          <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400">
+            <ShieldCheck className="w-5 h-5" />
           </div>
-          <h3 className="text-lg font-black text-slate-900 dark:text-white">Email OTP Verification</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs">
-            Verify your institute email to complete submitting your request.
-          </p>
+          <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center space-x-1.5">
+            <span>Email OTP Verification</span>
+          </h3>
         </div>
 
         {error && (
@@ -185,20 +184,38 @@ export function OtpVerificationModal({
               className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition-all disabled:opacity-50 flex items-center justify-center space-x-2"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              <span>Send OTP to Email</span>
+              <span>Send OTP Code</span>
             </button>
           </form>
         ) : (
-          <form onSubmit={handleVerifyOtp} className="space-y-4">
-            <div className="text-center bg-blue-50/70 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40 p-2.5 rounded-xl space-y-1">
-              <p className="text-xs text-slate-600 dark:text-slate-300">
-                OTP sent to <span className="font-bold text-slate-900 dark:text-white">{email}</span>
-              </p>
-              <p className="text-[10px] text-slate-400">Attempt {attempts} of 3</p>
+          <form onSubmit={handleVerifyOtp} className="space-y-3.5">
+            {/* Sent Status Badge */}
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40 text-xs">
+              <div className="flex items-center space-x-2 overflow-hidden">
+                <MailCheck className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                <span className="font-bold text-slate-900 dark:text-white truncate">{email}</span>
+              </div>
+              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 shrink-0 ml-2">
+                Try {attempts}/3
+              </span>
             </div>
 
+            {/* Spam Folder Alert Banner */}
+            <div className="p-3 rounded-xl bg-amber-50/90 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-800/60 text-amber-800 dark:text-amber-200 text-xs flex items-start space-x-2.5 shadow-sm">
+              <Inbox className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div className="leading-tight space-y-0.5">
+                <p className="font-extrabold text-[11px] flex items-center space-x-1 text-amber-900 dark:text-amber-100">
+                  <span>📁 Check Spam / Junk Folder!</span>
+                </p>
+                <p className="text-[10px] text-amber-700 dark:text-amber-300 font-medium">
+                  If OTP does not appear in Primary Inbox within 15s, check your Spam or Junk folder.
+                </p>
+              </div>
+            </div>
+
+            {/* OTP Input */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-1">Enter Verification Code / OTP</label>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-1">Enter Verification Code</label>
               <div className="relative">
                 <KeyRound className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
                 <input
@@ -222,6 +239,7 @@ export function OtpVerificationModal({
               <span>Verify & Complete Submission</span>
             </button>
 
+            {/* Resend & Change Email Actions */}
             <div className="flex items-center justify-between pt-1 text-xs">
               <button
                 type="button"
