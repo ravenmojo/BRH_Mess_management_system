@@ -160,3 +160,28 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: 'Feedback ID is required.' }, { status: 400 });
+    }
+
+    inMemoryFeedbacks = inMemoryFeedbacks.filter((f) => f.id !== id);
+
+    try {
+      await prisma.feedback.delete({
+        where: { id },
+      });
+    } catch (dbErr) {
+      console.warn('DB bypass for feedback DELETE');
+    }
+
+    return NextResponse.json({ message: 'Complaint removed successfully!' });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

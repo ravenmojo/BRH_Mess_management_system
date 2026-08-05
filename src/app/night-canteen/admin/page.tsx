@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, MessageSquare, CheckCircle, ChevronDown } from 'lucide-react';
+import { ShieldCheck, MessageSquare, CheckCircle, ChevronDown, Trash2 } from 'lucide-react';
 import { AdminAuthGate } from '@/components/admin-auth-gate';
 
 export default function CanteenAdminDashboard() {
@@ -39,6 +39,18 @@ function CanteenAdminContent() {
         body: JSON.stringify({ id, status: newStatus, remark }),
       });
 
+      if (res.ok) {
+        fetchFeedbacks();
+      }
+    } catch (err) {}
+  };
+
+  const handleDeleteFeedback = async (id: string) => {
+    if (!confirm('Are you sure you want to permanently remove this complaint?')) return;
+    try {
+      const res = await fetch(`/api/feedback?id=${id}`, {
+        method: 'DELETE',
+      });
       if (res.ok) {
         fetchFeedbacks();
       }
@@ -108,6 +120,14 @@ function CanteenAdminContent() {
                 />
 
                 <div className="flex space-x-2 justify-end">
+                  <button
+                    onClick={() => handleDeleteFeedback(fb.id)}
+                    className="px-2.5 py-1 rounded text-[11px] font-bold bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 transition-colors flex items-center space-x-1 border border-rose-200 dark:border-rose-800"
+                    title="Remove Complaint"
+                  >
+                    <Trash2 className="w-3 h-3 text-rose-500" />
+                    <span>Remove</span>
+                  </button>
                   <button
                     onClick={() => handleUpdateFeedback(fb.id, 'PENDING')}
                     className="px-2.5 py-1 rounded text-[11px] font-semibold bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
