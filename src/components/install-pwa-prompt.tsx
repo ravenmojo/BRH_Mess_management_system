@@ -1,12 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { Smartphone, Download, X, Share, PlusSquare } from 'lucide-react';
 
 export function InstallPwaPrompt() {
+  const pathname = usePathname();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIos, setIsIos] = useState(false);
+  const [isManualTrigger, setIsManualTrigger] = useState(false);
 
   useEffect(() => {
     // Detect iOS
@@ -16,6 +19,7 @@ export function InstallPwaPrompt() {
 
     // Custom event listener to open prompt manually anytime (e.g. from header '+' button)
     const handleManualOpen = () => {
+      setIsManualTrigger(true);
       setShowPrompt(true);
     };
     window.addEventListener('open-pwa-install-prompt', handleManualOpen);
@@ -28,25 +32,22 @@ export function InstallPwaPrompt() {
       return () => window.removeEventListener('open-pwa-install-prompt', handleManualOpen);
     }
 
-    // Auto-show ONLY ONCE per user AND ONLY on Landing Page ('/')
-    const hasBeenShownOnce = localStorage.getItem('bros_pwa_shown_once');
-    const isLandingPage = window.location.pathname === '/';
-
     // Android / Chrome / Chromium event
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      if (!hasBeenShownOnce && isLandingPage) {
+
+      const isDismissed = localStorage.getItem('bros_pwa_dismissed') === 'true';
+      if (!isDismissed && window.location.pathname === '/') {
         setShowPrompt(true);
-        localStorage.setItem('bros_pwa_shown_once', 'true');
       }
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    if (isIosDevice && !hasBeenShownOnce && isLandingPage) {
+    const isDismissed = localStorage.getItem('bros_pwa_dismissed') === 'true';
+    if (isIosDevice && !isDismissed && window.location.pathname === '/') {
       setShowPrompt(true);
-      localStorage.setItem('bros_pwa_shown_once', 'true');
     }
 
     return () => {
@@ -56,23 +57,25 @@ export function InstallPwaPrompt() {
   }, []);
 
   const handleInstallClick = async () => {
+    localStorage.setItem('bros_pwa_dismissed', 'true');
     if (deferredPrompt) {
       deferredPrompt.prompt();
-      const choiceResult = await deferredPrompt.userChoice;
-      if (choiceResult.outcome === 'accepted') {
-        localStorage.setItem('bros_pwa_dismissed', 'true');
-      }
+      await deferredPrompt.userChoice;
       setDeferredPrompt(null);
-      setShowPrompt(false);
     }
+    setShowPrompt(false);
+    setIsManualTrigger(false);
   };
 
   const handleDismiss = () => {
     localStorage.setItem('bros_pwa_dismissed', 'true');
     setShowPrompt(false);
+    setIsManualTrigger(false);
   };
 
+  // Strictly block showing on non-landing pages unless manually triggered via header button
   if (!showPrompt) return null;
+  if (!isManualTrigger && pathname !== '/') return null;
 
   return (
     <div className="fixed top-16 left-0 right-0 z-50 px-4 max-w-md mx-auto animate-in slide-in-from-top duration-300">
