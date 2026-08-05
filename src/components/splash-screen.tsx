@@ -43,8 +43,8 @@ export function SplashScreen() {
         {/* Main BROS Logo */}
         <div
           className={`transition-all duration-1000 ease-out transform ${phase === 'enter'
-              ? 'opacity-0 scale-75 translate-y-4 filter blur-sm'
-              : 'opacity-100 scale-100 translate-y-0 filter-none'
+            ? 'opacity-0 scale-75 translate-y-4 filter blur-sm'
+            : 'opacity-100 scale-100 translate-y-0 filter-none'
             }`}
         >
           <h1 className="text-6xl sm:text-7xl md:text-8xl font-black tracking-widest bg-gradient-to-r from-blue-400 via-indigo-300 to-sky-400 bg-clip-text text-transparent drop-shadow-[0_10px_25px_rgba(59,130,246,0.3)]">
@@ -55,14 +55,14 @@ export function SplashScreen() {
         {/* Tagline */}
         <div
           className={`mt-3 transition-all duration-1000 delay-300 ease-out transform ${phase === 'enter'
-              ? 'opacity-0 translate-y-2'
-              : 'opacity-100 translate-y-0'
+            ? 'opacity-0 translate-y-2'
+            : 'opacity-100 translate-y-0'
             }`}
         >
           <p className="text-xs sm:text-sm font-semibold tracking-wider uppercase text-blue-200/90 bg-blue-950/60 px-4 py-1.5 rounded-full border border-blue-500/30 backdrop-blur-md shadow-lg shadow-blue-950/50">
             for the bros by the bros
           </p>
-          <p className="text-xs sm:text-sm font-semibold tracking-wider uppercase text-blue-200/90 bg-blue-950/60 px-4 py-1.5 rounded-full border border-blue-500/30 backdrop-blur-md shadow-lg shadow-blue-950/50">
+          <p className="text-xs sm:text-sm font-semibold tracking-wider text-blue-200/90 bg-blue-950/60 px-4 py-1.5 rounded-full border border-blue-500/30 backdrop-blur-md shadow-lg shadow-blue-950/50">
             Responsibility, Accountability, Transparency
           </p>
         </div>
