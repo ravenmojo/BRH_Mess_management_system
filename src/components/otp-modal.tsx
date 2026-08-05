@@ -213,20 +213,60 @@ export function OtpVerificationModal({
               </div>
             </div>
 
-            {/* OTP Input */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-1">Enter Verification Code</label>
+            {/* OTP Input - 8-Dot Numeric PIN Visualization */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between ml-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
+                  <KeyRound className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Enter 8-Digit OTP</span>
+                </label>
+                <span className="text-[10px] font-bold text-slate-400">
+                  {otp.length}/8 digits
+                </span>
+              </div>
+
               <div className="relative">
-                <KeyRound className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                {/* Hidden input capturing numeric keypad on iOS & Android */}
                 <input
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  autoComplete="one-time-code"
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  placeholder="Enter OTP"
+                  onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, '').slice(0, 8))}
                   maxLength={8}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-black text-center tracking-widest text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                  className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
                   required
+                  autoFocus
                 />
+
+                {/* 8-Dot / Box PIN Visualization */}
+                <div className="grid grid-cols-8 gap-1 sm:gap-1.5 pointer-events-none">
+                  {Array.from({ length: 8 }).map((_, index) => {
+                    const char = otp[index];
+                    const isFilled = char !== undefined;
+                    const isCurrent = otp.length === index;
+
+                    return (
+                      <div
+                        key={index}
+                        className={`h-11 rounded-xl border flex items-center justify-center font-black text-sm transition-all ${
+                          isFilled
+                            ? 'bg-blue-50/90 dark:bg-blue-950/70 border-blue-500 text-blue-600 dark:text-blue-400 shadow-sm shadow-blue-500/20'
+                            : isCurrent
+                            ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-500/30 bg-white dark:bg-slate-900 animate-pulse'
+                            : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/80 text-slate-300 dark:text-slate-600'
+                        }`}
+                      >
+                        {isFilled ? (
+                          char
+                        ) : (
+                          <span className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-700 inline-block" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
