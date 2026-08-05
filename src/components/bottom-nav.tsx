@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Utensils, Wrench } from 'lucide-react';
+import { Utensils, Wrench, Info } from 'lucide-react';
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -10,6 +10,7 @@ export function BottomNav() {
   const navItems = [
     { label: 'Mess', href: '/', icon: Utensils },
     { label: 'Maintenance', href: '/maintenance', icon: Wrench },
+    { label: 'Hall Info Hub', href: '/hub', icon: Info },
   ];
 
   return (

@@ -73,4 +73,4 @@ When publishing a menu as an Admin, pay attention to the **Live Compliance Widge
 Please use the system responsibly and complain rationally!
 
 ## License
-Private / IITKGP specific usage.
+Open Source with credits to this repo/source for IITKGP specific usage.

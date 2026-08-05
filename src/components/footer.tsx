@@ -11,7 +11,7 @@ export function Footer() {
         <span className="text-gray-900 dark:text-white text-xs">🫶</span>
         <span>by <span className="text-gray-900 dark:text-white">Souradeep Satpathy</span></span>
       </p>
-      <p className="text-sm text-gray-900 dark:text-white pt-0.5">TENSORE Lab, IIT Kharagpur</p>
+      <p className="text-sm text-gray-900 dark:text-white pt-0.5">TeNSoRE Lab, IIT Kharagpur</p>
     </div>
   );
 }

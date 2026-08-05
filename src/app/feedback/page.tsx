@@ -1,17 +1,45 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Send, CheckCircle2, Clock, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { MessageSquare, Send, CheckCircle2, Clock, ShieldCheck, AlertTriangle, Paperclip, Loader2, Image as ImageIcon, Video } from 'lucide-react';
 import Link from 'next/link';
+import { createClient } from '@/utils/supabase/client';
+import { uploadToCloudinary } from '@/lib/cloudinary-upload';
+import { useRouter } from 'next/navigation';
 
 export default function StudentFeedbackPage() {
   const [facilityType, setFacilityType] = useState<'REGULAR_MESS' | 'NIGHT_CANTEEN'>('REGULAR_MESS');
   const [studentName, setStudentName] = useState('');
   const [hallRoll, setHallRoll] = useState('');
+  const [roomNo, setRoomNo] = useState('');
+  const [email, setEmail] = useState('');
   const [comment, setComment] = useState('');
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+  
+  // Auth state
+  const [user, setUser] = useState<any>(null);
+  
+  // Upload state
+  const [file, setFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [mediaUrl, setMediaUrl] = useState<string>('');
+  
+  const router = useRouter();
+  const supabase = createClient();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+      if (user?.email) {
+        setEmail(user.email);
+      }
+    });
+
+    loadFeedbacks();
+  }, []);
 
   const loadFeedbacks = () => {
     fetch('/api/feedback')
@@ -20,12 +48,39 @@ export default function StudentFeedbackPage() {
       .catch(() => { });
   };
 
-  useEffect(() => {
-    loadFeedbacks();
-  }, []);
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const selectedFile = e.target.files[0];
+      // Check 20MB limit
+      if (selectedFile.size > 20 * 1024 * 1024) {
+        alert("File size exceeds 20MB limit.");
+        return;
+      }
+      setFile(selectedFile);
+      
+      // Auto-upload to Cloudinary
+      setIsUploading(true);
+      setUploadProgress(0);
+      try {
+        const url = await uploadToCloudinary(selectedFile, (percent) => {
+          setUploadProgress(percent);
+        });
+        setMediaUrl(url);
+      } catch (err: any) {
+        alert("Upload failed: " + err.message);
+        setFile(null);
+      } finally {
+        setIsUploading(false);
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+      router.push('/login?next=/feedback');
+      return;
+    }
     if (!studentName || !hallRoll || !comment) return;
 
     setSubmitting(true);
@@ -38,16 +93,23 @@ export default function StudentFeedbackPage() {
         body: JSON.stringify({
           studentName,
           hallRoll,
+          roomNo,
+          email,
           comment,
           facilityType,
+          mediaUrl,
         }),
       });
 
       if (res.ok) {
-        setStatusMessage('Feedback submitted successfully to Warden & HMC Admin!');
+        setStatusMessage('Feedback submitted successfully!');
         setStudentName('');
         setHallRoll('');
+        setRoomNo('');
         setComment('');
+        setFile(null);
+        setMediaUrl('');
+        setUploadProgress(0);
         loadFeedbacks();
       } else {
         setStatusMessage('Failed to submit feedback. Please try again.');
@@ -63,9 +125,9 @@ export default function StudentFeedbackPage() {
     <div className="space-y-4 pb-8">
       {/* Header */}
       <div>
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Feedback & Complaint Center</h2>
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Mess Feedback Center</h2>
         <p className="text-xs text-gray-500">
-          Directly report food quality, hygiene, or service issues to the HMC.
+          Report food quality or issues related to the regular mess and night canteen.
         </p>
       </div>
 
@@ -80,11 +142,11 @@ export default function StudentFeedbackPage() {
       {/* Submission Form */}
       <form
         onSubmit={handleSubmit}
-        className="p-4 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 space-y-3 shadow-sm"
+        className="p-4 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 space-y-3 shadow-sm relative overflow-hidden"
       >
         <h3 className="text-xs font-bold text-gray-900 dark:text-white flex items-center space-x-1.5">
           <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-          <span>New Complaint / Suggestion</span>
+          <span>New Feedback Request</span>
         </h3>
 
         {statusMessage && (
@@ -94,27 +156,20 @@ export default function StudentFeedbackPage() {
         )}
 
         {/* Facility Selector */}
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          <button
-            type="button"
-            onClick={() => setFacilityType('REGULAR_MESS')}
-            className={`py-1.5 rounded-lg font-medium border transition-colors ${facilityType === 'REGULAR_MESS'
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700'
-              }`}
-          >
-            Regular Mess
-          </button>
-          <button
-            type="button"
-            onClick={() => setFacilityType('NIGHT_CANTEEN')}
-            className={`py-1.5 rounded-lg font-medium border transition-colors ${facilityType === 'NIGHT_CANTEEN'
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700'
-              }`}
-          >
-            Night Canteen
-          </button>
+        <div className="grid grid-cols-2 gap-2 text-[11px]">
+          {['REGULAR_MESS', 'NIGHT_CANTEEN'].map((type) => (
+             <button
+             key={type}
+             type="button"
+             onClick={() => setFacilityType(type as any)}
+             className={`py-1.5 px-1 rounded-lg font-medium border transition-colors whitespace-nowrap overflow-hidden text-ellipsis ${facilityType === type
+                 ? 'bg-blue-600 text-white border-blue-600'
+                 : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700'
+               }`}
+           >
+             {type.replace('MAINTENANCE_', '').replace('_', ' ')}
+           </button>
+          ))}
         </div>
 
         <div className="grid grid-cols-2 gap-2">
@@ -134,10 +189,24 @@ export default function StudentFeedbackPage() {
             required
             className="w-full px-3 py-1.5 rounded-lg text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
+          <input
+            type="text"
+            placeholder="Room No"
+            value={roomNo}
+            onChange={(e) => setRoomNo(e.target.value)}
+            className="w-full px-3 py-1.5 rounded-lg text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          <input
+            type="email"
+            placeholder="Email *"
+            value={email}
+            readOnly
+            className="w-full px-3 py-1.5 rounded-lg text-xs bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-500 focus:outline-none cursor-not-allowed"
+          />
         </div>
 
         <textarea
-          placeholder="Details of complaint (e.g. food quality, missing mandatory items, cleanliness)..."
+          placeholder="Details of complaint (e.g. food quality, exact location of plumbing issue)..."
           value={comment}
           onChange={(e) => setComment(e.target.value)}
           rows={3}
@@ -145,13 +214,46 @@ export default function StudentFeedbackPage() {
           className="w-full px-3 py-2 rounded-lg text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
 
+        {/* Media Upload */}
+        <div className="border border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-3 bg-gray-50/50 dark:bg-gray-800/50">
+          <label className="flex items-center justify-between cursor-pointer">
+            <div className="flex items-center space-x-2 text-xs text-gray-600 dark:text-gray-400">
+              <Paperclip className="w-4 h-4" />
+              <span>{file ? file.name : 'Attach a photo/video (Max 20MB)'}</span>
+            </div>
+            <input 
+              type="file" 
+              accept="image/*,video/*" 
+              className="hidden" 
+              onChange={handleFileChange}
+              disabled={isUploading}
+            />
+            {isUploading && (
+              <span className="text-[10px] font-bold text-blue-600">
+                {uploadProgress}%
+              </span>
+            )}
+            {mediaUrl && (
+              <CheckCircle2 className="w-4 h-4 text-green-500" />
+            )}
+          </label>
+          {isUploading && (
+            <div className="w-full h-1 bg-gray-200 dark:bg-gray-700 rounded-full mt-2 overflow-hidden">
+              <div 
+                className="h-full bg-blue-600 transition-all duration-300"
+                style={{ width: `${uploadProgress}%` }}
+              ></div>
+            </div>
+          )}
+        </div>
+
         <button
           type="submit"
-          disabled={submitting}
-          className="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors flex items-center justify-center space-x-1.5"
+          disabled={submitting || isUploading}
+          className="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors flex items-center justify-center space-x-1.5 disabled:opacity-50"
         >
-          <Send className="w-3.5 h-3.5" />
-          <span>{submitting ? 'Submitting...' : 'Submit Feedback'}</span>
+          {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+          <span>{submitting ? 'Submitting...' : 'Submit Request'}</span>
         </button>
       </form>
 
@@ -159,7 +261,7 @@ export default function StudentFeedbackPage() {
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400">
-            Submitted Complaints & Status ({feedbacks.length})
+            Recent Requests ({feedbacks.length})
           </h3>
           <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
             {feedbacks.filter(f => f.status === 'RESOLVED').length} Resolved
@@ -170,24 +272,24 @@ export default function StudentFeedbackPage() {
           {feedbacks.map((item) => (
             <div
               key={item.id}
-              className="p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 space-y-1.5 text-xs shadow-sm"
+              className="p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 space-y-2 text-xs shadow-sm"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-1.5">
                   <span className="font-bold text-gray-900 dark:text-white">{item.studentName}</span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded border font-bold uppercase tracking-wider ${item.facilityType === 'NIGHT_CANTEEN'
+                  <span className={`text-[10px] px-2 py-0.5 rounded border font-bold uppercase tracking-wider ${
+                    item.facilityType.includes('MAINTENANCE')
+                      ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800'
+                      : item.facilityType === 'NIGHT_CANTEEN'
                       ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800'
                       : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800'
                     }`}>
-                    {item.facilityType === 'NIGHT_CANTEEN' ? 'Canteen' : 'Mess'}
+                    {item.facilityType.replace('MAINTENANCE_', '').replace('_', ' ')}
                   </span>
                 </div>
 
                 <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center space-x-1 ${item.status === 'RESOLVED'
-                      ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
-                      : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
-                    }`}
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center space-x-1 bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300`}
                 >
                   {item.status === 'RESOLVED' ? (
                     <CheckCircle2 className="w-3 h-3" />
@@ -199,6 +301,13 @@ export default function StudentFeedbackPage() {
               </div>
 
               <p className="text-gray-700 dark:text-gray-300">{item.comment}</p>
+              
+              {item.mediaUrl && (
+                <a href={item.mediaUrl} target="_blank" rel="noreferrer" className="inline-flex items-center space-x-1.5 px-2 py-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md text-[10px] font-medium transition-colors text-blue-600">
+                  {item.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? <Video className="w-3 h-3" /> : <ImageIcon className="w-3 h-3" />}
+                  <span>View Attached Media</span>
+                </a>
+              )}
 
               {item.remark && (
                 <div className="mt-2 p-2 rounded bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/50 text-[11px] text-blue-900 dark:text-blue-200 flex items-start space-x-1.5">
@@ -211,14 +320,6 @@ export default function StudentFeedbackPage() {
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Admin Link */}
-      <div className="pt-2 flex justify-center">
-        <Link href="/admin" className="px-4 py-2 rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold flex items-center space-x-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
-          <ShieldCheck className="w-4 h-4" />
-          <span>Access Mess Admin Panel</span>
-        </Link>
       </div>
     </div>
   );
