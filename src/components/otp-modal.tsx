@@ -1,0 +1,185 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Mail, KeyRound, Loader2, X, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
+
+interface OtpVerificationModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  initialEmail: string;
+  onVerified: (verifiedEmail: string) => Promise<void> | void;
+}
+
+export function OtpVerificationModal({
+  isOpen,
+  onClose,
+  initialEmail,
+  onVerified,
+}: OtpVerificationModalProps) {
+  const [email, setEmail] = useState(initialEmail);
+  const [otp, setOtp] = useState('');
+  const [step, setStep] = useState<'email' | 'otp'>('email');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    if (isOpen) {
+      const savedEmail = localStorage.getItem('bros_last_email') || initialEmail;
+      setEmail(savedEmail);
+      setOtp('');
+      setStep('email');
+      setError(null);
+    }
+  }, [isOpen, initialEmail]);
+
+  if (!isOpen) return null;
+
+  const handleSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    const trimmedEmail = email.trim().toLowerCase();
+
+    if (!trimmedEmail.endsWith('.iitkgp.ac.in') && trimmedEmail !== 'soura7@gmail.com' && trimmedEmail !== 'souradeep.satpathy@gmail.com') {
+      setError('Only .iitkgp.ac.in institute email addresses are allowed.');
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithOtp({
+      email: trimmedEmail,
+    });
+
+    setLoading(false);
+    if (error) {
+      setError(error.message || 'Failed to send OTP. Please check your email address.');
+    } else {
+      localStorage.setItem('bros_last_email', trimmedEmail);
+      setStep('otp');
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    const trimmedEmail = email.trim().toLowerCase();
+
+    const { error } = await supabase.auth.verifyOtp({
+      email: trimmedEmail,
+      token: otp.trim(),
+      type: 'email',
+    });
+
+    setLoading(false);
+    if (error) {
+      setError(error.message || 'Invalid or expired OTP. Please try again.');
+    } else {
+      localStorage.setItem('bros_last_email', trimmedEmail);
+      await onVerified(trimmedEmail);
+      onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md transition-opacity">
+      <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          aria-label="Close"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        <div className="flex flex-col items-center text-center space-y-2 pt-2">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400">
+            <ShieldCheck className="w-6 h-6" />
+          </div>
+          <h3 className="text-lg font-black text-slate-900 dark:text-white">Email OTP Verification</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs">
+            Verify your institute email to complete submitting your request.
+          </p>
+        </div>
+
+        {error && (
+          <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold">
+            {error}
+          </div>
+        )}
+
+        {step === 'email' ? (
+          <form onSubmit={handleSendOtp} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-1">Institute Email</label>
+              <div className="relative">
+                <Mail className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="yourname@iitkgp.ac.in"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                  required
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={loading || !email.trim()}
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition-all disabled:opacity-50 flex items-center justify-center space-x-2"
+            >
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              <span>Send OTP to Email</span>
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleVerifyOtp} className="space-y-4">
+            <div className="text-center bg-blue-50/70 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40 p-2.5 rounded-xl">
+              <p className="text-xs text-slate-600 dark:text-slate-300">
+                OTP sent to <span className="font-bold text-slate-900 dark:text-white">{email}</span>
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-1">Enter 8-digit OTP</label>
+              <div className="relative">
+                <KeyRound className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                <input
+                  type="text"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  placeholder="12345678"
+                  maxLength={8}
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-black text-center tracking-widest text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                  required
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading || otp.trim().length !== 8}
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition-all disabled:opacity-50 flex items-center justify-center space-x-2"
+            >
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              <span>Verify & Complete Submission</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStep('email')}
+              className="w-full py-1.5 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 font-semibold transition-colors text-center"
+            >
+              Change Email Address
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}

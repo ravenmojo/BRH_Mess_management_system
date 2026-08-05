@@ -2,8 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, MessageSquare, CheckCircle, ChevronDown } from 'lucide-react';
+import { AdminAuthGate } from '@/components/admin-auth-gate';
 
 export default function CanteenAdminDashboard() {
+  return (
+    <AdminAuthGate title="Night Canteen Admin Portal">
+      <CanteenAdminContent />
+    </AdminAuthGate>
+  );
+}
+
+function CanteenAdminContent() {
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [remarkInputs, setRemarkInputs] = useState<{ [id: string]: string }>({});
 

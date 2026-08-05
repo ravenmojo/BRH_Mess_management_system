@@ -23,7 +23,17 @@ const SEASONAL_CURRIES = [
   "Chickpeas Curry", "Alu Cabbage", "Cauliflower Cur"
 ];
 
+import { AdminAuthGate } from '@/components/admin-auth-gate';
+
 export default function AdminPollPage() {
+  return (
+    <AdminAuthGate title="Poll Admin Portal">
+      <AdminPollContent />
+    </AdminAuthGate>
+  );
+}
+
+function AdminPollContent() {
   const [polls, setPolls] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   

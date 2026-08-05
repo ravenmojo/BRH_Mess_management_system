@@ -2,8 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, MessageSquare, CheckCircle, ChevronDown } from 'lucide-react';
+import { AdminAuthGate } from '@/components/admin-auth-gate';
 
 export default function MaintenanceAdminDashboard() {
+  return (
+    <AdminAuthGate title="Maintenance Admin Portal">
+      <MaintenanceAdminContent />
+    </AdminAuthGate>
+  );
+}
+
+function MaintenanceAdminContent() {
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [remarkInputs, setRemarkInputs] = useState<{ [id: string]: string }>({});
 

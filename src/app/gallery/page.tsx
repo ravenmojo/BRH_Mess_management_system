@@ -248,7 +248,7 @@ export default function PublicGalleryPage() {
                 <form onSubmit={handleUploadSubmit} className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Name</label>
-                    <input type="text" required value={uploaderName} onChange={e => setUploaderName(e.target.value)} className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" placeholder="John Doe" />
+                    <input type="text" required value={uploaderName} onChange={e => setUploaderName(e.target.value)} className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Aarav Sharma" />
                   </div>
                   
                   <div>

@@ -21,18 +21,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} pb-20`}>
+      <body className={`${inter.className} pb-20 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <header className="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 transition-colors duration-500">
+          <header className="sticky top-0 z-40 glass-header">
             <div className="max-w-md mx-auto px-4 h-14 flex items-center justify-between">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2.5">
                 <BackButton />
-                <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center transition-colors duration-500 overflow-hidden">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-sm shadow-blue-500/20 overflow-hidden ring-1 ring-white/20">
                   <img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f1ee-1f1f3.svg" alt="India" className="w-5 h-5 object-contain" />
                 </div>
                 <div className="flex flex-col justify-center">
-                  <h1 className="text-lg font-black tracking-tight text-gray-900 dark:text-white leading-none transition-colors duration-500">BROS</h1>
-                  <span className="text-[9px] sm:text-[10px] uppercase tracking-wider sm:tracking-widest text-indigo-600 dark:text-indigo-400 font-bold mt-0.5 transition-colors duration-500">
+                  <h1 className="text-lg font-black tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent leading-none">BROS</h1>
+                  <span className="text-[9px] sm:text-[10px] uppercase tracking-wider sm:tracking-widest text-indigo-600 dark:text-indigo-400 font-bold mt-0.5">
                     BR Ambedkar Hall <span className="text-fuchsia-600 dark:text-fuchsia-400">Operations & Services</span>
                   </span>
                 </div>
@@ -49,3 +49,4 @@ export default function RootLayout({
     </html>
   );
 }
+

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Moon, Utensils, MessageSquare, Send, CheckCircle, Clock, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
+import { OtpVerificationModal } from '@/components/otp-modal';
 
 export default function NightCanteenPage() {
   // CRITICAL REQUIREMENT: Strictly TWO tabs ONLY
@@ -23,10 +24,12 @@ export default function NightCanteenPage() {
   // Feedback State
   const [studentName, setStudentName] = useState('');
   const [hallRoll, setHallRoll] = useState('');
+  const [email, setEmail] = useState('');
   const [comment, setComment] = useState('');
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
+  const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
 
   const fetchCanteenFeedbacks = () => {
     fetch('/api/feedback?facility=NIGHT_CANTEEN')
@@ -36,13 +39,23 @@ export default function NightCanteenPage() {
   };
 
   useEffect(() => {
+    const savedEmail = localStorage.getItem('bros_last_email');
+    if (savedEmail) {
+      setEmail(savedEmail);
+    }
     fetchCanteenFeedbacks();
   }, []);
 
-  const handleSubmitFeedback = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!studentName || !comment) return;
+    if (!studentName || !email || !comment) {
+      alert("Please fill in your name, email address, and comment.");
+      return;
+    }
+    setIsOtpModalOpen(true);
+  };
 
+  const handleExecuteSubmit = async (verifiedEmail: string) => {
     setSubmitting(true);
     try {
       const res = await fetch('/api/feedback', {
@@ -50,7 +63,8 @@ export default function NightCanteenPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           studentName,
-          hallRoll,
+          hallRoll: hallRoll || 'STUDENT',
+          email: verifiedEmail,
           comment,
           facilityType: 'NIGHT_CANTEEN',
         }),
@@ -71,32 +85,32 @@ export default function NightCanteenPage() {
   };
 
   return (
-    <div className="space-y-4 pb-8">
+    <div className="space-y-5 pb-8">
       {/* Header Banner */}
-      <div className="rounded-xl bg-gradient-to-r from-slate-900 to-blue-950 p-4 text-white shadow-md flex items-center justify-between">
+      <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 p-5 text-white shadow-xl shadow-indigo-950/20 flex items-center justify-between ring-1 ring-white/10">
         <div>
-          <div className="flex items-center space-x-1.5 text-xs text-blue-300 font-semibold mb-1">
+          <div className="flex items-center space-x-1.5 text-xs text-blue-400 font-bold mb-1 tracking-wider uppercase">
             <Moon className="w-3.5 h-3.5" />
             <span>BROS NIGHT CANTEEN</span>
           </div>
-          <h2 className="text-base font-bold">Independent Canteen Services</h2>
-          <p className="text-[11px] text-slate-300">Open 09:30 PM - 02:00 AM Daily</p>
+          <h2 className="text-base font-black">Independent Canteen Services</h2>
+          <p className="text-[11px] text-slate-300 font-medium">Open 09:30 PM - 02:00 AM Daily</p>
         </div>
         <div className="text-right">
-          <span className="inline-block px-2 py-1 rounded bg-blue-600/50 text-[10px] font-mono border border-blue-400/30">
+          <span className="inline-block px-2.5 py-1 rounded-full bg-blue-600/30 text-[10px] font-bold font-mono border border-blue-400/30 text-blue-200">
             No Budget Cap
           </span>
         </div>
       </div>
 
       {/* STRICT 2-TAB SWITCHER (Menu & Feedback/Complaint ONLY) */}
-      <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700">
+      <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-slate-200/80 dark:bg-slate-900/80 border border-slate-300/80 dark:border-slate-800/80 backdrop-blur-md">
         <button
           onClick={() => setActiveTab('menu')}
-          className={`flex items-center justify-center space-x-2 py-2 rounded-lg text-xs font-bold transition-all ${
+          className={`flex items-center justify-center space-x-2 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
             activeTab === 'menu'
-              ? 'bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 shadow-sm'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-md scale-[1.01]'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
           }`}
         >
           <Utensils className="w-4 h-4" />
@@ -105,10 +119,10 @@ export default function NightCanteenPage() {
 
         <button
           onClick={() => setActiveTab('feedback')}
-          className={`flex items-center justify-center space-x-2 py-2 rounded-lg text-xs font-bold transition-all ${
+          className={`flex items-center justify-center space-x-2 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
             activeTab === 'feedback'
-              ? 'bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 shadow-sm'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-md scale-[1.01]'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
           }`}
         >
           <MessageSquare className="w-4 h-4" />
@@ -119,7 +133,7 @@ export default function NightCanteenPage() {
       {/* TAB 1: MENU */}
       {activeTab === 'menu' && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between px-1 text-xs text-gray-500">
+          <div className="flex items-center justify-between px-1 text-xs font-semibold text-slate-500">
             <span>Item Name & Category</span>
             <span>Price</span>
           </div>
@@ -128,19 +142,19 @@ export default function NightCanteenPage() {
             {canteenMenuItems.map((item) => (
               <div
                 key={item.id}
-                className="p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 flex items-center justify-between shadow-sm"
+                className="p-3.5 rounded-2xl glass-card flex items-center justify-between"
               >
                 <div>
-                  <h4 className="text-xs font-bold text-gray-900 dark:text-white">{item.name}</h4>
-                  <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">{item.name}</h4>
+                  <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold">
                     {item.category}
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-sm font-extrabold text-gray-900 dark:text-white font-mono">
+                  <span className="text-sm font-black text-slate-900 dark:text-white font-mono">
                     ₹{item.price}
                   </span>
-                  <div className="text-[10px] text-blue-600 dark:text-blue-400 flex items-center justify-end space-x-0.5">
+                  <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center justify-end space-x-0.5">
                     <CheckCircle className="w-3 h-3" />
                     <span>Available</span>
                   </div>
@@ -156,37 +170,46 @@ export default function NightCanteenPage() {
         <div className="space-y-4">
           {/* Canteen Specific Feedback Form */}
           <form
-            onSubmit={handleSubmitFeedback}
-            className="p-4 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 space-y-3 shadow-sm"
+            onSubmit={handleFormSubmit}
+            className="p-5 rounded-2xl glass-card space-y-3.5"
           >
-            <h3 className="text-xs font-bold text-gray-900 dark:text-white flex items-center space-x-1.5">
+            <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center space-x-2">
               <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <span>Submit Night Canteen Feedback / Complaint</span>
             </h3>
 
             {message && (
-              <div className="p-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 text-xs font-medium">
+              <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-medium">
                 {message}
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2.5">
               <input
                 type="text"
                 placeholder="Your Name *"
                 value={studentName}
                 onChange={(e) => setStudentName(e.target.value)}
                 required
-                className="w-full px-3 py-1.5 rounded-lg text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
               />
               <input
                 type="text"
                 placeholder="Roll No. (Optional)"
                 value={hallRoll}
                 onChange={(e) => setHallRoll(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
               />
             </div>
+
+            <input
+              type="email"
+              placeholder="Institute Email *"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            />
 
             <textarea
               placeholder="Describe your complaint, food quality issue, or suggestion..."
@@ -194,13 +217,13 @@ export default function NightCanteenPage() {
               onChange={(e) => setComment(e.target.value)}
               rows={3}
               required
-              className="w-full px-3 py-2 rounded-lg text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full px-3.5 py-2.5 rounded-xl text-xs font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             />
 
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors flex items-center justify-center space-x-1.5"
+              className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all flex items-center justify-center space-x-1.5"
             >
               <Send className="w-3.5 h-3.5" />
               <span>{submitting ? 'Submitting...' : 'Submit Canteen Feedback'}</span>
@@ -208,40 +231,40 @@ export default function NightCanteenPage() {
           </form>
 
           {/* Canteen Feedbacks Timeline */}
-          <div className="space-y-2">
-            <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 px-1">
+          <div className="space-y-2.5">
+            <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 px-1">
               Canteen Feedback History ({feedbacks.length})
             </h4>
 
             {feedbacks.length === 0 ? (
-              <div className="p-4 rounded-xl bg-white dark:bg-gray-900 border text-center text-xs text-gray-500">
+              <div className="p-5 rounded-2xl glass-card text-center text-xs font-semibold text-slate-500">
                 No canteen complaints submitted yet.
               </div>
             ) : (
               feedbacks.map((fb) => (
                 <div
                   key={fb.id}
-                  className="p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 space-y-1.5 text-xs shadow-sm"
+                  className="p-4 rounded-2xl glass-card space-y-1.5 text-xs"
                 >
-                  <div className="flex items-center justify-between text-gray-500 text-[11px]">
-                    <span className="font-semibold text-gray-900 dark:text-white">
+                  <div className="flex items-center justify-between text-slate-500 text-[11px]">
+                    <span className="font-bold text-slate-900 dark:text-white">
                       {fb.studentName} ({fb.hallRoll})
                     </span>
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                         fb.status === 'RESOLVED'
-                          ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
-                          : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
+                          ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
+                          : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
                       }`}
                     >
                       {fb.status}
                     </span>
                   </div>
 
-                  <p className="text-gray-700 dark:text-gray-300">{fb.comment}</p>
+                  <p className="text-slate-700 dark:text-slate-300 font-medium">{fb.comment}</p>
 
                   {fb.remark && (
-                    <div className="p-2 rounded bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/50 text-[11px] text-blue-900 dark:text-blue-200">
+                    <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/50 text-[11px] text-blue-900 dark:text-blue-200">
                       <strong>Admin Remark:</strong> {fb.remark}
                     </div>
                   )}
@@ -254,11 +277,20 @@ export default function NightCanteenPage() {
 
       {/* Admin Link */}
       <div className="pt-2 flex justify-center">
-        <Link href="/night-canteen/admin" className="px-4 py-2 rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold flex items-center space-x-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+        <Link href="/night-canteen/admin" className="px-4 py-2 rounded-full border border-blue-200/80 dark:border-blue-800/80 bg-blue-50/80 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold flex items-center space-x-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shadow-sm">
           <ShieldCheck className="w-4 h-4" />
           <span>Access Canteen Admin Panel</span>
         </Link>
       </div>
+
+      <OtpVerificationModal
+        isOpen={isOtpModalOpen}
+        onClose={() => setIsOtpModalOpen(false)}
+        initialEmail={email}
+        onVerified={handleExecuteSubmit}
+      />
     </div>
   );
 }
+
+
