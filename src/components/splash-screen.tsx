@@ -32,42 +32,52 @@ export function SplashScreen() {
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950 text-white transition-all duration-700 ease-in-out ${phase === 'fade-out' ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'
-        }`}
+      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950 text-white transition-all duration-700 ease-in-out ${
+        phase === 'fade-out' ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'
+      }`}
     >
-      {/* Subtle background glow */}
-      <div className="absolute w-72 h-72 rounded-full bg-blue-600/20 blur-3xl animate-pulse pointer-events-none" />
-      <div className="absolute w-56 h-56 rounded-full bg-indigo-500/15 blur-2xl pointer-events-none" />
+      {/* Ambient background orbs */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-blue-600/10 blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[55%] w-80 h-80 rounded-full bg-indigo-500/15 blur-[80px] pointer-events-none animate-pulse" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-[45%] -translate-y-[50%] w-40 h-40 rounded-full bg-sky-400/10 blur-[60px] pointer-events-none" />
 
-      <div className="relative z-10 flex flex-col items-center justify-center text-center px-4">
+      {/* Content container — true center using flex on parent */}
+      <div className="relative z-10 flex flex-col items-center text-center px-6">
         {/* Main BROS Logo */}
         <div
-          className={`transition-all duration-1000 ease-out transform ${phase === 'enter'
-            ? 'opacity-0 scale-75 translate-y-4 filter blur-sm'
-            : 'opacity-100 scale-100 translate-y-0 filter-none'
-            }`}
+          className={`transition-all duration-1000 ease-out transform ${
+            phase === 'enter'
+              ? 'opacity-0 scale-75 translate-y-4 blur-sm'
+              : 'opacity-100 scale-100 translate-y-0 blur-0'
+          }`}
         >
-          <h1 className="text-6xl sm:text-7xl md:text-8xl font-black tracking-widest bg-gradient-to-r from-blue-400 via-indigo-300 to-sky-400 bg-clip-text text-transparent drop-shadow-[0_10px_25px_rgba(59,130,246,0.3)]">
+          <h1 className="text-7xl sm:text-8xl md:text-9xl font-black tracking-[0.2em] bg-gradient-to-b from-white via-blue-200 to-blue-400 bg-clip-text text-transparent leading-none" style={{ WebkitTextStroke: '0.5px rgba(147,197,253,0.15)' }}>
             BROS
           </h1>
+          {/* Reflection glow under the text */}
+          <div className="mx-auto mt-2 h-px w-32 bg-gradient-to-r from-transparent via-blue-400/60 to-transparent" />
         </div>
 
-        {/* Tagline */}
+        {/* Taglines — stacked with subtle stagger delay */}
         <div
-          className={`mt-3 transition-all duration-1000 delay-300 ease-out transform ${phase === 'enter'
-            ? 'opacity-0 translate-y-2'
-            : 'opacity-100 translate-y-0'
-            }`}
+          className={`mt-6 flex flex-col items-center space-y-2 transition-all duration-1000 delay-300 ease-out transform ${
+            phase === 'enter'
+              ? 'opacity-0 translate-y-3'
+              : 'opacity-100 translate-y-0'
+          }`}
         >
-          <p className="text-xs sm:text-sm font-semibold tracking-wider uppercase text-blue-200/90 bg-blue-950/60 px-4 py-1.5 rounded-full border border-blue-500/30 backdrop-blur-md shadow-lg shadow-blue-950/50">
+          <p className="text-[11px] sm:text-xs font-bold tracking-[0.25em] uppercase text-blue-300/90">
             for the bros by the bros
           </p>
-          <p className="text-xs sm:text-sm font-semibold tracking-wider text-blue-200/90 bg-blue-950/60 px-4 py-1.5 rounded-full border border-blue-500/30 backdrop-blur-md shadow-lg shadow-blue-950/50">
-            Responsibility, Accountability, Transparency
-          </p>
+          <div className="flex items-center space-x-2.5 text-[10px] sm:text-[11px] font-semibold tracking-[0.15em] uppercase text-slate-400">
+            <span>Responsibility</span>
+            <span className="w-1 h-1 rounded-full bg-blue-500/70" />
+            <span>Accountability</span>
+            <span className="w-1 h-1 rounded-full bg-blue-500/70" />
+            <span>Transparency</span>
+          </div>
         </div>
       </div>
     </div>
   );
 }
-
