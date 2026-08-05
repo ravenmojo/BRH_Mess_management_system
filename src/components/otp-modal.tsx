@@ -208,7 +208,7 @@ export function OtpVerificationModal({
                   <span>📁 Check Spam / Junk Folder!</span>
                 </p>
                 <p className="text-[10px] text-amber-700 dark:text-amber-300 font-medium">
-                  If OTP does not appear in Primary Inbox within 15s, check your Spam or Junk folder.
+                  If OTP does not appear in Primary Inbox in about 30s, check your Spam or Junk folder.
                 </p>
               </div>
             </div>
@@ -256,8 +256,8 @@ export function OtpVerificationModal({
                   {attempts >= 3
                     ? 'Max tries (3/3)'
                     : cooldown > 0
-                    ? `Resend in ${cooldown}s`
-                    : `Resend OTP (${3 - attempts} left)`}
+                      ? `Resend in ${cooldown}s`
+                      : `Resend OTP (${3 - attempts} left)`}
                 </span>
               </button>
 
