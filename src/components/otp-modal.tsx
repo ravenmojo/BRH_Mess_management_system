@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Mail, KeyRound, Loader2, X, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Mail, KeyRound, Loader2, X, ShieldCheck, RefreshCw } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 
 interface OtpVerificationModalProps {
@@ -21,7 +21,12 @@ export function OtpVerificationModal({
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'email' | 'otp'>('email');
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // OTP Resend Cooldown & Attempt tracking
+  const [attempts, setAttempts] = useState(1); // Initial attempt = 1
+  const [cooldown, setCooldown] = useState(60); // 60 seconds timer
 
   const supabase = createClient();
 
@@ -32,8 +37,21 @@ export function OtpVerificationModal({
       setOtp('');
       setStep('email');
       setError(null);
+      setAttempts(1);
+      setCooldown(60);
     }
   }, [isOpen, initialEmail]);
+
+  // 60 seconds countdown timer
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (step === 'otp' && cooldown > 0) {
+      timer = setInterval(() => {
+        setCooldown((prev) => Math.max(0, prev - 1));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [step, cooldown]);
 
   if (!isOpen) return null;
 
@@ -59,6 +77,33 @@ export function OtpVerificationModal({
     } else {
       localStorage.setItem('bros_last_email', trimmedEmail);
       setStep('otp');
+      setAttempts(1);
+      setCooldown(60);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (attempts >= 3) {
+      setError('Maximum 3 OTP attempts reached. Please change email address or wait a few minutes.');
+      return;
+    }
+    if (cooldown > 0 || resendLoading) return;
+
+    setError(null);
+    setResendLoading(true);
+
+    const trimmedEmail = email.trim().toLowerCase();
+    const { error } = await supabase.auth.signInWithOtp({
+      email: trimmedEmail,
+    });
+
+    setResendLoading(false);
+    if (error) {
+      setError(error.message || 'Failed to resend OTP. Please try again.');
+    } else {
+      setAttempts((prev) => prev + 1);
+      setCooldown(60);
+      setOtp('');
     }
   };
 
@@ -139,21 +184,22 @@ export function OtpVerificationModal({
           </form>
         ) : (
           <form onSubmit={handleVerifyOtp} className="space-y-4">
-            <div className="text-center bg-blue-50/70 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40 p-2.5 rounded-xl">
+            <div className="text-center bg-blue-50/70 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40 p-2.5 rounded-xl space-y-1">
               <p className="text-xs text-slate-600 dark:text-slate-300">
                 OTP sent to <span className="font-bold text-slate-900 dark:text-white">{email}</span>
               </p>
+              <p className="text-[10px] text-slate-400">Attempt {attempts} of 3</p>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-1">Enter 8-digit OTP</label>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-1">Enter Verification Code / OTP</label>
               <div className="relative">
                 <KeyRound className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
                 <input
                   type="text"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
-                  placeholder="12345678"
+                  placeholder="Enter OTP"
                   maxLength={8}
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-black text-center tracking-widest text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
                   required
@@ -163,20 +209,46 @@ export function OtpVerificationModal({
 
             <button
               type="submit"
-              disabled={loading || otp.trim().length !== 8}
+              disabled={loading || otp.trim().length < 6}
               className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition-all disabled:opacity-50 flex items-center justify-center space-x-2"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               <span>Verify & Complete Submission</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => setStep('email')}
-              className="w-full py-1.5 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 font-semibold transition-colors text-center"
-            >
-              Change Email Address
-            </button>
+            <div className="flex items-center justify-between pt-1 text-xs">
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={cooldown > 0 || attempts >= 3 || resendLoading}
+                className="text-blue-600 dark:text-blue-400 hover:underline font-bold disabled:opacity-50 disabled:no-underline flex items-center space-x-1"
+              >
+                {resendLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1 inline" />
+                ) : (
+                  <RefreshCw className="w-3.5 h-3.5 mr-1 inline" />
+                )}
+                <span>
+                  {attempts >= 3
+                    ? 'Max tries (3/3)'
+                    : cooldown > 0
+                    ? `Resend in ${cooldown}s`
+                    : `Resend OTP (${3 - attempts} left)`}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setStep('email');
+                  setAttempts(1);
+                  setCooldown(0);
+                }}
+                className="text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 font-semibold transition-colors"
+              >
+                Change Email
+              </button>
+            </div>
           </form>
         )}
       </div>
