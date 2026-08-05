@@ -1,76 +1,121 @@
-# BRH Hall Management System
+# BROS – BR Ambedkar Hall Operations & Services
 
-A comprehensive Next.js web application built as a centralized solution for the students of B.R. Ambedkar Hall (BRH) (currently) at IIT Kharagpur. The system handles weekly mess menu scheduling, rigorous mess guideline validation (budgeting, mandatory item checks, and dietary constraints), student feedback, and hall maintenance requests.
+A comprehensive, mobile-first Next.js web application built as a centralized digital platform for the students of **B.R. Ambedkar Hall (BRH) at IIT Kharagpur**. BROS covers mess management, maintenance complaints, night canteen, student polls, a media gallery, and a community information hub — all behind a seamless OTP-based verification system.
 
-## Features
+> **"For the Bros, By the Bros"** — Responsibility, Accountability, Transparency.
 
-### 🍽️ Student Portals
-- **Interactive Menu Viewer:** Students can view the live weekly menu categorized by day and meal (Breakfast, Lunch, Dinner).
-- **Complaints & Feedback:** A dedicated portal for students to submit rational feedback and complaints regarding the mess food quality or service.
-- **Maintenance Portal:** A separate channel to log maintenance issues within the hall premises. Covers multiple categories including Electrical, Civil (Plumbing & Carpentry), Sweeping/Cleaning, Internet/Network, and Pest Control. Features an administrative dashboard for the maintenance secretary to track and resolve student issues.
+---
 
-### 🛡️ Admin & Menu Builder
-- **Dynamic Weekly Menu Builder:** Admins can structure a full 7-day menu for the mess, adjusting items across "Common", "Option 1/2", "Veg", and "Non-Veg" categories.
-- **Live Compliance Widgets:** As the admin builds the menu, the system runs strict, real-time mess guideline validations:
-  - **Budget Cap Enforcement (PDF Logic):** Calculates the average rate per day per student. Flags if the mathematical sum exceeds the strict ₹826/week limit, allowing for a service provider adjustment buffer up to ₹850.
-  - **Mandatory Items Check:** Ensures that essential Indian staples (Rice, Roti, Dal) are present in major meals.
-  - **Salad Count:** Ensures a minimum of 11 salad servings per week across lunch and dinner.
-- **Visual Validation UI:** Non-critical violations highlight in yellow, while critical blocking errors flash red to prevent publishing out-of-budget menus.
+## ✨ Features
 
-### 🌓 Modern UI/UX
-- **Dark Mode Support:** Fully integrated light and dark modes with sleek, smooth transitions and glassmorphism styling.
-- **Responsive Design:** Mobile-first, fully responsive layouts using Tailwind CSS.
+### 🍽️ Mess Management
+- **Live Weekly Menu Viewer:** Browse the full 7-day mess schedule by day and meal (Breakfast, Lunch, Dinner), with grouped item options (Common, Veg, Non-Veg, Option 1/2).
+- **Mess Feedback & Complaints:** Submit structured complaints and feedback for the regular mess with media attachments (photo/video via Cloudinary).
+- **OTP-Verified Submissions:** All complaint/feedback submissions require email OTP verification inline — no prior login needed to browse the app.
 
-## Tech Stack
+### 🔧 Maintenance Portal
+- **Category-Based Complaints:** Log issues across six categories — Washroom, Water Supply, Electrical, Civil (Plumbing & Carpentry), and Cleaning.
+- **Media Attachments:** Attach photos or videos (up to 20MB) to complaints, automatically uploaded to Cloudinary.
+- **Admin Resolution Timeline:** Track submitted complaints and view admin remarks and resolution status live.
+- **Maintenance Admin Panel:** A dedicated dashboard for the maintenance secretary, protected by the Admin Auth Gate.
 
-- **Framework:** [Next.js](https://nextjs.org/) (React)
-- **Language:** TypeScript
-- **Styling:** [Tailwind CSS](https://tailwindcss.com/)
-- **Icons:** [Lucide React](https://lucide.dev/)
-- **Database / ORM:** [Prisma](https://www.prisma.io/)
-- **Theming:** `next-themes`
+### 🌙 Night Canteen
+- **Live Canteen Menu:** Browse the independent night canteen menu (open 9:30 PM – 2:00 AM) with item names, categories, and prices.
+- **Canteen Feedback:** Submit complaints or suggestions specific to the night canteen, also OTP-verified.
 
-## Getting Started
+### 📊 Mess Poll
+- **Monthly Seasonal Poll:** Boarders vote on which seasonal vegetable curry they want included in the upcoming month's menu.
+- **Auto-Locking:** Voting automatically locks after the 15th of each month (configurable by admin override).
+- **Live Results:** Real-time vote count and percentage breakdown visible to all users.
+- **Poll Admin Panel:** Create, manage, lock/unlock, and delete polls with a dedicated admin interface.
 
-### Prerequisites
-Make sure you have Node.js and npm installed on your local environment.
+### 📸 Gallery
+- **Mess Duty Gallery:** Transparent visual records of mess operations — raw materials, cleaning, weight checking, and duty execution.
+- **Media Upload with Approval Flow:** Students can submit photos/videos (up to 5MB) via an upload modal. All submissions are held for admin approval before appearing in the gallery.
+- **Admin Moderation:** Pending uploads appear in the Mess Admin panel for quick Approve/Reject decisions.
+- **Category Filtering:** Browse gallery media by category (Operations, Cleaning, Ingredients, etc.).
 
-### Installation
+### 🏛️ Hall Info Hub
+- **Weekend Movies:** Upcoming movie screening announcements with title, venue, and showtime.
+- **Hall Activities:** A log of students participating in inter-hall and intra-hall events.
+- **Hall Achievements:** Showcase of hall-level wins, awards, and accolades.
+- **Emergency Contacts:** Direct-call links to key hall contacts (President, Secretaries, Warden, Hospital, Security) — dynamically populated from the database or falls back to defaults.
+- **Boarder Suggestion Portal:** Submit improvement ideas (Mess, Events, Sports, etc.) directly to the hall council with OTP verification.
+- **Hall Info Admin Panel:** A dedicated panel to manage movies, activities, achievements, emergency contacts, and seed all hub data.
 
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+### 🛡️ Admin Portals
+- **Mess Admin Panel:** Full weekly menu builder with live compliance validation widgets, feedback moderation, and gallery upload approval.
+  - **Budget Enforcement:** Real-time check against the ₹826/week hard cap (with a ₹850 service provider buffer).
+  - **Mandatory Item Check:** Flags missing staples (Rice, Roti, Dal) in any major meal.
+  - **Salad Count:** Enforces a minimum of 11 salad servings per week.
+- **Night Canteen Admin Panel:** View and manage canteen-specific feedback submissions.
+- **Maintenance Admin Panel:** Track and resolve all maintenance complaints by category, with remark support.
+- **Hall Info Admin Panel:** Manage all Hub sub-sections from a single interface.
+- **All Admin Panels** are protected by the `AdminAuthGate` component requiring a secure passkey.
 
-2. **Database Setup:**
-   Ensure your database connection string is properly set in the `.env` file (if applicable). Then generate the Prisma client and push the schema:
-   ```bash
-   npm run prisma:generate
-   npm run prisma:push
-   ```
+### 🔐 Authentication & Verification
+- **Sessionless OTP Verification:** No persistent login required. Email OTP verification is triggered inline when a user submits any complaint, suggestion, or vote.
+- **Allowed Emails:** Only `iitkgp.ac.in` email addresses are permitted, with whitelisted admin emails.
+- **Persistent Email Autofill:** The last verified email is stored in `localStorage` and auto-filled in all forms for convenience.
 
-3. **Start the development server:**
-   ```bash
-   npm run dev
-   ```
 
-4. **Open the app:**
-   Navigate to [http://localhost:3000](http://localhost:3000) in your browser.
+### 📱 PWA Support
+- **Installable:** A `manifest.json` and PWA meta tags allow users to install BROS as a home screen app on mobile devices.
 
-## Project Structure
+### 🌓 UI/UX
+- **Splash Screen:** Animated BROS intro screen shown once per session.
+- **Dark Mode:** Full light/dark mode with glassmorphism styling and smooth transitions.
+- **Glassmorphism Design:** Cards and navigation use `backdrop-blur` glass effects throughout.
+- **Mobile-First:** Fully responsive, bottom-navigation-driven layout optimized for mobile browsers.
+- **Micro-Animations:** Hover effects, scale transitions, and animated indicators enhance interactivity.
 
-- `/src/app`: Contains the Next.js App Router pages (`/menu`, `/admin`, `/feedback`, etc.).
-- `/src/lib`: Contains core business logic, including `mess-rules.ts` which handles the complex pricing validation.
-- `/src/components`: Reusable UI components.
-- `/prisma`: Contains the `schema.prisma` defining the database models.
+---
 
-## Usage Guidelines
 
-When publishing a menu as an Admin, pay attention to the **Live Compliance Widgets**. 
-- A **Yellow Warning** means the menu deviates slightly from standard guidelines (e.g., missing Roti on a Friday, or relying on the Service Provider Adjustment Buffer for pricing), but **publication is allowed**.
-- A **Flashing Red Error** means a critical budget or structural violation has occurred, and **publication is blocked**.
+## 🛠️ Tech Stack
 
-Please use the system responsibly and complain rationally!
+| Layer | Technology |
+|---|---|
+| Framework | [Next.js 14](https://nextjs.org/) (App Router) |
+| Language | TypeScript |
+| Styling | [Tailwind CSS](https://tailwindcss.com/) |
+| Icons | [Lucide React](https://lucide.dev/) |
+| Database | PostgreSQL (via [Supabase](https://supabase.com/)) |
+| ORM | [Prisma](https://www.prisma.io/) |
+| Auth | [Supabase Auth](https://supabase.com/auth) (OTP Magic Link) |
+| Media Storage | [Cloudinary](https://cloudinary.com/) |
+| Theming | `next-themes` |
 
-## License
-Open Source with credits to this repo/source for IITKGP specific usage.
+---
+
+## Prerequisites
+- Node.js (v18+) and npm
+- A [Supabase](https://supabase.com/) project (for PostgreSQL database and OTP Auth)
+- A [Cloudinary](https://cloudinary.com/) account (for media uploads)
+
+---
+
+## 📋 Admin Usage Guide
+
+### Menu Compliance Widgets
+When publishing a menu as a Mess Admin, the **Live Compliance Widgets** run in real time:
+- 🟡 **Yellow Warning** — Minor deviation (e.g., missing Roti on a day, relying on service buffer). Publication is **allowed**.
+- 🔴 **Flashing Red Error** — Critical budget or structural violation. Publication is **blocked** until resolved.
+
+### Admin Access
+All admin panels are protected by the `AdminAuthGate` component. The admin passkey is configured separately from the Supabase Auth system. Admins visit:
+- `/admin` — Mess Menu, Gallery Approvals, Poll Manager
+- `/maintenance/admin` — Maintenance Complaint Resolution
+- `/night-canteen/admin` — Canteen Feedback Management
+- `/hub/admin` — Hall Info Hub Content Management
+
+---
+
+## ⚠️ Responsible Use
+
+Please submit complaints that are **rational, constructive, and factual**. Frivolous or abusive feedback delays resolution for genuine issues.
+
+---
+
+## 📄 License
+Open Source — Give credits to this repository for usage or forks.
