@@ -69,6 +69,9 @@ export function OtpVerificationModal({
     setLoading(true);
     const { error } = await supabase.auth.signInWithOtp({
       email: trimmedEmail,
+      options: {
+        shouldCreateUser: true,
+      },
     });
 
     setLoading(false);
@@ -95,6 +98,9 @@ export function OtpVerificationModal({
     const trimmedEmail = email.trim().toLowerCase();
     const { error } = await supabase.auth.signInWithOtp({
       email: trimmedEmail,
+      options: {
+        shouldCreateUser: true,
+      },
     });
 
     setResendLoading(false);
