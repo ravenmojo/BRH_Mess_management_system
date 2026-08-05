@@ -12,7 +12,17 @@ const CATEGORIES = [
   { id: 'PACKAGING', label: 'Packaging' },
 ];
 
+import { AdminAuthGate } from '@/components/admin-auth-gate';
+
 export default function AdminGalleryPage() {
+  return (
+    <AdminAuthGate title="Gallery Admin Portal">
+      <AdminGalleryContent />
+    </AdminAuthGate>
+  );
+}
+
+function AdminGalleryContent() {
   const [images, setImages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   

@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, Send, CheckCircle2, Clock, ShieldCheck, AlertTriangle, Paperclip, Loader2, Image as ImageIcon, Video } from 'lucide-react';
 import Link from 'next/link';
-import { createClient } from '@/utils/supabase/client';
 import { uploadToCloudinary } from '@/lib/cloudinary-upload';
 import { useRouter } from 'next/navigation';
+import { OtpVerificationModal } from '@/components/otp-modal';
 
 export default function StudentFeedbackPage() {
   const [facilityType, setFacilityType] = useState<'REGULAR_MESS' | 'NIGHT_CANTEEN'>('REGULAR_MESS');
@@ -18,8 +18,8 @@ export default function StudentFeedbackPage() {
   const [submitting, setSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   
-  // Auth state
-  const [user, setUser] = useState<any>(null);
+  // OTP Modal state
+  const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
   
   // Upload state
   const [file, setFile] = useState<File | null>(null);
@@ -28,15 +28,12 @@ export default function StudentFeedbackPage() {
   const [mediaUrl, setMediaUrl] = useState<string>('');
   
   const router = useRouter();
-  const supabase = createClient();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      if (user?.email) {
-        setEmail(user.email);
-      }
-    });
+    const savedEmail = localStorage.getItem('bros_last_email');
+    if (savedEmail) {
+      setEmail(savedEmail);
+    }
 
     loadFeedbacks();
   }, []);
@@ -75,14 +72,16 @@ export default function StudentFeedbackPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      router.push('/login?next=/feedback');
+    if (!studentName || !hallRoll || !email || !comment) {
+      alert("Please fill in all required fields including your email address.");
       return;
     }
-    if (!studentName || !hallRoll || !comment) return;
+    setIsOtpModalOpen(true);
+  };
 
+  const handleExecuteSubmit = async (verifiedEmail: string) => {
     setSubmitting(true);
     setStatusMessage('');
 
@@ -94,7 +93,7 @@ export default function StudentFeedbackPage() {
           studentName,
           hallRoll,
           roomNo,
-          email,
+          email: verifiedEmail,
           comment,
           facilityType,
           mediaUrl,
@@ -141,7 +140,7 @@ export default function StudentFeedbackPage() {
 
       {/* Submission Form */}
       <form
-        onSubmit={handleSubmit}
+        onSubmit={handleFormSubmit}
         className="p-4 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 space-y-3 shadow-sm relative overflow-hidden"
       >
         <h3 className="text-xs font-bold text-gray-900 dark:text-white flex items-center space-x-1.5">
@@ -200,8 +199,9 @@ export default function StudentFeedbackPage() {
             type="email"
             placeholder="Email *"
             value={email}
-            readOnly
-            className="w-full px-3 py-1.5 rounded-lg text-xs bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-500 focus:outline-none cursor-not-allowed"
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="w-full px-3 py-1.5 rounded-lg text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
 
@@ -321,6 +321,14 @@ export default function StudentFeedbackPage() {
           ))}
         </div>
       </div>
+
+      <OtpVerificationModal
+        isOpen={isOtpModalOpen}
+        onClose={() => setIsOtpModalOpen(false)}
+        initialEmail={email}
+        onVerified={handleExecuteSubmit}
+      />
     </div>
   );
 }
+

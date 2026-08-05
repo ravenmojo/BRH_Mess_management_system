@@ -177,3 +177,13 @@ model Achievement {
   date        DateTime @default(now())
   createdAt   DateTime @default(now())
 }
+
+model EmergencyContact {
+  id        String   @id @default(uuid())
+  role      String
+  name      String
+  phone     String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+

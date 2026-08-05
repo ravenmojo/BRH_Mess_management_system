@@ -65,21 +65,18 @@ export async function GET(request: Request) {
   }
 }
 
-import { createClient } from '@/utils/supabase/server';
-
 export async function POST(request: Request) {
   try {
-    const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    if (!user.email?.endsWith('.iitkgp.ac.in') && user.email !== 'soura7@gmail.com' && user.email !== 'souradeep.satpathy@gmail.com') {
-      return NextResponse.json({ error: 'Only .iitkgp.ac.in emails or the super admin are allowed.' }, { status: 403 });
-    }
-
     const { studentName, hallRoll, comment, facilityType, mediaUrl, roomNo, email } = await request.json();
+
+    if (!email) {
+      return NextResponse.json({ error: 'Email address is required.' }, { status: 400 });
+    }
+
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail.endsWith('.iitkgp.ac.in') && trimmedEmail !== 'soura7@gmail.com' && trimmedEmail !== 'souradeep.satpathy@gmail.com') {
+      return NextResponse.json({ error: 'Only .iitkgp.ac.in emails or super admin are allowed.' }, { status: 403 });
+    }
 
     if (!studentName || !hallRoll || !comment) {
       return NextResponse.json(

@@ -4,9 +4,9 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Send, CheckCircle2, Clock, ShieldCheck, ShowerHead, Droplet, Zap, Hammer, Sparkles, Wrench, AlertTriangle, Paperclip, Loader2, Image as ImageIcon, Video } from 'lucide-react';
 import { Footer } from '@/components/footer';
-import { createClient } from '@/utils/supabase/client';
 import { uploadToCloudinary } from '@/lib/cloudinary-upload';
 import { useRouter } from 'next/navigation';
+import { OtpVerificationModal } from '@/components/otp-modal';
 
 type MaintenanceCategory =
   | 'MAINTENANCE_WASHROOM'
@@ -34,8 +34,8 @@ export default function MaintenancePage() {
   const [submitting, setSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
 
-  // Auth state
-  const [user, setUser] = useState<any>(null);
+  // OTP Modal state
+  const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
 
   // Upload state
   const [file, setFile] = useState<File | null>(null);
@@ -44,7 +44,6 @@ export default function MaintenancePage() {
   const [mediaUrl, setMediaUrl] = useState<string>('');
 
   const router = useRouter();
-  const supabase = createClient();
 
   const loadFeedbacks = () => {
     fetch('/api/feedback')
@@ -58,12 +57,10 @@ export default function MaintenancePage() {
   };
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      if (user?.email) {
-        setEmail(user.email);
-      }
-    });
+    const savedEmail = localStorage.getItem('bros_last_email');
+    if (savedEmail) {
+      setEmail(savedEmail);
+    }
 
     loadFeedbacks();
   }, []);
@@ -95,14 +92,16 @@ export default function MaintenancePage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      router.push('/login?next=/maintenance');
+    if (!studentName || !hallRoll || !email || !comment) {
+      alert("Please fill in all required fields including your email address.");
       return;
     }
-    if (!studentName || !hallRoll || !comment) return;
+    setIsOtpModalOpen(true);
+  };
 
+  const handleExecuteSubmit = async (verifiedEmail: string) => {
     setSubmitting(true);
     setStatusMessage('');
 
@@ -114,7 +113,7 @@ export default function MaintenancePage() {
           studentName,
           hallRoll,
           roomNo,
-          email,
+          email: verifiedEmail,
           comment,
           facilityType,
           mediaUrl,
@@ -148,28 +147,28 @@ export default function MaintenancePage() {
   return (
     <div className="space-y-5 pb-8">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-800 to-slate-900 p-4 text-white shadow-lg">
-        <div className="relative z-10 space-y-0.5">
-          <h2 className="text-lg font-black tracking-tight drop-shadow-sm flex items-center space-x-1.5">
-            <Wrench className="w-4 h-4 text-blue-300" />
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-800 via-indigo-950 to-slate-900 p-5 text-white shadow-xl shadow-slate-950/20">
+        <div className="relative z-10 space-y-1">
+          <h2 className="text-xl font-black tracking-tight drop-shadow-sm flex items-center space-x-2">
+            <Wrench className="w-5 h-5 text-blue-400" />
             <span>BROS Maintenance</span>
           </h2>
-          <p className="text-[11px] text-slate-300 font-medium max-w-[280px]">
+          <p className="text-xs text-slate-300 font-medium max-w-[280px]">
             Log complaints for washrooms, electrical faults, civil issues, and cleaning.
           </p>
         </div>
       </div>
 
       {/* Responsibility Disclaimer */}
-      <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/50 p-3 rounded-xl flex items-start space-x-2 shadow-sm">
+      <div className="bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/50 p-3.5 rounded-2xl flex items-start space-x-2.5 shadow-sm">
         <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
-        <p className="text-[11px] text-amber-800 dark:text-amber-200 leading-tight">
+        <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed font-medium">
           <strong>Use this system responsibly.</strong> Please ensure your complaints are rational, constructive, and factual. Frivolous or abusive feedback delays resolutions for genuine issues.
         </p>
       </div>
 
       {/* Category Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
         {CATEGORIES.map((cat) => {
           const Icon = cat.icon;
           const isActive = facilityType === cat.id;
@@ -178,13 +177,13 @@ export default function MaintenancePage() {
               type="button"
               key={cat.id}
               onClick={() => setFacilityType(cat.id as MaintenanceCategory)}
-              className={`p-3 rounded-xl border flex flex-col items-center justify-center space-y-1.5 transition-all ${isActive
-                  ? 'bg-blue-600 border-blue-600 text-white shadow-md scale-[1.02]'
-                  : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+              className={`p-3.5 rounded-2xl border flex flex-col items-center justify-center space-y-1.5 transition-all duration-200 ${isActive
+                  ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/25 scale-[1.02]'
+                  : 'glass-card text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80'
                 }`}
             >
-              <Icon className={`w-6 h-6 ${isActive ? 'text-white' : 'text-blue-600 dark:text-blue-400'}`} />
-              <span className="text-[11px] font-bold text-center leading-tight">{cat.label}</span>
+              <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-blue-600 dark:text-blue-400'}`} />
+              <span className="text-xs font-bold text-center leading-tight">{cat.label}</span>
             </button>
           );
         })}
@@ -192,28 +191,28 @@ export default function MaintenancePage() {
 
       {/* Submission Form */}
       <form
-        onSubmit={handleSubmit}
-        className="p-4 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 space-y-3 shadow-sm relative overflow-hidden"
+        onSubmit={handleFormSubmit}
+        className="p-5 rounded-2xl glass-card space-y-3.5 relative overflow-hidden"
       >
-        <h3 className="text-xs font-bold text-gray-900 dark:text-white flex items-center space-x-1.5">
+        <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center space-x-2">
           <Wrench className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           <span>New Complaint Details</span>
         </h3>
 
         {statusMessage && (
-          <div className="p-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 text-xs font-medium">
+          <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-medium">
             {statusMessage}
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2.5">
           <input
             type="text"
             placeholder="Student Name *"
             value={studentName}
             onChange={(e) => setStudentName(e.target.value)}
             required
-            className="w-full px-3 py-1.5 rounded-lg text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
           />
           <input
             type="text"
@@ -221,21 +220,22 @@ export default function MaintenancePage() {
             value={hallRoll}
             onChange={(e) => setHallRoll(e.target.value)}
             required
-            className="w-full px-3 py-1.5 rounded-lg text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
           />
           <input
             type="text"
             placeholder="Room No"
             value={roomNo}
             onChange={(e) => setRoomNo(e.target.value)}
-            className="w-full px-3 py-1.5 rounded-lg text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
           />
           <input
             type="email"
             placeholder="Email *"
             value={email}
-            readOnly
-            className="w-full px-3 py-1.5 rounded-lg text-xs bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-500 focus:outline-none cursor-not-allowed"
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="w-full px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
           />
         </div>
 
@@ -245,13 +245,13 @@ export default function MaintenancePage() {
           onChange={(e) => setComment(e.target.value)}
           rows={3}
           required
-          className="w-full px-3 py-2 rounded-lg text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full px-3.5 py-2.5 rounded-xl text-xs font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
         />
 
         {/* Media Upload */}
-        <div className="border border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-3 bg-gray-50/50 dark:bg-gray-800/50">
+        <div className="border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-3.5 bg-slate-50/50 dark:bg-slate-800/50">
           <label className="flex items-center justify-between cursor-pointer">
-            <div className="flex items-center space-x-2 text-xs text-gray-600 dark:text-gray-400">
+            <div className="flex items-center space-x-2 text-xs font-medium text-slate-600 dark:text-slate-400">
               <Paperclip className="w-4 h-4" />
               <span>{file ? file.name : 'Attach a photo/video (Max 20MB)'}</span>
             </div>
@@ -268,11 +268,11 @@ export default function MaintenancePage() {
               </span>
             )}
             {mediaUrl && (
-              <CheckCircle2 className="w-4 h-4 text-green-500" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
             )}
           </label>
           {isUploading && (
-            <div className="w-full h-1 bg-gray-200 dark:bg-gray-700 rounded-full mt-2 overflow-hidden">
+            <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mt-2 overflow-hidden">
               <div
                 className="h-full bg-blue-600 transition-all duration-300"
                 style={{ width: `${uploadProgress}%` }}
@@ -284,7 +284,7 @@ export default function MaintenancePage() {
         <button
           type="submit"
           disabled={submitting || isUploading}
-          className="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors flex items-center justify-center space-x-1.5 disabled:opacity-50"
+          className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50"
         >
           {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
           <span>{submitting ? 'Submitting...' : 'Submit Complaint'}</span>
@@ -292,39 +292,39 @@ export default function MaintenancePage() {
       </form>
 
       {/* Submitted Complaints & Admin Resolution Timeline */}
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         <div className="flex items-center justify-between px-1">
-          <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400">
+          <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400">
             Recent Maintenance Complaints ({feedbacks.length})
           </h3>
-          <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
+          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
             {feedbacks.filter(f => f.status === 'RESOLVED').length} Resolved
           </span>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {feedbacks.map((item) => (
             <div
               key={item.id}
-              className="p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 space-y-1.5 text-xs shadow-sm"
+              className="p-4 rounded-2xl glass-card space-y-2 text-xs"
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-1.5">
-                  <span className="font-bold text-gray-900 dark:text-white">{item.studentName}</span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded border font-bold uppercase tracking-wider ${item.facilityType === 'MAINTENANCE_WASHROOM' ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800' :
-                      item.facilityType === 'MAINTENANCE_WATER' ? 'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-400 dark:border-cyan-800' :
-                        item.facilityType === 'MAINTENANCE_ELECTRICAL' ? 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800' :
-                          item.facilityType === 'MAINTENANCE_CIVIL' ? 'bg-stone-50 text-stone-700 border-stone-200 dark:bg-stone-900/30 dark:text-stone-400 dark:border-stone-800' :
-                            'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-400 dark:border-sky-800'
+                <div className="flex items-center space-x-2">
+                  <span className="font-bold text-slate-900 dark:text-white">{item.studentName}</span>
+                  <span className={`text-[10px] px-2.5 py-0.5 rounded-full border font-bold uppercase tracking-wider ${item.facilityType === 'MAINTENANCE_WASHROOM' ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800' :
+                      item.facilityType === 'MAINTENANCE_WATER' ? 'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-950/50 dark:text-cyan-400 dark:border-cyan-800' :
+                        item.facilityType === 'MAINTENANCE_ELECTRICAL' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800' :
+                          item.facilityType === 'MAINTENANCE_CIVIL' ? 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700' :
+                            'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/50 dark:text-sky-400 dark:border-sky-800'
                     }`}>
                     {getCategoryLabel(item.facilityType)}
                   </span>
                 </div>
 
                 <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center space-x-1 ${item.status === 'RESOLVED'
-                      ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
-                      : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
+                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold flex items-center space-x-1 ${item.status === 'RESOLVED'
+                      ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
+                      : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
                     }`}
                 >
                   {item.status === 'RESOLVED' ? (
@@ -336,17 +336,17 @@ export default function MaintenancePage() {
                 </span>
               </div>
 
-              <p className="text-gray-700 dark:text-gray-300">{item.comment}</p>
+              <p className="text-slate-700 dark:text-slate-300 font-medium">{item.comment}</p>
 
               {item.mediaUrl && (
-                <a href={item.mediaUrl} target="_blank" rel="noreferrer" className="inline-flex items-center space-x-1.5 px-2 py-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md text-[10px] font-medium transition-colors text-blue-600 mt-1">
+                <a href={item.mediaUrl} target="_blank" rel="noreferrer" className="inline-flex items-center space-x-1.5 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-[10px] font-semibold transition-colors text-blue-600 dark:text-blue-400 mt-1">
                   {item.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? <Video className="w-3 h-3" /> : <ImageIcon className="w-3 h-3" />}
                   <span>View Attached Media</span>
                 </a>
               )}
 
               {item.remark && (
-                <div className="mt-2 p-2 rounded bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/50 text-[11px] text-blue-900 dark:text-blue-200 flex items-start space-x-1.5">
+                <div className="mt-2 p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/50 text-[11px] text-blue-900 dark:text-blue-200 flex items-start space-x-2">
                   <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                   <div>
                     <strong className="font-semibold">Maintenance Secretary:</strong> {item.remark}
@@ -360,13 +360,22 @@ export default function MaintenancePage() {
 
       {/* Admin Link */}
       <div className="pt-2 flex justify-center">
-        <Link href="/maintenance/admin" className="px-4 py-2 rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold flex items-center space-x-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+        <Link href="/maintenance/admin" className="px-4 py-2 rounded-full border border-blue-200/80 dark:border-blue-800/80 bg-blue-50/80 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold flex items-center space-x-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shadow-sm">
           <ShieldCheck className="w-4 h-4" />
           <span>Access Maintenance Admin Panel</span>
         </Link>
       </div>
 
       <Footer />
+
+      <OtpVerificationModal
+        isOpen={isOtpModalOpen}
+        onClose={() => setIsOtpModalOpen(false)}
+        initialEmail={email}
+        onVerified={handleExecuteSubmit}
+      />
     </div>
   );
 }
+
+
