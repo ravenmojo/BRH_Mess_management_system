@@ -9,6 +9,7 @@
 *.key
 *.cert
 *.pfx
+Readme_copy.md
 
 # Sensitive logs & diagnostics
 supabase_logs.json
