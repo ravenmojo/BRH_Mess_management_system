@@ -1,8 +1,30 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Mail, KeyRound, Loader2, X, ShieldCheck, RefreshCw, MailCheck, AlertTriangle, Inbox } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Mail, KeyRound, Loader2, X, ShieldCheck, RefreshCw, MailCheck, AlertTriangle, Inbox, CheckCircle2 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
+
+const VERIFICATION_CACHE_KEY = 'bros_verified_email';
+const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+function isEmailVerifiedRecently(email: string): boolean {
+  try {
+    const raw = localStorage.getItem(VERIFICATION_CACHE_KEY);
+    if (!raw) return false;
+    const { email: cachedEmail, verifiedAt } = JSON.parse(raw);
+    if (cachedEmail !== email.trim().toLowerCase()) return false;
+    return Date.now() - verifiedAt < VERIFICATION_TTL_MS;
+  } catch {
+    return false;
+  }
+}
+
+function cacheEmailVerification(email: string) {
+  localStorage.setItem(
+    VERIFICATION_CACHE_KEY,
+    JSON.stringify({ email: email.trim().toLowerCase(), verifiedAt: Date.now() })
+  );
+}
 
 interface OtpVerificationModalProps {
   isOpen: boolean;
@@ -25,8 +47,8 @@ export function OtpVerificationModal({
   const [error, setError] = useState<string | null>(null);
 
   // OTP Resend Cooldown & Attempt tracking
-  const [attempts, setAttempts] = useState(1); // Initial attempt = 1
-  const [cooldown, setCooldown] = useState(60); // 60 seconds timer
+  const [attempts, setAttempts] = useState(1);
+  const [cooldown, setCooldown] = useState(60);
 
   const supabase = createClient();
 
@@ -39,6 +61,15 @@ export function OtpVerificationModal({
       setError(null);
       setAttempts(1);
       setCooldown(60);
+
+      // Check 24hr verification cache — skip OTP entirely if valid
+      if (savedEmail && isEmailVerifiedRecently(savedEmail)) {
+        // Auto-submit without OTP
+        const trimmed = savedEmail.trim().toLowerCase();
+        localStorage.setItem('bros_last_email', trimmed);
+        onVerified(trimmed);
+        onClose();
+      }
     }
   }, [isOpen, initialEmail]);
 
@@ -63,6 +94,14 @@ export function OtpVerificationModal({
 
     if (!trimmedEmail.endsWith('.iitkgp.ac.in') && trimmedEmail !== 'soura7@gmail.com' && trimmedEmail !== 'souradeep.satpathy@gmail.com') {
       setError('Only .iitkgp.ac.in institute email addresses are allowed.');
+      return;
+    }
+
+    // Check 24hr cache before sending OTP
+    if (isEmailVerifiedRecently(trimmedEmail)) {
+      localStorage.setItem('bros_last_email', trimmedEmail);
+      await onVerified(trimmedEmail);
+      onClose();
       return;
     }
 
@@ -130,6 +169,8 @@ export function OtpVerificationModal({
     if (error) {
       setError(error.message || 'Invalid or expired OTP. Please try again.');
     } else {
+      // Cache successful verification for 24 hours
+      cacheEmailVerification(trimmedEmail);
       localStorage.setItem('bros_last_email', trimmedEmail);
       await onVerified(trimmedEmail);
       onClose();

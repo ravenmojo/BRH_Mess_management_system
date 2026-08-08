@@ -573,6 +573,8 @@ const mockWeeklyMenu: DailyMenuInput[] = [
 
 let inMemoryWeeklyMenu: DailyMenuInput[] = [...mockWeeklyMenu];
 
+const DAY_ORDER = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+
 export async function GET() {
   try {
     const dailyMenus = await prisma.dailyMenu.findMany({
@@ -587,9 +589,10 @@ export async function GET() {
     });
 
     if (dailyMenus.length === 0) {
-      const validation = validateWeeklyMenu(inMemoryWeeklyMenu);
+      const sortedInMemory = [...inMemoryWeeklyMenu].sort((a, b) => DAY_ORDER.indexOf(a.dayOfWeek) - DAY_ORDER.indexOf(b.dayOfWeek));
+      const validation = validateWeeklyMenu(sortedInMemory);
       return NextResponse.json({
-        menu: inMemoryWeeklyMenu,
+        menu: sortedInMemory,
         validation,
       });
     }
@@ -626,7 +629,6 @@ export async function GET() {
       };
     });
 
-    const DAY_ORDER = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
     formattedMenu.sort((a, b) => DAY_ORDER.indexOf(a.dayOfWeek) - DAY_ORDER.indexOf(b.dayOfWeek));
 
     const validation = validateWeeklyMenu(formattedMenu);
@@ -636,9 +638,10 @@ export async function GET() {
     });
   } catch (error) {
     // Fallback to in-memory store if DB is disconnected
-    const validation = validateWeeklyMenu(inMemoryWeeklyMenu);
+    const sortedInMemory = [...inMemoryWeeklyMenu].sort((a, b) => DAY_ORDER.indexOf(a.dayOfWeek) - DAY_ORDER.indexOf(b.dayOfWeek));
+    const validation = validateWeeklyMenu(sortedInMemory);
     return NextResponse.json({
-      menu: inMemoryWeeklyMenu,
+      menu: sortedInMemory,
       validation,
     });
   }

@@ -84,15 +84,15 @@ export default function StudentDashboard() {
           </Link>
         </div>
 
-        <div className="flex space-x-2 overflow-x-auto pb-1.5 pt-0.5 scrollbar-none px-0.5">
-          {['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'].map(
+        <div className="grid grid-cols-7 gap-1 p-1 rounded-2xl bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800">
+          {['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'].map(
             (day) => (
               <button
                 key={day}
                 onClick={() => setSelectedDay(day)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 ${selectedDay === day
+                className={`py-2 rounded-xl text-[11px] font-bold text-center transition-all duration-200 ${selectedDay === day
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 scale-[1.02]'
-                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800/80'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
               >
                 {day.substring(0, 3)}
@@ -211,7 +211,7 @@ export default function StudentDashboard() {
           className="p-3.5 rounded-2xl glass-card border border-slate-200/80 dark:border-slate-800/80 hover:border-blue-500/50 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 transition-all flex flex-col justify-center items-center space-y-1.5 h-20 text-center group"
         >
           <MessageSquare className="w-5 h-5 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
-          <span className="text-xs font-bold text-slate-900 dark:text-white leading-tight">Feedback</span>
+          <span className="text-xs font-bold text-slate-900 dark:text-white leading-tight">Grievances</span>
         </Link>
 
         <Link

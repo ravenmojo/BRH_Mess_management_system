@@ -5,11 +5,21 @@ import { Moon, Utensils, MessageSquare, Send, CheckCircle, Clock, ShieldCheck } 
 import Link from 'next/link';
 import { OtpVerificationModal } from '@/components/otp-modal';
 
-export default function NightCanteenPage() {
-  // CRITICAL REQUIREMENT: Strictly TWO tabs ONLY
-  const [activeTab, setActiveTab] = useState<'menu' | 'feedback'>('menu');
+// Smart room number formatter
+function formatRoomNo(value: string): string {
+  let v = value.toUpperCase().replace(/[^A-D0-9-]/g, '');
+  if (v.length >= 1 && /^[A-D]$/.test(v[0])) {
+    if (v.length >= 2 && v[1] !== '-') {
+      v = v[0] + '-' + v.slice(1);
+    }
+  }
+  if (v.length > 5) v = v.slice(0, 5);
+  return v;
+}
 
-  // Canteen Menu Items (Independent Entity - No ₹826 constraint)
+export default function NightCanteenPage() {
+  const [activeTab, setActiveTab] = useState<'menu' | 'grievance'>('menu');
+
   const canteenMenuItems = [
     { id: 'nc-1', name: 'Paneer Butter Masala Roll', price: 60, category: 'Rolls & Wraps', available: true },
     { id: 'nc-2', name: 'Chicken Egg Roll', price: 70, category: 'Rolls & Wraps', available: true },
@@ -21,9 +31,8 @@ export default function NightCanteenPage() {
     { id: 'nc-8', name: 'Masala Chai', price: 10, category: 'Beverages', available: true },
   ];
 
-  // Feedback State
-  const [studentName, setStudentName] = useState('');
-  const [hallRoll, setHallRoll] = useState('');
+  // Grievance State
+  const [roomNo, setRoomNo] = useState('');
   const [email, setEmail] = useState('');
   const [comment, setComment] = useState('');
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
@@ -48,8 +57,12 @@ export default function NightCanteenPage() {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!studentName || !email || !comment) {
-      alert("Please fill in your name, email address, and comment.");
+    if (!roomNo || !/^[A-D]-\d{3}$/.test(roomNo)) {
+      alert("Please enter a valid Room No. (e.g. A-515)");
+      return;
+    }
+    if (!email || !comment) {
+      alert("Please fill in your email address and grievance details.");
       return;
     }
     setIsOtpModalOpen(true);
@@ -62,8 +75,8 @@ export default function NightCanteenPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          studentName,
-          hallRoll: hallRoll || 'STUDENT',
+          studentName: 'Anonymous',
+          roomNo,
           email: verifiedEmail,
           comment,
           facilityType: 'NIGHT_CANTEEN',
@@ -71,14 +84,16 @@ export default function NightCanteenPage() {
       });
 
       if (res.ok) {
-        setMessage('Feedback submitted successfully!');
-        setStudentName('');
-        setHallRoll('');
+        setMessage('Grievance submitted successfully!');
+        setRoomNo('');
         setComment('');
         fetchCanteenFeedbacks();
+      } else {
+        const data = await res.json();
+        setMessage(data.error || 'Failed to submit grievance.');
       }
     } catch (err) {
-      setMessage('Failed to submit feedback.');
+      setMessage('Failed to submit grievance.');
     } finally {
       setSubmitting(false);
     }
@@ -103,7 +118,7 @@ export default function NightCanteenPage() {
         </div>
       </div>
 
-      {/* STRICT 2-TAB SWITCHER (Menu & Feedback/Complaint ONLY) */}
+      {/* 2-TAB SWITCHER */}
       <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-slate-200/80 dark:bg-slate-900/80 border border-slate-300/80 dark:border-slate-800/80 backdrop-blur-md">
         <button
           onClick={() => setActiveTab('menu')}
@@ -118,15 +133,15 @@ export default function NightCanteenPage() {
         </button>
 
         <button
-          onClick={() => setActiveTab('feedback')}
+          onClick={() => setActiveTab('grievance')}
           className={`flex items-center justify-center space-x-2 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
-            activeTab === 'feedback'
+            activeTab === 'grievance'
               ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-md scale-[1.01]'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
           }`}
         >
           <MessageSquare className="w-4 h-4" />
-          <span>Feedback/Complaint</span>
+          <span>Grievances</span>
         </button>
       </div>
 
@@ -165,21 +180,20 @@ export default function NightCanteenPage() {
         </div>
       )}
 
-      {/* TAB 2: FEEDBACK / COMPLAINT */}
-      {activeTab === 'feedback' && (
+      {/* TAB 2: GRIEVANCES */}
+      {activeTab === 'grievance' && (
         <div className="space-y-4">
-          {/* Canteen Specific Feedback Form */}
           <form
             onSubmit={handleFormSubmit}
             className="p-5 rounded-2xl glass-card space-y-3.5"
           >
             <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center space-x-2">
               <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <span>Submit Night Canteen Feedback / Complaint</span>
+              <span>Submit Night Canteen Grievance</span>
             </h3>
 
             {message && (
-              <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-medium">
+              <div className={`p-3 rounded-xl text-xs font-medium border ${message.includes('success') ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' : 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'}`}>
                 {message}
               </div>
             )}
@@ -187,32 +201,25 @@ export default function NightCanteenPage() {
             <div className="grid grid-cols-2 gap-2.5">
               <input
                 type="text"
-                placeholder="Your Name *"
-                value={studentName}
-                onChange={(e) => setStudentName(e.target.value)}
+                placeholder="Room No. *  e.g. A-515"
+                value={roomNo}
+                onChange={(e) => setRoomNo(formatRoomNo(e.target.value))}
+                maxLength={5}
                 required
-                className="w-full px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                className="w-full px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 uppercase"
               />
               <input
-                type="text"
-                placeholder="Roll No. (Optional)"
-                value={hallRoll}
-                onChange={(e) => setHallRoll(e.target.value)}
+                type="email"
+                placeholder="Institute Email *"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
                 className="w-full px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
               />
             </div>
 
-            <input
-              type="email"
-              placeholder="Institute Email *"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-            />
-
             <textarea
-              placeholder="Describe your complaint, food quality issue, or suggestion..."
+              placeholder="Describe your grievance, food quality issue, or suggestion..."
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               rows={3}
@@ -226,19 +233,19 @@ export default function NightCanteenPage() {
               className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all flex items-center justify-center space-x-1.5"
             >
               <Send className="w-3.5 h-3.5" />
-              <span>{submitting ? 'Submitting...' : 'Submit Canteen Feedback'}</span>
+              <span>{submitting ? 'Submitting...' : 'Submit Canteen Grievance'}</span>
             </button>
           </form>
 
-          {/* Canteen Feedbacks Timeline */}
+          {/* Canteen Grievances Timeline */}
           <div className="space-y-2.5">
             <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 px-1">
-              Canteen Feedback History ({feedbacks.length})
+              Canteen Grievance History ({feedbacks.length})
             </h4>
 
             {feedbacks.length === 0 ? (
               <div className="p-5 rounded-2xl glass-card text-center text-xs font-semibold text-slate-500">
-                No canteen complaints submitted yet.
+                No canteen grievances submitted yet.
               </div>
             ) : (
               feedbacks.map((fb) => (
@@ -247,13 +254,18 @@ export default function NightCanteenPage() {
                   className="p-4 rounded-2xl glass-card space-y-1.5 text-xs"
                 >
                   <div className="flex items-center justify-between text-slate-500 text-[11px]">
-                    <span className="font-bold text-slate-900 dark:text-white">
-                      {fb.studentName} ({fb.hallRoll})
-                    </span>
+                    <div className="flex items-center space-x-1.5">
+                      <span className="font-bold text-slate-900 dark:text-white">
+                        {fb.studentName || 'Anonymous'}
+                      </span>
+                      {fb.roomNo && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 font-mono">{fb.roomNo}</span>
+                      )}
+                    </div>
                     <span
                       className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                         fb.status === 'RESOLVED'
-                          ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
+                          ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                           : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
                       }`}
                     >
@@ -292,5 +304,3 @@ export default function NightCanteenPage() {
     </div>
   );
 }
-
-

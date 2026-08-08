@@ -214,14 +214,14 @@ function HubAdminContent() {
   return (
     <div className="space-y-6 pb-12">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center space-x-3">
-          <Link href="/hub" className="p-2 rounded-xl glass-card text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">
+          <Link href="/hub" className="p-2 rounded-xl glass-card text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors shrink-0">
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
             <h1 className="text-xl font-black text-slate-900 dark:text-white flex items-center space-x-2">
-              <ShieldCheck className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              <ShieldCheck className="w-5 h-5 text-purple-600 dark:text-purple-400 shrink-0" />
               <span>Hall Info Portal Admin</span>
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">Manage all sub-sections of the BROS Info Hub.</p>
@@ -232,7 +232,7 @@ function HubAdminContent() {
         <button
           onClick={handleSeedAll}
           disabled={submitting}
-          className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-purple-500/20 transition-all flex items-center space-x-2 disabled:opacity-50"
+          className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-purple-500/20 transition-all flex items-center justify-center space-x-2 disabled:opacity-50 shrink-0"
         >
           {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
           <span>Populate All Sub-sections</span>
