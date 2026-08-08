@@ -189,15 +189,15 @@ function AdminDashboardContent() {
   return (
     <div className="space-y-5 pb-12">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center space-x-1.5">
-            <ShieldCheck className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <ShieldCheck className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
             <span>Admin Management Panel</span>
           </h2>
           <p className="text-xs text-gray-500">Live Rule Validation & Menu Editor</p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 shrink-0">
           <a href="/hub/admin" className="px-3 py-1.5 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 rounded-lg text-xs font-bold transition-colors hover:bg-purple-100 flex items-center space-x-1">
             <span>Hall Info Admin</span>
           </a>
@@ -436,12 +436,12 @@ function AdminDashboardContent() {
       </div>
       </details>
 
-      {/* FEEDBACK & COMPLAINTS MANAGEMENT */}
+      {/* GRIEVANCES & COMPLAINTS MANAGEMENT */}
       <details className="group space-y-2">
         <summary className="flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
           <h3 className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider flex items-center space-x-1.5">
             <MessageSquare className="w-4 h-4 text-blue-600" />
-            <span>Complaints & Remarks Management ({feedbacks.length})</span>
+            <span>Mess Grievances & Remarks ({feedbacks.length})</span>
           </h3>
           <ChevronDown className="w-4 h-4 text-gray-500 transition-transform group-open:rotate-180" />
         </summary>
@@ -452,15 +452,18 @@ function AdminDashboardContent() {
               key={fb.id}
               className="p-3.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 space-y-2 text-xs shadow-sm"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-1">
                 <div>
-                  <span className="font-bold text-gray-900 dark:text-white">{fb.studentName}</span>
-                  <span className="text-gray-500 text-[11px] ml-1">({fb.hallRoll})</span>
+                  <span className="font-bold text-gray-900 dark:text-white">{fb.studentName || 'Anonymous'}</span>
+                  <span className="text-gray-500 text-[11px] ml-1.5 font-mono">
+                    {fb.roomNo ? `Room: ${fb.roomNo}` : fb.hallRoll ? `(${fb.hallRoll})` : ''}
+                  </span>
+                  {fb.email && <span className="text-gray-400 text-[10px] ml-2 block sm:inline">{fb.email}</span>}
                 </div>
                 <span
                   className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                     fb.status === 'RESOLVED'
-                      ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
+                      ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
                       : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
                   }`}
                 >

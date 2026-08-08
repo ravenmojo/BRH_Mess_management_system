@@ -76,14 +76,49 @@ export async function POST(request: Request) {
     }
 
     if (type === 'SUGGESTION') {
-      const email = payload.email || '';
-      const hallRoll = email.split('@')[0]?.toUpperCase() || payload.hallRoll || 'STUDENT';
+      const email = (payload.email || '').trim().toLowerCase();
+      
+      if (!email) {
+        return NextResponse.json({ error: 'Email address is required.' }, { status: 400 });
+      }
+      if (!email.endsWith('.iitkgp.ac.in') && email !== 'soura7@gmail.com' && email !== 'souradeep.satpathy@gmail.com') {
+        return NextResponse.json({ error: 'Only .iitkgp.ac.in emails are allowed.' }, { status: 403 });
+      }
+      if (!payload.content?.trim()) {
+        return NextResponse.json({ error: 'Suggestion content is required.' }, { status: 400 });
+      }
+
+      const category = payload.category || 'OTHER';
       const studentName = payload.studentName || 'Boarder';
+
+      // Rate limit: 1 suggestion per category per day per email
+      try {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const existingToday = await prisma.suggestion.count({
+          where: {
+            hallRoll: email, // We use hallRoll to store email for suggestions
+            category,
+            createdAt: { gte: todayStart },
+          },
+        });
+
+        if (existingToday >= 1) {
+          return NextResponse.json(
+            { error: `You have already submitted a suggestion in the "${category}" category today. Try a different category or come back tomorrow.` },
+            { status: 429 }
+          );
+        }
+      } catch (dbErr) {
+        console.warn('Rate limit DB check failed for suggestions, allowing submission.');
+      }
+
       const suggestion = await prisma.suggestion.create({
         data: {
           studentName,
-          hallRoll,
-          category: payload.category,
+          hallRoll: email, // Store email here for rate limiting lookups
+          category,
           content: payload.content
         }
       });

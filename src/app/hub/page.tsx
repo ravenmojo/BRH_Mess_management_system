@@ -1,10 +1,22 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Film, Lightbulb, Users, Phone, Trophy, Send, Loader2, Star, ShieldCheck } from 'lucide-react';
+import { Film, Lightbulb, Users, Phone, Trophy, Send, Loader2, Star, ShieldCheck, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Footer } from '@/components/footer';
 import { OtpVerificationModal } from '@/components/otp-modal';
+
+// Smart room number formatter
+function formatRoomNo(value: string): string {
+  let v = value.toUpperCase().replace(/[^A-D0-9-]/g, '');
+  if (v.length >= 1 && /^[A-D]$/.test(v[0])) {
+    if (v.length >= 2 && v[1] !== '-') {
+      v = v[0] + '-' + v.slice(1);
+    }
+  }
+  if (v.length > 5) v = v.slice(0, 5);
+  return v;
+}
 
 const DUMMY_EMERGENCY_CONTACTS = [
   { role: 'Hall President', name: 'Aarav Sharma', phone: '+91 99999 00001' },
@@ -23,8 +35,10 @@ export default function HubPage() {
   // Suggestion Form
   const [suggestion, setSuggestion] = useState('');
   const [email, setEmail] = useState('');
+  const [roomNo, setRoomNo] = useState('');
   const [category, setCategory] = useState('MESS');
   const [submitting, setSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState('');
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
 
   useEffect(() => {
@@ -41,6 +55,10 @@ export default function HubPage() {
   }, []);
 
   const handleFormSubmit = () => {
+    if (!roomNo || !/^[A-D]-\d{3}$/.test(roomNo)) {
+      alert("Please enter a valid Room No. (e.g. A-515)");
+      return;
+    }
     if (!suggestion.trim() || !email.trim()) {
       alert("Please enter your institute email address and suggestion details.");
       return;
@@ -50,8 +68,9 @@ export default function HubPage() {
 
   const handleExecuteSubmit = async (verifiedEmail: string) => {
     setSubmitting(true);
+    setSubmitMessage('');
     try {
-      await fetch('/api/hub', {
+      const res = await fetch('/api/hub', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -59,10 +78,16 @@ export default function HubPage() {
           payload: { category, content: suggestion, email: verifiedEmail, studentName: 'Boarder' }
         })
       });
-      alert('Suggestion submitted successfully!');
-      setSuggestion('');
+
+      if (res.ok) {
+        setSubmitMessage('Suggestion submitted successfully!');
+        setSuggestion('');
+      } else {
+        const data = await res.json();
+        setSubmitMessage(data.error || 'Error submitting suggestion.');
+      }
     } catch (err) {
-      alert('Error submitting suggestion');
+      setSubmitMessage('Network error submitting suggestion.');
     } finally {
       setSubmitting(false);
     }
@@ -173,17 +198,34 @@ export default function HubPage() {
             {activeTab === 'SUGGESTION' && (
               <div className="glass-card p-5 rounded-2xl space-y-4">
                 <h3 className="font-bold text-slate-900 dark:text-white text-sm">Boarder Suggestion Portal</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Submit your ideas for hall improvement, events, or mess menus directly to the council.</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Submit your ideas for hall improvement, events, or mess menus directly to the council. Limited to 1 suggestion per category per day.</p>
 
-                <div className="space-y-3 pt-2">
-                  <input
-                    type="email"
-                    placeholder="Institute Email *"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all"
-                  />
+                {submitMessage && (
+                  <div className={`p-3 rounded-xl text-xs font-medium border ${submitMessage.includes('success') ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' : 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'}`}>
+                    {submitMessage}
+                  </div>
+                )}
+
+                <div className="space-y-3 pt-1">
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      placeholder="Room No. *  e.g. A-515"
+                      value={roomNo}
+                      onChange={(e) => setRoomNo(formatRoomNo(e.target.value))}
+                      maxLength={5}
+                      required
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all uppercase"
+                    />
+                    <input
+                      type="email"
+                      placeholder="Institute Email *"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all"
+                    />
+                  </div>
 
                   <select
                     value={category}
@@ -207,7 +249,7 @@ export default function HubPage() {
 
                   <button
                     onClick={handleFormSubmit}
-                    disabled={submitting || !suggestion.trim() || !email.trim()}
+                    disabled={submitting || !suggestion.trim() || !email.trim() || !roomNo}
                     className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold shadow-md shadow-purple-500/20 transition-all disabled:opacity-50 flex items-center justify-center space-x-2"
                   >
                     {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}

@@ -5,7 +5,8 @@ let inMemoryFeedbacks: any[] = [
   {
     id: 'fb-1',
     studentName: 'Sourav Roy',
-    hallRoll: '21BRH1002',
+    roomNo: 'A-515',
+    email: 'sourav@iitkgp.ac.in',
     comment: 'The Dal served in Tuesday lunch was slightly undercooked.',
     facilityType: 'REGULAR_MESS',
     status: 'RESOLVED',
@@ -15,7 +16,8 @@ let inMemoryFeedbacks: any[] = [
   {
     id: 'fb-2',
     studentName: 'Rahul Verma',
-    hallRoll: '22BRH2015',
+    roomNo: 'B-312',
+    email: 'rahul@iitkgp.ac.in',
     comment: 'Night Canteen Paneer Roll was great! Could you add extra cheese options?',
     facilityType: 'NIGHT_CANTEEN',
     status: 'PENDING',
@@ -25,7 +27,8 @@ let inMemoryFeedbacks: any[] = [
   {
     id: 'fb-3',
     studentName: 'Amit Kumar',
-    hallRoll: '20BRH3045',
+    roomNo: 'C-201',
+    email: 'amit@iitkgp.ac.in',
     comment: 'The flush in C-Block 2nd floor left washroom is leaking.',
     facilityType: 'MAINTENANCE_WASHROOM',
     status: 'PENDING',
@@ -34,14 +37,32 @@ let inMemoryFeedbacks: any[] = [
   },
 ];
 
+// Room number validation: A-515 format (Wing A-D, 3-digit room)
+function isValidRoomNo(roomNo: string): boolean {
+  return /^[A-D]-\d{3}$/.test(roomNo.trim().toUpperCase());
+}
+
+const MAINTENANCE_TYPES = [
+  'MAINTENANCE_WASHROOM',
+  'MAINTENANCE_WATER',
+  'MAINTENANCE_ELECTRICAL',
+  'MAINTENANCE_CIVIL',
+  'MAINTENANCE_CLEANING',
+  'MAINTENANCE_OUTDOOR',
+];
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const facility = searchParams.get('facility'); // REGULAR_MESS | NIGHT_CANTEEN
+  const facility = searchParams.get('facility');
 
   try {
     const whereClause: any = {};
     if (facility) {
-      whereClause.facilityType = facility;
+      if (facility === 'MAINTENANCE') {
+        whereClause.facilityType = { in: MAINTENANCE_TYPES };
+      } else {
+        whereClause.facilityType = facility;
+      }
     }
 
     const feedbacks = await prisma.feedback.findMany({
@@ -51,7 +72,9 @@ export async function GET(request: Request) {
 
     if (feedbacks.length === 0) {
       const filtered = facility
-        ? inMemoryFeedbacks.filter((f) => f.facilityType === facility)
+        ? facility === 'MAINTENANCE'
+          ? inMemoryFeedbacks.filter((f) => f.facilityType.startsWith('MAINTENANCE_'))
+          : inMemoryFeedbacks.filter((f) => f.facilityType === facility)
         : inMemoryFeedbacks;
       return NextResponse.json(filtered);
     }
@@ -59,7 +82,9 @@ export async function GET(request: Request) {
     return NextResponse.json(feedbacks);
   } catch (error) {
     const filtered = facility
-      ? inMemoryFeedbacks.filter((f) => f.facilityType === facility)
+      ? facility === 'MAINTENANCE'
+        ? inMemoryFeedbacks.filter((f) => f.facilityType.startsWith('MAINTENANCE_'))
+        : inMemoryFeedbacks.filter((f) => f.facilityType === facility)
       : inMemoryFeedbacks;
     return NextResponse.json(filtered);
   }
@@ -67,7 +92,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { studentName, hallRoll, comment, facilityType, mediaUrl, roomNo, email } = await request.json();
+    const { studentName, comment, facilityType, mediaUrl, roomNo, email } = await request.json();
 
     if (!email) {
       return NextResponse.json({ error: 'Email address is required.' }, { status: 400 });
@@ -78,9 +103,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Only .iitkgp.ac.in emails or super admin are allowed.' }, { status: 403 });
     }
 
-    if (!studentName || !hallRoll || !comment) {
+    if (!roomNo || !isValidRoomNo(roomNo)) {
       return NextResponse.json(
-        { error: 'Student Name, Roll Number, and Comment are required fields.' },
+        { error: 'Valid Room No. is required (format: A-515, wing A-D, 3-digit room).' },
+        { status: 400 }
+      );
+    }
+
+    if (!comment) {
+      return NextResponse.json(
+        { error: 'Grievance description is required.' },
         { status: 400 }
       );
     }
@@ -88,14 +120,65 @@ export async function POST(request: Request) {
     const validFacilities = [
       'REGULAR_MESS', 'NIGHT_CANTEEN',
       'MAINTENANCE_WASHROOM', 'MAINTENANCE_WATER',
-      'MAINTENANCE_ELECTRICAL', 'MAINTENANCE_CIVIL', 'MAINTENANCE_CLEANING'
+      'MAINTENANCE_ELECTRICAL', 'MAINTENANCE_CIVIL', 'MAINTENANCE_CLEANING',
+      'MAINTENANCE_OUTDOOR'
     ];
     const finalFacility = validFacilities.includes(facilityType) ? facilityType : 'REGULAR_MESS';
 
+    // --- Rate Limiting ---
+    // 1/hour per section type (mess/canteen OR maintenance)
+    // 3/day combined across all sections
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    try {
+      // Per-hour limit: check same facilityType group
+      const isMaintenance = finalFacility.startsWith('MAINTENANCE_');
+      const hourWhereClause: any = {
+        email: trimmedEmail,
+        createdAt: { gte: oneHourAgo },
+      };
+      if (isMaintenance) {
+        hourWhereClause.facilityType = { in: MAINTENANCE_TYPES };
+      } else {
+        hourWhereClause.facilityType = finalFacility;
+      }
+
+      const hourlyCount = await prisma.feedback.count({ where: hourWhereClause });
+      if (hourlyCount >= 1) {
+        return NextResponse.json(
+          { error: 'You can only submit 1 grievance per hour in this section. Please try again later.' },
+          { status: 429 }
+        );
+      }
+
+      // Per-day limit: combined across ALL sections
+      const dailyCount = await prisma.feedback.count({
+        where: {
+          email: trimmedEmail,
+          createdAt: { gte: todayStart },
+        },
+      });
+      if (dailyCount >= 3) {
+        return NextResponse.json(
+          { error: 'Daily limit reached (3 grievances/day across all sections). Please try again tomorrow.' },
+          { status: 429 }
+        );
+      }
+    } catch (dbErr) {
+      // If DB is unavailable, allow submission (fallback)
+      console.warn('Rate limit DB check failed, allowing submission:', dbErr);
+    }
+
+    const normalizedRoomNo = roomNo.trim().toUpperCase();
+    const finalStudentName = (studentName && studentName.trim()) || 'Anonymous';
+
     const newFeedback = {
       id: `fb-${Date.now()}`,
-      studentName,
-      hallRoll: hallRoll,
+      studentName: finalStudentName,
+      roomNo: normalizedRoomNo,
+      email: trimmedEmail,
       comment,
       facilityType: finalFacility,
       status: 'PENDING',
@@ -109,10 +192,10 @@ export async function POST(request: Request) {
     try {
       await prisma.feedback.create({
         data: {
-          studentName,
-          hallRoll,
-          roomNo,
-          email,
+          studentName: finalStudentName,
+          hallRoll: normalizedRoomNo, // Legacy field — store roomNo here for backward compat
+          roomNo: normalizedRoomNo,
+          email: trimmedEmail,
           comment,
           facilityType: finalFacility,
           mediaUrl: mediaUrl || null,
