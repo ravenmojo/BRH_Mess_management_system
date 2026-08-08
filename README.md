@@ -8,7 +8,7 @@ A comprehensive, mobile-first Next.js web application built as a centralized dig
 
 ---
 
-## 🚀 Release Notes — Version 0.9.0 (v0.9)
+## 🚀 Release Notes — Version 0.9.0
 
 ### 📌 What's New in v0.9.0
 
@@ -73,27 +73,6 @@ A comprehensive, mobile-first Next.js web application built as a centralized dig
 | Auth & Verification | [Supabase Auth](https://supabase.com/auth) (OTP Magic Link) |
 | Media Storage | [Cloudinary](https://cloudinary.com/) |
 | Theming | `next-themes` |
-
----
-
-## 📋 Quick Start
-
-### 1. Install Dependencies
-```bash
-npm install
-```
-
-### 2. Database Migration & Client Generation
-```bash
-npx prisma generate
-npx prisma db push
-```
-
-### 3. Run Local Development Server
-```bash
-npm run dev
-```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
