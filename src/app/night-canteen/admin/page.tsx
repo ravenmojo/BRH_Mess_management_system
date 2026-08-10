@@ -110,27 +110,39 @@ function CanteenAdminContent() {
               </p>
 
               {fb.mediaUrl && (
-                <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-gray-50 dark:bg-gray-800/80 rounded-lg border border-gray-200 dark:border-gray-700 text-[10px]">
-                  <div className="flex items-center space-x-2">
-                    <a href={fb.mediaUrl} target="_blank" rel="noreferrer" className="inline-flex items-center space-x-1 font-bold text-blue-600 dark:text-blue-400 hover:underline">
-                      {fb.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? <Video className="w-3 h-3" /> : <ImageIcon className="w-3 h-3" />}
-                      <span>View Media</span>
-                    </a>
-                    <a
-                      href={fb.mediaUrl}
-                      download
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center space-x-1 font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-200/70 dark:bg-slate-700/70 px-2 py-0.5 rounded-md transition-colors"
-                      title="Download Media File"
-                    >
-                      <Download className="w-3 h-3" />
-                      <span>Download</span>
-                    </a>
+                <div className="space-y-2 p-2 bg-gray-50 dark:bg-gray-800/80 rounded-lg border border-gray-200 dark:border-gray-700 text-[10px]">
+                  {/* Low Res Preview Media */}
+                  <div className="w-full max-h-48 overflow-hidden rounded-lg bg-black/90 flex items-center justify-center border border-slate-200/50 dark:border-slate-700/50">
+                    {fb.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
+                      <video src={fb.mediaUrl} className="w-full max-h-48 object-contain" controls preload="metadata" />
+                    ) : (
+                      <a href={fb.mediaUrl} target="_blank" rel="noreferrer" className="w-full h-full flex items-center justify-center p-0.5">
+                        <img src={fb.mediaUrl} alt="Grievance Media Proof" className="w-full max-h-48 object-contain rounded-md hover:scale-[1.02] transition-transform duration-200" />
+                      </a>
+                    )}
                   </div>
-                  <span className="text-gray-500 font-mono text-[9.5px]">
-                    Captured: {fb.capturedAt || new Date(fb.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
-                  </span>
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+                    <div className="flex items-center space-x-2">
+                      <a href={fb.mediaUrl} target="_blank" rel="noreferrer" className="inline-flex items-center space-x-1 font-bold text-blue-600 dark:text-blue-400 hover:underline">
+                        {fb.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? <Video className="w-3 h-3" /> : <ImageIcon className="w-3 h-3" />}
+                        <span>Full Media</span>
+                      </a>
+                      <a
+                        href={fb.mediaUrl}
+                        download
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center space-x-1 font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-200/70 dark:bg-slate-700/70 px-2 py-0.5 rounded-md transition-colors"
+                        title="Download Media File"
+                      >
+                        <Download className="w-3 h-3" />
+                        <span>Download</span>
+                      </a>
+                    </div>
+                    <span className="text-gray-500 font-mono text-[9.5px]">
+                      Captured: {fb.capturedAt || new Date(fb.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })} IST
+                    </span>
+                  </div>
                 </div>
               )}
 

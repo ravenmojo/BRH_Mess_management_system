@@ -386,12 +386,12 @@ function HubAdminContent() {
                 {data.movies.map((movie: any) => (
                   <div key={movie.id} className="rounded-2xl glass-card overflow-hidden border border-slate-200 dark:border-slate-800 space-y-0">
                     {movie.posterUrl && (
-                      <div className="w-full aspect-video relative bg-black flex items-center justify-center overflow-hidden">
+                      <div className="w-full aspect-video relative bg-slate-950 flex items-center justify-center overflow-hidden">
                         {movie.posterUrl.match(/\.(mp4|webm|ogg)$/i) ? (
-                          <video src={movie.posterUrl} className="w-full h-full object-cover" controls preload="metadata" />
+                          <video src={movie.posterUrl} className="w-full h-full object-contain" controls preload="metadata" />
                         ) : (
-                          <a href={movie.posterUrl} target="_blank" rel="noreferrer" className="w-full h-full block">
-                            <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover" />
+                          <a href={movie.posterUrl} target="_blank" rel="noreferrer" className="w-full h-full flex items-center justify-center p-1">
+                            <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-contain" />
                           </a>
                         )}
                         <a
@@ -410,7 +410,7 @@ function HubAdminContent() {
                       <div>
                         <h4 className="font-extrabold text-slate-900 dark:text-white text-sm">{movie.title}</h4>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
-                          {movie.venue} • {new Date(movie.showTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                          {movie.venue} • {new Date(movie.showTime).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' })} IST
                         </p>
                       </div>
                       <button

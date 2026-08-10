@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Camera, Loader2, Video, Upload, X, AlertTriangle, Clock, Download } from 'lucide-react';
 import { Footer } from '@/components/footer';
+import { uploadToCloudinary } from '@/lib/cloudinary-upload';
 import { OtpVerificationModal } from '@/components/otp-modal';
 
 const CATEGORIES = [
@@ -22,6 +23,7 @@ export default function PublicGalleryPage() {
   // Upload Modal State
   const [showUpload, setShowUpload] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   
@@ -87,36 +89,28 @@ export default function PublicGalleryPage() {
     try {
       // 1. Upload to Cloudinary ONLY AFTER email OTP verification succeeds
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || '');
+      setUploading(true);
+      setUploadProgress(0);
       
-      const cloudinaryRes = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/upload`, {
-        method: 'POST',
-        body: formData,
-      });
-      
-      const cloudinaryData = await cloudinaryRes.json();
-      
-      if (!cloudinaryRes.ok) {
-        throw new Error(cloudinaryData.error?.message || 'Failed to upload to Cloudinary');
-      }
+      const secureUrl = await uploadToCloudinary(file, (pct) => setUploadProgress(pct));
 
       const lastMod = file!.lastModified ? new Date(file!.lastModified) : new Date();
       const capturedStr = lastMod.toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
         day: '2-digit',
         month: 'short',
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
-      });
+      }) + ' IST';
 
       // 2. Save to database
       const dbRes = await fetch('/api/gallery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          url: cloudinaryData.secure_url,
+          url: secureUrl,
           caption,
           category,
           uploaderName,
@@ -243,7 +237,7 @@ export default function PublicGalleryPage() {
                   )}
                   <p className="text-[9px] text-emerald-300 font-mono drop-shadow flex items-center space-x-1">
                     <Clock className="w-2.5 h-2.5 inline mr-0.5" />
-                    <span>Captured: {img.capturedAt || new Date(img.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                    <span>Captured: {img.capturedAt || new Date(img.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' }) + ' IST'}</span>
                   </p>
                   {img.uploaderName && (
                     <p className="text-[9px] text-gray-300 flex justify-between items-center opacity-80">
@@ -326,6 +320,21 @@ export default function PublicGalleryPage() {
                     <input type="text" value={caption} onChange={e => setCaption(e.target.value)} className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Short description..." />
                   </div>
 
+                  {uploading && (
+                    <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 space-y-1.5 shadow-sm">
+                      <div className="flex items-center justify-between text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                        <span className="flex items-center space-x-1.5">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                          <span>Uploading Duty Record ({uploadProgress}%)...</span>
+                        </span>
+                        <span className="font-mono text-[11px]">{uploadProgress}%</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-emerald-200 dark:bg-emerald-900 rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-600 transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
+                      </div>
+                    </div>
+                  )}
+
                   {uploadError && (
                     <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded-lg border border-red-100 dark:border-red-800">
                       {uploadError}
@@ -334,8 +343,8 @@ export default function PublicGalleryPage() {
 
                   <div className="pt-2">
                     <button type="submit" disabled={uploading || !file} className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition-all disabled:opacity-50 flex justify-center items-center space-x-2">
-                      {uploading && <Loader2 className="w-4 h-4 animate-spin" />}
-                      <span>{uploading ? 'Uploading...' : 'Submit to Gallery'}</span>
+                      {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                      <span>{uploading ? `Uploading Media (${uploadProgress}%)...` : 'Submit to Gallery'}</span>
                     </button>
                   </div>
                 </form>

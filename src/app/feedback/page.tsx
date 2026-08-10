@@ -254,13 +254,30 @@ export default function StudentFeedbackPage() {
           )}
         </div>
 
+        {submitting && (
+          <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 space-y-1.5 shadow-sm">
+            <div className="flex items-center justify-between text-xs font-bold text-blue-700 dark:text-blue-300">
+              <span className="flex items-center space-x-1.5">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                <span>{isUploading ? `Uploading Media Proof (${uploadProgress}%)...` : 'Submitting Grievance...'}</span>
+              </span>
+              {isUploading && <span className="font-mono text-[11px]">{uploadProgress}%</span>}
+            </div>
+            {isUploading && (
+              <div className="w-full h-1.5 bg-blue-200 dark:bg-blue-900 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-600 transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
+              </div>
+            )}
+          </div>
+        )}
+
         <button
           type="submit"
           disabled={submitting || isUploading}
           className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors flex items-center justify-center space-x-1.5 disabled:opacity-50 shadow-md shadow-blue-500/20"
         >
           {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-          <span>{submitting ? 'Submitting...' : 'Submit Grievance'}</span>
+          <span>{submitting ? (isUploading ? `Uploading Media (${uploadProgress}%)...` : 'Submitting...') : 'Submit Grievance'}</span>
         </button>
       </form>
 
@@ -307,28 +324,40 @@ export default function StudentFeedbackPage() {
               <p className="text-slate-700 dark:text-slate-300">{item.comment}</p>
               
               {item.mediaUrl && (
-                <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 text-[10px]">
-                  <div className="flex items-center space-x-2">
-                    <a href={item.mediaUrl} target="_blank" rel="noreferrer" className="inline-flex items-center space-x-1 font-bold text-blue-600 dark:text-blue-400 hover:underline">
-                      {item.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? <Video className="w-3 h-3" /> : <ImageIcon className="w-3 h-3" />}
-                      <span>View Media</span>
-                    </a>
-                    <a
-                      href={item.mediaUrl}
-                      download
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center space-x-1 font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-200/70 dark:bg-slate-700/70 px-2 py-0.5 rounded-md transition-colors"
-                      title="Download Media File"
-                    >
-                      <Download className="w-3 h-3" />
-                      <span>Download</span>
-                    </a>
+                <div className="space-y-2 p-2 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 text-[10px]">
+                  {/* Low Res Preview Media */}
+                  <div className="w-full max-h-48 overflow-hidden rounded-lg bg-black/90 flex items-center justify-center border border-slate-200/50 dark:border-slate-700/50">
+                    {item.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
+                      <video src={item.mediaUrl} className="w-full max-h-48 object-contain" controls preload="metadata" />
+                    ) : (
+                      <a href={item.mediaUrl} target="_blank" rel="noreferrer" className="w-full h-full flex items-center justify-center p-0.5">
+                        <img src={item.mediaUrl} alt="Grievance Media Proof" className="w-full max-h-48 object-contain rounded-md hover:scale-[1.02] transition-transform duration-200" />
+                      </a>
+                    )}
                   </div>
-                  <span className="text-slate-500 font-mono text-[9.5px] flex items-center space-x-1">
-                    <Clock className="w-3 h-3 text-slate-400 inline" />
-                    <span>Captured: {item.capturedAt || new Date(item.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-                  </span>
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+                    <div className="flex items-center space-x-2">
+                      <a href={item.mediaUrl} target="_blank" rel="noreferrer" className="inline-flex items-center space-x-1 font-bold text-blue-600 dark:text-blue-400 hover:underline">
+                        {item.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? <Video className="w-3 h-3" /> : <ImageIcon className="w-3 h-3" />}
+                        <span>Full Media</span>
+                      </a>
+                      <a
+                        href={item.mediaUrl}
+                        download
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center space-x-1 font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-200/70 dark:bg-slate-700/70 px-2 py-0.5 rounded-md transition-colors"
+                        title="Download Media File"
+                      >
+                        <Download className="w-3 h-3" />
+                        <span>Download</span>
+                      </a>
+                    </div>
+                    <span className="text-slate-500 font-mono text-[9.5px] flex items-center space-x-1">
+                      <Clock className="w-3 h-3 text-slate-400 inline" />
+                      <span>Captured: {item.capturedAt || new Date(item.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })} IST</span>
+                    </span>
+                  </div>
                 </div>
               )}
 
