@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Film, Trophy, Users, Phone, ShieldCheck, Plus, Trash2, Sparkles, Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Film, Trophy, Users, Phone, ShieldCheck, Plus, Trash2, Sparkles, Loader2, ArrowLeft, CheckCircle2, UploadCloud, Upload, Image as ImageIcon, Video } from 'lucide-react';
 import Link from 'next/link';
+import { uploadToCloudinary } from '@/lib/cloudinary-upload';
 import { AdminAuthGate } from '@/components/admin-auth-gate';
 
 export default function HubAdminPage() {
@@ -26,6 +27,9 @@ function HubAdminContent() {
   const [moviePosterUrl, setMoviePosterUrl] = useState('');
   const [movieShowTime, setMovieShowTime] = useState('');
   const [movieVenue, setMovieVenue] = useState('BRH Common Room');
+  const [posterFile, setPosterFile] = useState<File | null>(null);
+  const [uploadingPoster, setUploadingPoster] = useState(false);
+  const [posterProgress, setPosterProgress] = useState(0);
 
   // 2. Activity Form
   const [activityStudentName, setActivityStudentName] = useState('');
@@ -107,7 +111,24 @@ function HubAdminContent() {
     e.preventDefault();
     if (!movieTitle) return;
     setSubmitting(true);
+    let finalPosterUrl = moviePosterUrl;
+
     try {
+      if (posterFile) {
+        setUploadingPoster(true);
+        setPosterProgress(0);
+        try {
+          finalPosterUrl = await uploadToCloudinary(posterFile, (pct) => setPosterProgress(pct));
+        } catch (err: any) {
+          alert('Movie poster upload failed: ' + (err.message || 'Error uploading poster file'));
+          setSubmitting(false);
+          setUploadingPoster(false);
+          return;
+        } finally {
+          setUploadingPoster(false);
+        }
+      }
+
       await fetch('/api/hub', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -115,7 +136,7 @@ function HubAdminContent() {
           type: 'MOVIE',
           payload: {
             title: movieTitle,
-            posterUrl: moviePosterUrl || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&q=80',
+            posterUrl: finalPosterUrl || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&q=80',
             showTime: movieShowTime || new Date().toISOString(),
             venue: movieVenue,
           },
@@ -124,6 +145,8 @@ function HubAdminContent() {
       setMovieTitle('');
       setMoviePosterUrl('');
       setMovieShowTime('');
+      setPosterFile(null);
+      setPosterProgress(0);
       loadData();
     } finally {
       setSubmitting(false);
@@ -292,42 +315,69 @@ function HubAdminContent() {
                   <Plus className="w-4 h-4 text-purple-600" />
                   <span>Add Movie Screening</span>
                 </h3>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <input
-                    type="text"
-                    placeholder="Movie Title *"
-                    value={movieTitle}
-                    onChange={(e) => setMovieTitle(e.target.value)}
-                    required
-                    className="w-full px-3.5 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Venue (e.g. Common Room)"
-                    value={movieVenue}
-                    onChange={(e) => setMovieVenue(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                  />
-                  <input
-                    type="datetime-local"
-                    value={movieShowTime}
-                    onChange={(e) => setMovieShowTime(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                  />
-                  <input
-                    type="url"
-                    placeholder="Poster Image URL (Optional)"
-                    value={moviePosterUrl}
-                    onChange={(e) => setMoviePosterUrl(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                  />
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <input
+                      type="text"
+                      placeholder="Movie Title *"
+                      value={movieTitle}
+                      onChange={(e) => setMovieTitle(e.target.value)}
+                      required
+                      className="w-full px-3.5 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Venue (e.g. BRH Common Room)"
+                      value={movieVenue}
+                      onChange={(e) => setMovieVenue(e.target.value)}
+                      className="w-full px-3.5 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    />
+                    <input
+                      type="datetime-local"
+                      value={movieShowTime}
+                      onChange={(e) => setMovieShowTime(e.target.value)}
+                      className="w-full px-3.5 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    />
+                    <input
+                      type="url"
+                      placeholder="Poster Image URL (Optional)"
+                      value={moviePosterUrl}
+                      onChange={(e) => setMoviePosterUrl(e.target.value)}
+                      className="w-full px-3.5 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    />
+                  </div>
+
+                  {/* Direct Poster File Upload */}
+                  <div className="border border-dashed border-purple-300 dark:border-purple-800/70 rounded-xl p-3 bg-purple-50/40 dark:bg-purple-950/20 text-center">
+                    <input
+                      type="file"
+                      id="poster-file-input"
+                      accept="image/*,video/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setPosterFile(e.target.files[0]);
+                        }
+                      }}
+                    />
+                    <label htmlFor="poster-file-input" className="cursor-pointer flex items-center justify-center space-x-2 text-xs text-purple-700 dark:text-purple-300 font-bold">
+                      <UploadCloud className="w-4 h-4 text-purple-600" />
+                      <span>{posterFile ? `Selected Poster: ${posterFile.name}` : 'Click to Upload Movie Poster / Video File'}</span>
+                    </label>
+                    {uploadingPoster && (
+                      <div className="mt-2 w-full h-1.5 bg-purple-200 dark:bg-purple-900 rounded-full overflow-hidden">
+                        <div className="h-full bg-purple-600 transition-all duration-300" style={{ width: `${posterProgress}%` }}></div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <button
                   type="submit"
                   disabled={submitting || !movieTitle.trim()}
-                  className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+                  className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center space-x-2"
                 >
-                  Add Movie
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Film className="w-4 h-4" />}
+                  <span>{submitting ? 'Publishing Movie...' : 'Publish Movie Screening'}</span>
                 </button>
               </form>
 

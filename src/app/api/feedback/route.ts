@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { deleteFromCloudinary } from '@/lib/cloudinary-delete';
 
 let inMemoryFeedbacks: any[] = [
   {
@@ -92,7 +93,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { studentName, comment, facilityType, mediaUrl, roomNo, email } = await request.json();
+    const { studentName, comment, facilityType, mediaUrl, roomNo, email, capturedAt } = await request.json();
 
     if (!email) {
       return NextResponse.json({ error: 'Email address is required.' }, { status: 400 });
@@ -184,6 +185,7 @@ export async function POST(request: Request) {
       status: 'PENDING',
       remark: null,
       mediaUrl: mediaUrl || null,
+      capturedAt: capturedAt || null,
       createdAt: new Date().toISOString(),
     };
 
@@ -199,6 +201,7 @@ export async function POST(request: Request) {
           comment,
           facilityType: finalFacility,
           mediaUrl: mediaUrl || null,
+          capturedAt: capturedAt || null,
         },
       });
     } catch (dbErr) {
@@ -253,6 +256,17 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Feedback ID is required.' }, { status: 400 });
     }
 
+    let mediaUrl: string | null = null;
+    const targetInMemory = inMemoryFeedbacks.find((f) => f.id === id);
+    if (targetInMemory?.mediaUrl) {
+      mediaUrl = targetInMemory.mediaUrl;
+    } else {
+      try {
+        const targetDb = await prisma.feedback.findUnique({ where: { id } });
+        if (targetDb?.mediaUrl) mediaUrl = targetDb.mediaUrl;
+      } catch (e) {}
+    }
+
     inMemoryFeedbacks = inMemoryFeedbacks.filter((f) => f.id !== id);
 
     try {
@@ -263,7 +277,15 @@ export async function DELETE(request: Request) {
       console.warn('DB bypass for feedback DELETE');
     }
 
-    return NextResponse.json({ message: 'Complaint removed successfully!' });
+    let cloudinaryNotice: string | null = null;
+    if (mediaUrl) {
+      const purgeRes = await deleteFromCloudinary(mediaUrl);
+      if (!purgeRes.success) {
+        cloudinaryNotice = purgeRes.message;
+      }
+    }
+
+    return NextResponse.json({ message: 'Grievance removed successfully!', cloudinaryNotice });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

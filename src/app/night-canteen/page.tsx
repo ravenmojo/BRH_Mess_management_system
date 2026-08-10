@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Moon, Utensils, MessageSquare, Send, CheckCircle, Clock, ShieldCheck } from 'lucide-react';
+import { Moon, Utensils, MessageSquare, Send, CheckCircle, Clock, ShieldCheck, Video, ImageIcon, Download } from 'lucide-react';
 import Link from 'next/link';
 import { OtpVerificationModal } from '@/components/otp-modal';
 
@@ -274,6 +274,32 @@ export default function NightCanteenPage() {
                   </div>
 
                   <p className="text-slate-700 dark:text-slate-300 font-medium">{fb.comment}</p>
+
+                  {fb.mediaUrl && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 text-[10px]">
+                      <div className="flex items-center space-x-2">
+                        <a href={fb.mediaUrl} target="_blank" rel="noreferrer" className="inline-flex items-center space-x-1 font-bold text-blue-600 dark:text-blue-400 hover:underline">
+                          {fb.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? <Video className="w-3 h-3" /> : <ImageIcon className="w-3 h-3" />}
+                          <span>View Media</span>
+                        </a>
+                        <a
+                          href={fb.mediaUrl}
+                          download
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center space-x-1 font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-200/70 dark:bg-slate-700/70 px-2 py-0.5 rounded-md transition-colors"
+                          title="Download Media File"
+                        >
+                          <Download className="w-3 h-3" />
+                          <span>Download</span>
+                        </a>
+                      </div>
+                      <span className="text-slate-500 font-mono text-[9.5px] flex items-center space-x-1">
+                        <Clock className="w-3 h-3 text-slate-400 inline" />
+                        <span>Captured: {fb.capturedAt || new Date(fb.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                      </span>
+                    </div>
+                  )}
 
                   {fb.remark && (
                     <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/50 text-[11px] text-blue-900 dark:text-blue-200">
