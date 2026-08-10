@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Film, Lightbulb, Users, Phone, Trophy, Send, Loader2, Star, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Film, Lightbulb, Users, Phone, Trophy, Send, Loader2, Star, ShieldCheck, AlertTriangle, Download, Video, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 import { Footer } from '@/components/footer';
 import { OtpVerificationModal } from '@/components/otp-modal';
@@ -150,19 +150,42 @@ export default function HubPage() {
           <>
             {/* MOVIES TAB */}
             {activeTab === 'MOVIE' && (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {data.movies.length > 0 ? (
                   data.movies.map((movie: any) => (
-                    <div key={movie.id} className="p-4 glass-card rounded-2xl space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
-                          {movie.venue}
-                        </span>
-                        <span className="text-[10px] font-semibold text-slate-400">
-                          {new Date(movie.showTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
-                        </span>
+                    <div key={movie.id} className="glass-card rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 space-y-0">
+                      {movie.posterUrl && (
+                        <div className="w-full aspect-video relative bg-black flex items-center justify-center overflow-hidden">
+                          {movie.posterUrl.match(/\.(mp4|webm|ogg)$/i) ? (
+                            <video src={movie.posterUrl} className="w-full h-full object-cover" controls preload="metadata" />
+                          ) : (
+                            <a href={movie.posterUrl} target="_blank" rel="noreferrer" className="w-full h-full block">
+                              <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
+                            </a>
+                          )}
+                          <a
+                            href={movie.posterUrl}
+                            download
+                            target="_blank"
+                            rel="noreferrer"
+                            className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 text-white rounded-lg transition-colors shadow-md backdrop-blur-sm z-10"
+                            title="Download Movie Poster"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+                      )}
+                      <div className="p-4 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
+                            {movie.venue || 'BRH Common Room'}
+                          </span>
+                          <span className="text-[10px] font-semibold text-slate-400 font-mono">
+                            {new Date(movie.showTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                          </span>
+                        </div>
+                        <h3 className="font-extrabold text-slate-900 dark:text-white text-base">{movie.title}</h3>
                       </div>
-                      <h3 className="font-bold text-slate-900 dark:text-white text-sm">{movie.title}</h3>
                     </div>
                   ))
                 ) : (
