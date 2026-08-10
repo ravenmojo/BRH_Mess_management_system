@@ -13,6 +13,11 @@ A comprehensive, mobile-first Next.js web application built as a centralized dig
 ### 📌 What's New in v0.9.0
 
 - **🛡️ Grievances System & Terminology:** Standardized terminology to **"Grievances"** across student and admin portals (Mess, Maintenance, Night Canteen), reserving "Suggestions" exclusively for the Hall Info Hub.
+- **🗑️ Cloudinary Auto-Purge & Fallback Notice:** Deleting or rejecting grievances and gallery items automatically purges physical files from Cloudinary storage. If API credentials are pending, actions fail gracefully with a notice: *"Cloudinary auto-purge will work in future once API credentials are configured."*
+- **📅 30-Day Gallery Auto-Purge Policy:** Mess Duty Gallery records older than 30 days are automatically purged from PostgreSQL DB and Cloudinary storage on query.
+- **📥 Individual & Bulk Media Downloads:** Added individual **"Download"** buttons to attached photo/video elements across all grievance cards and gallery overlays, plus a **"Download All Media"** batch download option for admins.
+- **📷 Picture & Video Metadata Timestamp (`capturedAt`):** Client-side extraction of `file.lastModified` metadata timestamp from uploaded media, displaying `📷 Captured: <Date & Time>` on all grievance cards and gallery overlays.
+- **🎬 Admin Movie Poster File Upload:** Admins can upload movie poster images or video trailers directly from their device with Cloudinary integration and live upload progress bars.
 - **⚡ 24-Hour OTP Verification Cache:** Verified institute emails are cached in `localStorage` for 24 hours. Boarders submitting subsequent grievances within 24 hours bypass the OTP modal instantly.
 - **⏱️ Server-Side Rate Limiting Engine:**
   - **Grievances:** 1 complaint per hour per section (Mess, Maintenance, Canteen) and capped at **3 total complaints per day** combined across all sections.
@@ -32,18 +37,18 @@ A comprehensive, mobile-first Next.js web application built as a centralized dig
 
 ### 🍽️ Mess Management & Grievances
 - **Live Weekly Menu Viewer:** Browse the full 7-day mess schedule starting from Sunday, with item options (Common, Veg, Non-Veg, Option 1/2).
-- **Mess Grievance Center:** Submit grievances for regular mess food quality/hygiene with media attachments (photos/videos via Cloudinary).
+- **Mess Grievance Center:** Submit grievances for regular mess food quality/hygiene with media attachments and metadata timestamps.
 - **OTP & Cache Verified:** Inline OTP verification with 24-hour verification cache.
 
 ### 🔧 Maintenance Portal
-- **Category-Based Grievances:** Log issues across six categories — Washroom, Water Supply, Electrical, Civil, Cleaning, and Outdoor.
-- **Media Attachments:** Attach photos or videos (up to 20MB) uploaded directly to Cloudinary.
-- **Resolution Timeline:** Track grievances live with official admin remarks and status badges.
+- **Category-Based Grievances:** Log issues across seven categories — Washroom, Water Supply, Electrical, Civil, Cleaning, Outdoor, and Other.
+- **Media Attachments & Downloads:** Attach photos or videos (up to 20MB) uploaded directly to Cloudinary, with individual download buttons.
+- **Resolution Timeline:** Track grievances live with official admin remarks, metadata capture timestamps, and status badges.
 - **Maintenance Admin Panel:** Protected by `AdminAuthGate` with 30-minute session limits.
 
 ### 🌙 Night Canteen
 - **Live Menu:** Browse independent canteen menu items (open 9:30 PM – 2:00 AM) with prices and categories.
-- **Canteen Grievances:** Submit canteen-specific grievances with rate limits and room number validation.
+- **Canteen Grievances:** Submit canteen-specific grievances with rate limits, media attachments, and room number validation.
 
 ### 📊 Mess Poll
 - **Monthly Seasonal Poll:** Boarders vote on monthly menu additions (e.g. seasonal vegetable curries).
@@ -51,10 +56,11 @@ A comprehensive, mobile-first Next.js web application built as a centralized dig
 
 ### 📸 Transparent Duty Gallery
 - **Duty Verification:** Transparent visual records of raw materials, cleaning, weight checking, and duty execution.
-- **Moderation Flow:** Student uploads (up to 5MB) require admin approval before appearing publicly.
+- **30-Day Auto-Purge:** Automatic 30-day retention policy for visual transparency logs.
+- **Admin Moderation & Bulk Download:** Student uploads require admin approval; admins can batch-download all gallery media.
 
 ### 🏛️ Hall Info Hub
-- **Community Portal:** Weekend movie announcements, student activity logs, hall achievements, and emergency contact direct-dial directory.
+- **Community Portal:** Weekend movie announcements with direct poster image/video uploads, student activity logs, hall achievements, and emergency contact directory.
 - **Boarder Suggestion Portal:** Submit ideas (Mess, Events, Sports, etc.) capped at 1 suggestion/category/day.
 
 ---
@@ -83,7 +89,7 @@ A comprehensive, mobile-first Next.js web application built as a centralized dig
   - `/admin` — Mess Menu Builder, Compliance Widgets, Grievance Moderation, Gallery Approvals, Poll Manager
   - `/maintenance/admin` — Infrastructure Grievance Resolution
   - `/night-canteen/admin` — Canteen Grievances Management
-  - `/hub/admin` — Hall Info Content Management & Data Seeding
+  - `/hub/admin` — Hall Info Content Management, Movie Poster Uploads & Data Seeding
 
 ---
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Send, CheckCircle2, Clock, ShieldCheck, AlertTriangle, Paperclip, Loader2, Image as ImageIcon, Video } from 'lucide-react';
+import { MessageSquare, Send, CheckCircle2, Clock, ShieldCheck, AlertTriangle, Paperclip, Loader2, Image as ImageIcon, Video, Download } from 'lucide-react';
 import Link from 'next/link';
 import { uploadToCloudinary } from '@/lib/cloudinary-upload';
 import { useRouter } from 'next/navigation';
@@ -35,6 +35,7 @@ export default function StudentFeedbackPage() {
   
   // Upload state
   const [file, setFile] = useState<File | null>(null);
+  const [capturedAt, setCapturedAt] = useState<string>('');
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isUploading, setIsUploading] = useState(false);
   const [mediaUrl, setMediaUrl] = useState<string>('');
@@ -65,6 +66,16 @@ export default function StudentFeedbackPage() {
         return;
       }
       setFile(selectedFile);
+      const lastMod = selectedFile.lastModified ? new Date(selectedFile.lastModified) : new Date();
+      const capturedStr = lastMod.toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+      setCapturedAt(capturedStr);
     }
   };
 
@@ -116,6 +127,7 @@ export default function StudentFeedbackPage() {
           comment,
           facilityType: 'REGULAR_MESS',
           mediaUrl: uploadedMediaUrl,
+          capturedAt: uploadedMediaUrl ? capturedAt : null,
         }),
       });
 
@@ -295,10 +307,29 @@ export default function StudentFeedbackPage() {
               <p className="text-slate-700 dark:text-slate-300">{item.comment}</p>
               
               {item.mediaUrl && (
-                <a href={item.mediaUrl} target="_blank" rel="noreferrer" className="inline-flex items-center space-x-1.5 px-2 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-[10px] font-medium transition-colors text-blue-600">
-                  {item.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? <Video className="w-3 h-3" /> : <ImageIcon className="w-3 h-3" />}
-                  <span>View Attached Media</span>
-                </a>
+                <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 text-[10px]">
+                  <div className="flex items-center space-x-2">
+                    <a href={item.mediaUrl} target="_blank" rel="noreferrer" className="inline-flex items-center space-x-1 font-bold text-blue-600 dark:text-blue-400 hover:underline">
+                      {item.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? <Video className="w-3 h-3" /> : <ImageIcon className="w-3 h-3" />}
+                      <span>View Media</span>
+                    </a>
+                    <a
+                      href={item.mediaUrl}
+                      download
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center space-x-1 font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-200/70 dark:bg-slate-700/70 px-2 py-0.5 rounded-md transition-colors"
+                      title="Download Media File"
+                    >
+                      <Download className="w-3 h-3" />
+                      <span>Download</span>
+                    </a>
+                  </div>
+                  <span className="text-slate-500 font-mono text-[9.5px] flex items-center space-x-1">
+                    <Clock className="w-3 h-3 text-slate-400 inline" />
+                    <span>Captured: {item.capturedAt || new Date(item.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                  </span>
+                </div>
               )}
 
               {item.remark && (

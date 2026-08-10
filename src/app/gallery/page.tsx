@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Camera, Loader2, Video, Upload, X, AlertTriangle } from 'lucide-react';
+import { Camera, Loader2, Video, Upload, X, AlertTriangle, Clock, Download } from 'lucide-react';
 import { Footer } from '@/components/footer';
 import { OtpVerificationModal } from '@/components/otp-modal';
 
@@ -101,6 +101,16 @@ export default function PublicGalleryPage() {
         throw new Error(cloudinaryData.error?.message || 'Failed to upload to Cloudinary');
       }
 
+      const lastMod = file!.lastModified ? new Date(file!.lastModified) : new Date();
+      const capturedStr = lastMod.toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+
       // 2. Save to database
       const dbRes = await fetch('/api/gallery', {
         method: 'POST',
@@ -111,6 +121,7 @@ export default function PublicGalleryPage() {
           category,
           uploaderName,
           uploaderRollNo,
+          capturedAt: capturedStr,
           email: verifiedEmail,
         })
       });
@@ -164,6 +175,12 @@ export default function PublicGalleryPage() {
         </div>
       </div>
 
+      {/* 30-Day Retention Notice */}
+      <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-xs font-semibold text-amber-800 dark:text-amber-300 flex items-center space-x-2">
+        <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+        <span><strong>Retention Notice:</strong> Mess Duty Gallery media records automatically auto-purge after 30 days.</span>
+      </div>
+
       {/* Filter Chips */}
       <div className="flex overflow-x-auto space-x-2 pb-2 scrollbar-none">
         {CATEGORIES.map(cat => (
@@ -207,18 +224,27 @@ export default function PublicGalleryPage() {
                       <img src={img.url} alt={img.caption || 'Gallery Image'} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
                     </a>
                   )}
-                  {isVideo && !img.url.includes('controls') && (
-                    <div className="absolute top-2 right-2 p-1 bg-black/50 rounded-md pointer-events-none">
-                      <Video className="w-3 h-3 text-white" />
-                    </div>
-                  )}
+                  <a
+                    href={img.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    download
+                    className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 text-white rounded-lg transition-colors shadow-md backdrop-blur-sm group-hover:scale-105"
+                    title="Download Media File"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                  </a>
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent pt-6">
+                <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent pt-6 space-y-0.5">
                   {img.caption && (
-                    <p className="text-[10px] text-white font-medium line-clamp-2 drop-shadow-md leading-tight mb-1">
+                    <p className="text-[10px] text-white font-medium line-clamp-2 drop-shadow-md leading-tight">
                       {img.caption}
                     </p>
                   )}
+                  <p className="text-[9px] text-emerald-300 font-mono drop-shadow flex items-center space-x-1">
+                    <Clock className="w-2.5 h-2.5 inline mr-0.5" />
+                    <span>Captured: {img.capturedAt || new Date(img.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                  </p>
                   {img.uploaderName && (
                     <p className="text-[9px] text-gray-300 flex justify-between items-center opacity-80">
                       <span>{img.uploaderName}</span>

@@ -1,11 +1,32 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { createClient } from '@/utils/supabase/server';
+import { deleteFromCloudinary } from '@/lib/cloudinary-delete';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');
+
+    // Auto-purge Mess Duty Gallery images older than 30 days
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    try {
+      const expiredImages = await prisma.galleryImage.findMany({
+        where: { createdAt: { lt: thirtyDaysAgo } }
+      });
+      if (expiredImages.length > 0) {
+        for (const img of expiredImages) {
+          if (img.url) {
+            deleteFromCloudinary(img.url).catch(() => {});
+          }
+        }
+        await prisma.galleryImage.deleteMany({
+          where: { createdAt: { lt: thirtyDaysAgo } }
+        });
+      }
+    } catch (purgeErr) {
+      console.warn('Gallery 30-day auto-purge check warning:', purgeErr);
+    }
 
     const images = await prisma.galleryImage.findMany({
       where: {
@@ -23,11 +44,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const supabase = createClient();
-    // Public upload allowed; no auth check required for POST
-
     const body = await request.json();
-    const { url, caption, category, uploaderName, uploaderRollNo } = body;
+    const { url, caption, category, uploaderName, uploaderRollNo, capturedAt } = body;
 
     if (!url) {
       return NextResponse.json({ error: 'Media URL is required' }, { status: 400 });
@@ -44,6 +62,7 @@ export async function POST(request: Request) {
         category: category || 'GENERAL',
         uploaderName,
         uploaderRollNo,
+        capturedAt: capturedAt || null,
         status: 'PENDING'
       }
     });
@@ -70,8 +89,19 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'ID is required' }, { status: 400 });
     }
 
+    let cloudinaryNotice: string | null = null;
+    try {
+      const target = await prisma.galleryImage.findUnique({ where: { id } });
+      if (target?.url) {
+        const purgeRes = await deleteFromCloudinary(target.url);
+        if (!purgeRes.success) {
+          cloudinaryNotice = purgeRes.message;
+        }
+      }
+    } catch (e) {}
+
     await prisma.galleryImage.delete({ where: { id } });
-    return NextResponse.json({ message: 'Deleted successfully' });
+    return NextResponse.json({ message: 'Deleted successfully', cloudinaryNotice });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
