@@ -274,7 +274,7 @@ function AdminGalleryContent() {
                 <div className="p-3 space-y-1">
                   <div className="flex items-center justify-between text-[10px] font-bold text-blue-600">
                     <span>{img.category}</span>
-                    <span className="text-slate-400 font-mono text-[9px]">{new Date(img.createdAt).toLocaleDateString()}</span>
+                    <span className="text-slate-400 font-mono text-[9px]">{new Date(img.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' })} IST</span>
                   </div>
                   <p className="text-xs text-gray-700 dark:text-gray-300 line-clamp-2">{img.caption || 'No caption'}</p>
                 </div>

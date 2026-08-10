@@ -24,24 +24,28 @@ This document tracks all feature implementations, bug fixes, UI/UX enhancements,
 - **Automated Expire Cleanup:** Mess Duty Gallery records (`GalleryImage` in Prisma) older than 30 days from `createdAt` are automatically auto-purged from both Supabase PostgreSQL DB and Cloudinary storage during `/api/gallery` queries.
 - **Retention Disclaimers:** Added explicit 30-day auto-purge retention notices to both public ([src/app/gallery/page.tsx](src/app/gallery/page.tsx)) and admin ([src/app/admin/gallery/page.tsx](src/app/admin/gallery/page.tsx)) gallery pages.
 
-### 4. 📥 Individual & Bulk Media Download Options
-- **Grievance Media Downloads:** Added an inline **"Download"** button to attached photo/video elements on all grievance cards across Mess, Maintenance, and Night Canteen portals (both student views and admin dashboards).
+### 4. 🖼️ Low-Res Preview Media & Download Options
+- **Inline Media Previews:** Added low-resolution image thumbnail and video player previews inline directly inside grievance cards across student portals and admin dashboards (`/feedback`, `/maintenance`, `/night-canteen`, `/maintenance/admin`, `/night-canteen/admin`).
+- **Grievance Media Downloads:** Added inline **"Full Media"** links and **"Download"** buttons (`<Download />`) next to preview thumbnails.
 - **Admin Gallery Bulk Download:** Added a **"Download All Media"** button in [src/app/admin/gallery/page.tsx](src/app/admin/gallery/page.tsx) available exclusively to authenticated admins.
 
-### 5. 📷 Picture & Video Metadata Timestamp (`capturedAt`)
+### 5. 📷 Picture & Video Metadata Timestamp (`capturedAt`) in IST (GMT +5:30)
 - **Metadata Extraction:** Client-side form handlers extract `file.lastModified` (camera capture / creation timestamp) from uploaded photos/videos in Grievances and Mess Duty Gallery.
-- **Database Schema Sync:** Added `capturedAt String?` to both `Feedback` and `GalleryImage` models in [prisma/schema.prisma](prisma/schema.prisma) and synced via `prisma db push`.
-- **Card Metadata Display:** Displays `📷 Captured: <Date & Time>` on all grievance cards and gallery overlays across student and admin portals (`/feedback`, `/maintenance`, `/night-canteen`, `/gallery`, `/admin`, `/admin/gallery`).
+- **GMT +5:30 IST Formatting:** All timestamps across the platform are formatted explicitly in Indian Standard Time (`timeZone: 'Asia/Kolkata'`) with `IST` indicator badges.
+- **Card Metadata Display:** Displays `📷 Captured: <Date & Time> IST` on all grievance cards and gallery overlays across student and admin portals.
 
-### 6. 🎬 Admin Movie Poster File Upload
+### 6. 🎬 Admin Movie Poster File Upload & Uncropped Frame Display
 - **Direct Poster File Upload:** Admins can now upload movie poster photos or video trailers directly from their device in [src/app/hub/admin/page.tsx](src/app/hub/admin/page.tsx) with a live progress bar.
-- **Cloudinary Integration:** Automatically uploads poster files to Cloudinary and links the poster URL to the movie screening schedule.
+- **Uncropped Poster Frame:** Movie posters display the complete uncropped poster image using `object-contain` inside standard aspect ratio frame containers across both student ([src/app/hub/page.tsx](src/app/hub/page.tsx)) and admin dashboards.
 
-### 7. ⚡ 24-Hour Email Verification Cache
+### 7. 📈 Post-OTP Verification Uploading Progress Bar
+- **Post-OTP Progress Feedback:** Immediately after OTP verification succeeds (or via cached 24h verification), submission forms display a live animated uploading progress bar (`Uploading Media Proof (XX%)...`) while uploading media to Cloudinary and saving to database.
+
+### 8. ⚡ 24-Hour Email Verification Cache
 - **OTP Bypass Cache:** Updated [src/components/otp-modal.tsx](src/components/otp-modal.tsx) to cache verified institute emails in `localStorage` under `bros_verified_email` with a 24-hour timestamp (`verifiedAt`).
 - **Instant Resubmission:** Boarders who successfully complete OTP verification bypass the OTP step automatically for 24 hours.
 
-### 8. ⏱️ Server-Side Rate Limiting Engine
+### 9. ⏱️ Server-Side Rate Limiting Engine
 - **Grievances Rate Limit:** Enforced 1 complaint per hour per section (Mess, Maintenance, Canteen) and capped at **3 total complaints per day** combined across all sections in [src/app/api/feedback/route.ts](src/app/api/feedback/route.ts).
 - **Suggestions Rate Limit:** Enforced 1 suggestion per category per day in [src/app/api/hub/route.ts](src/app/api/hub/route.ts).
 - **Prenum Fix:** Updated Prisma enum filters (`MAINTENANCE_TYPES` using `{ in: [...] }` instead of string `startsWith`).

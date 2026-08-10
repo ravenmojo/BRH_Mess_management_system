@@ -155,12 +155,12 @@ export default function HubPage() {
                   data.movies.map((movie: any) => (
                     <div key={movie.id} className="glass-card rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 space-y-0">
                       {movie.posterUrl && (
-                        <div className="w-full aspect-video relative bg-black flex items-center justify-center overflow-hidden">
+                        <div className="w-full aspect-video relative bg-slate-950 flex items-center justify-center overflow-hidden">
                           {movie.posterUrl.match(/\.(mp4|webm|ogg)$/i) ? (
-                            <video src={movie.posterUrl} className="w-full h-full object-cover" controls preload="metadata" />
+                            <video src={movie.posterUrl} className="w-full h-full object-contain" controls preload="metadata" />
                           ) : (
-                            <a href={movie.posterUrl} target="_blank" rel="noreferrer" className="w-full h-full block">
-                              <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
+                            <a href={movie.posterUrl} target="_blank" rel="noreferrer" className="w-full h-full flex items-center justify-center p-1">
+                              <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-contain transition-transform duration-300 hover:scale-105" />
                             </a>
                           )}
                           <a
@@ -181,7 +181,7 @@ export default function HubPage() {
                             {movie.venue || 'BRH Common Room'}
                           </span>
                           <span className="text-[10px] font-semibold text-slate-400 font-mono">
-                            {new Date(movie.showTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                            {new Date(movie.showTime).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' })} IST
                           </span>
                         </div>
                         <h3 className="font-extrabold text-slate-900 dark:text-white text-base">{movie.title}</h3>
