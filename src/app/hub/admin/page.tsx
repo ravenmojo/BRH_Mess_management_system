@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Film, Trophy, Users, Phone, ShieldCheck, Plus, Trash2, Sparkles, Loader2, ArrowLeft, CheckCircle2, UploadCloud, Upload, Image as ImageIcon, Video } from 'lucide-react';
+import { Film, Trophy, Users, Phone, ShieldCheck, Plus, Trash2, Sparkles, Loader2, ArrowLeft, CheckCircle2, UploadCloud, Upload, Image as ImageIcon, Video, Download } from 'lucide-react';
 import Link from 'next/link';
 import { uploadToCloudinary } from '@/lib/cloudinary-upload';
 import { AdminAuthGate } from '@/components/admin-auth-gate';
@@ -384,20 +384,43 @@ function HubAdminContent() {
               <div className="space-y-3">
                 <h4 className="text-xs font-bold text-slate-500 px-1">Screenings ({data.movies.length})</h4>
                 {data.movies.map((movie: any) => (
-                  <div key={movie.id} className="p-4 rounded-2xl glass-card flex items-center justify-between">
-                    <div>
-                      <h4 className="font-bold text-slate-900 dark:text-white text-sm">{movie.title}</h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        {movie.venue} • {new Date(movie.showTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
-                      </p>
+                  <div key={movie.id} className="rounded-2xl glass-card overflow-hidden border border-slate-200 dark:border-slate-800 space-y-0">
+                    {movie.posterUrl && (
+                      <div className="w-full aspect-video relative bg-black flex items-center justify-center overflow-hidden">
+                        {movie.posterUrl.match(/\.(mp4|webm|ogg)$/i) ? (
+                          <video src={movie.posterUrl} className="w-full h-full object-cover" controls preload="metadata" />
+                        ) : (
+                          <a href={movie.posterUrl} target="_blank" rel="noreferrer" className="w-full h-full block">
+                            <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover" />
+                          </a>
+                        )}
+                        <a
+                          href={movie.posterUrl}
+                          download
+                          target="_blank"
+                          rel="noreferrer"
+                          className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 text-white rounded-lg transition-colors shadow-md backdrop-blur-sm z-10"
+                          title="Download Movie Poster"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    )}
+                    <div className="p-4 flex items-center justify-between">
+                      <div>
+                        <h4 className="font-extrabold text-slate-900 dark:text-white text-sm">{movie.title}</h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
+                          {movie.venue} • {new Date(movie.showTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleDelete('MOVIE', movie.id)}
+                        className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors shrink-0"
+                        title="Delete Screening"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => handleDelete('MOVIE', movie.id)}
-                      className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors"
-                      title="Delete Screening"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
                   </div>
                 ))}
               </div>
