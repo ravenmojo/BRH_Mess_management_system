@@ -33,8 +33,10 @@ This document tracks all feature implementations, bug fixes, UI/UX enhancements,
 - **20 MB Limit:** Increased file size limit from 5 MB to **20 MB** for Mess Duty Gallery photos and video uploads in [src/app/gallery/page.tsx](src/app/gallery/page.tsx).
 - **Direct Submission:** Removed OTP authentication requirement for Mess Duty uploads. Boarders upload files directly to Cloudinary; items are saved in the PostgreSQL DB with status `PENDING` awaiting Mess Admin approval.
 
-### 6. 🥗 Merged Live Compliance Widget & Weekly Menu Builder
-- **Unified Mess Admin Dashboard:** Merged the Live Compliance Widget (Weekly Cost, Salad Count, Mandatory Rice/Dal/Roti checks) directly inside the Weekly Menu Builder section in [src/app/admin/page.tsx](src/app/admin/page.tsx).
+### 7. 🔒 Admin Auth Gate WebKit Stacking Context & Touch Glitch Fix
+- **Separate Stacking Layers:** Separated `backdrop-blur-md` overlay (`z-40 pointer-events-none`) into an independent DOM layer from the modal card container (`z-50 isolate`).
+- **Mobile Touch Glitch Resolved:** Fixed a WebKit/Mobile GPU compositing bug where focusing or touching the password input field caused the modal card to vanish behind the blur overlay layer.
+- **Scrollable Modal Container:** Wrapped modal content in `overflow-y-auto` to prevent layout clipping when virtual keyboards pop up on mobile devices.
 
 ### 5. 📷 Picture & Video Metadata Timestamp (`capturedAt`) in IST (GMT +5:30)
 - **Metadata Extraction:** Client-side form handlers extract `file.lastModified` (camera capture / creation timestamp) from uploaded photos/videos in Grievances and Mess Duty Gallery.
