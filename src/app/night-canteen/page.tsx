@@ -5,6 +5,7 @@ import { Moon, Utensils, MessageSquare, Send, CheckCircle, Clock, ShieldCheck, V
 import Link from 'next/link';
 import { uploadToCloudinary } from '@/lib/cloudinary-upload';
 import { OtpVerificationModal } from '@/components/otp-modal';
+import { GrievanceMediaGallery } from '@/components/grievance-media-gallery';
 
 // Smart room number formatter
 function formatRoomNo(value: string): string {
@@ -21,12 +22,13 @@ function formatRoomNo(value: string): string {
 export default function NightCanteenPage() {
   const [activeTab, setActiveTab] = useState<'menu' | 'grievance'>('menu');
 
+  // Hardcoded Canteen Menu Data
   const canteenMenuItems = [
-    { id: 'nc-1', name: 'Paneer Butter Masala Roll', price: 60, category: 'Rolls & Wraps', available: true },
-    { id: 'nc-2', name: 'Chicken Egg Roll', price: 70, category: 'Rolls & Wraps', available: true },
-    { id: 'nc-3', name: 'Veg Chowmein (Full)', price: 50, category: 'Chinese & Noodles', available: true },
-    { id: 'nc-4', name: 'Chicken Fried Rice', price: 90, category: 'Chinese & Noodles', available: true },
-    { id: 'nc-5', name: 'Alu Paratha with Butter', price: 30, category: 'Parathas', available: true },
+    { id: 'nc-1', name: 'Egg Bhurji + 2 Parathas', price: 60, category: 'Main Meals', available: true },
+    { id: 'nc-2', name: 'Paneer Butter Masala', price: 90, category: 'Main Meals', available: true },
+    { id: 'nc-3', name: 'Chicken Roll', price: 70, category: 'Snacks', available: true },
+    { id: 'nc-4', name: 'Veg Sandwich', price: 30, category: 'Snacks', available: true },
+    { id: 'nc-5', name: 'Plain Maggi', price: 25, category: 'Quick Bites', available: true },
     { id: 'nc-6', name: 'Cheese Maggi', price: 35, category: 'Quick Bites', available: true },
     { id: 'nc-7', name: 'Cold Coffee with Ice Cream', price: 45, category: 'Beverages', available: true },
     { id: 'nc-8', name: 'Masala Chai', price: 10, category: 'Beverages', available: true },
@@ -36,7 +38,7 @@ export default function NightCanteenPage() {
   const [roomNo, setRoomNo] = useState('');
   const [email, setEmail] = useState('');
   const [comment, setComment] = useState('');
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [mediaUrl, setMediaUrl] = useState('');
   const [capturedAt, setCapturedAt] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -62,10 +64,16 @@ export default function NightCanteenPage() {
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      setFile(selectedFile);
-      const fileDate = selectedFile.lastModified ? new Date(selectedFile.lastModified) : new Date();
+    if (e.target.files && e.target.files.length > 0) {
+      const selectedFiles = Array.from(e.target.files);
+      const invalid = selectedFiles.find(f => f.size > 20 * 1024 * 1024);
+      if (invalid) {
+        alert(`File "${invalid.name}" exceeds 20MB limit.`);
+        return;
+      }
+      setFiles(selectedFiles);
+      const firstFile = selectedFiles[0];
+      const fileDate = firstFile.lastModified ? new Date(firstFile.lastModified) : new Date();
       setCapturedAt(fileDate.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) + ' IST');
     }
   };
@@ -87,16 +95,23 @@ export default function NightCanteenPage() {
     setSubmitting(true);
     setMessage('');
     try {
-      let uploadedMediaUrl = '';
+      let uploadedUrls: string[] = [];
 
-      if (file) {
+      if (files.length > 0) {
         setIsUploading(true);
         setUploadProgress(0);
         try {
-          uploadedMediaUrl = await uploadToCloudinary(file, (percent) => {
-            setUploadProgress(percent);
-          });
-          setMediaUrl(uploadedMediaUrl);
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const url = await uploadToCloudinary(file, (percent) => {
+              const overall = Math.round(((i + percent / 100) / files.length) * 100);
+              setUploadProgress(overall);
+            });
+            uploadedUrls.push(url);
+          }
+          setUploadProgress(100);
+          const finalPayload = uploadedUrls.length > 1 ? JSON.stringify(uploadedUrls) : (uploadedUrls[0] || '');
+          setMediaUrl(finalPayload);
         } catch (err: any) {
           alert('Media upload failed: ' + (err.message || 'Error uploading file'));
           setSubmitting(false);
@@ -107,6 +122,8 @@ export default function NightCanteenPage() {
         }
       }
 
+      const finalMediaPayload = uploadedUrls.length > 1 ? JSON.stringify(uploadedUrls) : (uploadedUrls[0] || '');
+
       const res = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -116,8 +133,8 @@ export default function NightCanteenPage() {
           email: verifiedEmail,
           comment,
           facilityType: 'NIGHT_CANTEEN',
-          mediaUrl: uploadedMediaUrl,
-          capturedAt: uploadedMediaUrl ? capturedAt : null,
+          mediaUrl: finalMediaPayload,
+          capturedAt: finalMediaPayload ? capturedAt : null,
         }),
       });
 
@@ -125,7 +142,7 @@ export default function NightCanteenPage() {
         setMessage('Grievance submitted successfully!');
         setRoomNo('');
         setComment('');
-        setFile(null);
+        setFiles([]);
         setMediaUrl('');
         setUploadProgress(0);
         fetchCanteenFeedbacks();
@@ -274,17 +291,18 @@ export default function NightCanteenPage() {
                 <div className="flex items-center space-x-2">
                   <Camera className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                   <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">
-                    {file ? file.name : 'Attach Photo/Video Proof (Optional)'}
+                    {files.length > 0 ? `${files.length} File(s) Selected` : 'Attach Photos/Videos (Multiple, Max 20MB each)'}
                   </span>
                 </div>
                 <input 
                   type="file" 
+                  multiple
                   accept="image/*,video/*" 
                   className="hidden" 
                   onChange={handleFileChange}
                   disabled={isUploading}
                 />
-                {mediaUrl && (
+                {files.length > 0 && (
                   <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                 )}
               </label>
@@ -355,43 +373,7 @@ export default function NightCanteenPage() {
 
                   <p className="text-slate-700 dark:text-slate-300 font-medium">{fb.comment}</p>
 
-                  {fb.mediaUrl && (
-                    <div className="space-y-2 p-2 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 text-[10px]">
-                      {/* Low Res Preview Media */}
-                      <div className="w-full max-h-48 overflow-hidden rounded-lg bg-black/90 flex items-center justify-center border border-slate-200/50 dark:border-slate-700/50">
-                        {fb.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
-                          <video src={fb.mediaUrl} className="w-full max-h-48 object-contain" controls preload="metadata" />
-                        ) : (
-                          <a href={fb.mediaUrl} target="_blank" rel="noreferrer" className="w-full h-full flex items-center justify-center p-0.5">
-                            <img src={fb.mediaUrl} alt="Grievance Media Proof" className="w-full max-h-48 object-contain rounded-md hover:scale-[1.02] transition-transform duration-200" />
-                          </a>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
-                        <div className="flex items-center space-x-2">
-                          <a href={fb.mediaUrl} target="_blank" rel="noreferrer" className="inline-flex items-center space-x-1 font-bold text-blue-600 dark:text-blue-400 hover:underline">
-                            {fb.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? <Video className="w-3 h-3" /> : <ImageIcon className="w-3 h-3" />}
-                            <span>Full Media</span>
-                          </a>
-                          <a
-                            href={fb.mediaUrl}
-                            download
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center space-x-1 font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-200/70 dark:bg-slate-700/70 px-2 py-0.5 rounded-md transition-colors"
-                            title="Download Media File"
-                          >
-                            <Download className="w-3 h-3" />
-                            <span>Download</span>
-                          </a>
-                        </div>
-                        <span className="text-slate-500 font-mono text-[9.5px] flex items-center space-x-1">
-                          <Clock className="w-3 h-3 text-slate-400 inline" />
-                          <span>Captured: {fb.capturedAt || new Date(fb.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })} IST</span>
-                        </span>
-                      </div>
-                    </div>
-                  )}
+                  <GrievanceMediaGallery mediaUrl={fb.mediaUrl} capturedAt={fb.capturedAt} createdAt={fb.createdAt} />
 
                   {fb.remark && (
                     <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/50 text-[11px] text-blue-900 dark:text-blue-200">

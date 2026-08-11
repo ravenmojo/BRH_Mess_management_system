@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { validateWeeklyMenu, DailyMenuInput } from '@/lib/mess-rules';
 import { AdminAuthGate } from '@/components/admin-auth-gate';
+import { GrievanceMediaGallery } from '@/components/grievance-media-gallery';
 
 export default function AdminDashboard() {
   return (
@@ -211,101 +212,93 @@ function AdminDashboardContent() {
         </div>
       </div>
 
-      {/* LIVE VALIDATION WIDGETS SECTION */}
-      <details className="group space-y-2">
+      {/* MERGED WEEKLY MENU BUILDER & LIVE COMPLIANCE WIDGET SECTION */}
+      <details open className="group space-y-3">
         <summary className="flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <h3 className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-            Live Compliance Widgets
+          <h3 className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider flex items-center space-x-2">
+            <Salad className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <span>Weekly Menu Builder & Live Compliance</span>
           </h3>
           <ChevronDown className="w-4 h-4 text-gray-500 transition-transform group-open:rotate-180" />
         </summary>
         
-        <div className="pt-2 grid grid-cols-3 gap-2">
-          {/* Widget 1: Budget Cap (₹826 limit) */}
-          <div
-            className={`p-3 rounded-xl border text-center space-y-1 transition-all ${
-              metrics.totalWeeklyCost <= metrics.maxWeeklyCost
-                ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800 text-blue-900 dark:text-blue-300'
-                : metrics.totalWeeklyCost <= 850
-                ? 'bg-yellow-50 dark:bg-yellow-950/50 border-yellow-400 dark:border-yellow-800 text-yellow-900 dark:text-yellow-400'
-                : 'bg-red-50 dark:bg-red-950/50 border-red-400 dark:border-red-800 text-red-900 dark:text-red-300 animate-pulse'
-            }`}
-          >
-            <div className="text-[10px] font-bold uppercase tracking-wider">Weekly Cost</div>
-            <div className="text-base font-extrabold font-mono">₹{metrics.totalWeeklyCost}</div>
-            <div className="text-[9px] opacity-80">Limit: ₹{metrics.maxWeeklyCost}</div>
-          </div>
-
-          {/* Widget 2: Salad Count (Min 12/14) */}
-          <div
-            className={`p-3 rounded-xl border text-center space-y-1 transition-all ${
-              metrics.saladCount >= metrics.minSaladRequired
-                ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800 text-blue-900 dark:text-blue-300'
-                : 'bg-yellow-50 dark:bg-yellow-950/50 border-yellow-400 dark:border-yellow-800 text-yellow-900 dark:text-yellow-400'
-            }`}
-          >
-            <div className="text-[10px] font-bold uppercase tracking-wider">Salad Count</div>
-            <div className="text-base font-extrabold font-mono">{metrics.saladCount}/14</div>
-            <div className="text-[9px] opacity-80">Min: {metrics.minSaladRequired} meals</div>
-          </div>
-
-          {/* Widget 3: Mandatory Items Check */}
-          <div
-            className={`p-3 rounded-xl border text-center space-y-1 transition-all ${
-              metrics.mandatoryItemsValid
-                ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800 text-blue-900 dark:text-blue-300'
-                : 'bg-yellow-50 dark:bg-yellow-950/50 border-yellow-400 dark:border-yellow-800 text-yellow-900 dark:text-yellow-400'
-            }`}
-          >
-            <div className="text-[10px] font-bold uppercase tracking-wider">Mandatory Items</div>
-            <div className="text-xs font-bold pt-1">
-              {metrics.mandatoryItemsValid ? 'PASSED' : 'WARNING'}
+        <div className="pt-2 space-y-4">
+          {/* Live Compliance Summary Cards */}
+          <div className="grid grid-cols-3 gap-2">
+            {/* Widget 1: Budget Cap */}
+            <div
+              className={`p-3 rounded-xl border text-center space-y-1 transition-all ${
+                metrics.totalWeeklyCost <= metrics.maxWeeklyCost
+                  ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800 text-blue-900 dark:text-blue-300'
+                  : metrics.totalWeeklyCost <= 850
+                  ? 'bg-yellow-50 dark:bg-yellow-950/50 border-yellow-400 dark:border-yellow-800 text-yellow-900 dark:text-yellow-400'
+                  : 'bg-red-50 dark:bg-red-950/50 border-red-400 dark:border-red-800 text-red-900 dark:text-red-300 animate-pulse'
+              }`}
+            >
+              <div className="text-[10px] font-bold uppercase tracking-wider">Weekly Cost</div>
+              <div className="text-base font-extrabold font-mono">₹{metrics.totalWeeklyCost}</div>
+              <div className="text-[9px] opacity-80">Limit: ₹{metrics.maxWeeklyCost}</div>
             </div>
-            <div className="text-[9px] opacity-80">Rice/Dal/Roti</div>
-          </div>
-        </div>
 
-        {/* Error Warnings Banner */}
-        {validation.errors.length > 0 && (
-          <div className="p-3 rounded-xl bg-red-100 dark:bg-red-950/60 border border-red-300 dark:border-red-800 text-red-900 dark:text-red-200 text-xs space-y-1">
-            <div className="flex items-center space-x-1.5 font-bold">
-              <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
-              <span>Publication Blocked - Critical Violations:</span>
+            {/* Widget 2: Salad Count */}
+            <div
+              className={`p-3 rounded-xl border text-center space-y-1 transition-all ${
+                metrics.saladCount >= metrics.minSaladRequired
+                  ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800 text-blue-900 dark:text-blue-300'
+                  : 'bg-yellow-50 dark:bg-yellow-950/50 border-yellow-400 dark:border-yellow-800 text-yellow-900 dark:text-yellow-400'
+              }`}
+            >
+              <div className="text-[10px] font-bold uppercase tracking-wider">Salad Count</div>
+              <div className="text-base font-extrabold font-mono">{metrics.saladCount}/14</div>
+              <div className="text-[9px] opacity-80">Min: {metrics.minSaladRequired} meals</div>
             </div>
-            <ul className="list-disc list-inside space-y-0.5 text-[11px]">
-              {validation.errors.map((err, idx) => (
-                <li key={idx}>{err}</li>
-              ))}
-            </ul>
-          </div>
-        )}
 
-        {/* Non-Critical Warnings Banner */}
-        {validation.warnings.length > 0 && (
-          <div className="p-3 rounded-xl bg-yellow-100 dark:bg-yellow-950/60 border border-yellow-300 dark:border-yellow-800 text-yellow-900 dark:text-yellow-400 text-xs space-y-1">
-            <div className="flex items-center space-x-1.5 font-bold">
-              <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-500" />
-              <span>Non-Critical Warnings (Publication Allowed):</span>
+            {/* Widget 3: Mandatory Items Check */}
+            <div
+              className={`p-3 rounded-xl border text-center space-y-1 transition-all ${
+                metrics.mandatoryItemsValid
+                  ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800 text-blue-900 dark:text-blue-300'
+                  : 'bg-yellow-50 dark:bg-yellow-950/50 border-yellow-400 dark:border-yellow-800 text-yellow-900 dark:text-yellow-400'
+              }`}
+            >
+              <div className="text-[10px] font-bold uppercase tracking-wider">Mandatory Items</div>
+              <div className="text-xs font-bold pt-1">
+                {metrics.mandatoryItemsValid ? 'PASSED' : 'WARNING'}
+              </div>
+              <div className="text-[9px] opacity-80">Rice/Dal/Roti</div>
             </div>
-            <ul className="list-disc list-inside space-y-0.5 text-[11px]">
-              {validation.warnings.map((warn, idx) => (
-                <li key={idx}>{warn}</li>
-              ))}
-            </ul>
           </div>
-        )}
-      </details>
 
-      {/* Save Action Header & Menu Builder */}
-      <details className="group space-y-2">
-        <summary className="flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <h3 className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-            Weekly Menu Builder
-          </h3>
-          <ChevronDown className="w-4 h-4 text-gray-500 transition-transform group-open:rotate-180" />
-        </summary>
-        
-        <div className="pt-2">
+          {/* Error Warnings Banner */}
+          {validation.errors.length > 0 && (
+            <div className="p-3 rounded-xl bg-red-100 dark:bg-red-950/60 border border-red-300 dark:border-red-800 text-red-900 dark:text-red-200 text-xs space-y-1">
+              <div className="flex items-center space-x-1.5 font-bold">
+                <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                <span>Publication Blocked - Critical Violations:</span>
+              </div>
+              <ul className="list-disc list-inside space-y-0.5 text-[11px]">
+                {validation.errors.map((err, idx) => (
+                  <li key={idx}>{err}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Non-Critical Warnings Banner */}
+          {validation.warnings.length > 0 && (
+            <div className="p-3 rounded-xl bg-yellow-100 dark:bg-yellow-950/60 border border-yellow-300 dark:border-yellow-800 text-yellow-900 dark:text-yellow-400 text-xs space-y-1">
+              <div className="flex items-center space-x-1.5 font-bold">
+                <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-500" />
+                <span>Non-Critical Warnings (Publication Allowed):</span>
+              </div>
+              <ul className="list-disc list-inside space-y-0.5 text-[11px]">
+                {validation.warnings.map((warn, idx) => (
+                  <li key={idx}>{warn}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="flex items-center justify-end pb-3">
             <button
               onClick={handleSaveMenu}
@@ -478,30 +471,7 @@ function AdminDashboardContent() {
                 "{fb.comment}"
               </p>
 
-              {fb.mediaUrl && (
-                <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-gray-50 dark:bg-gray-800/80 rounded-lg border border-gray-200 dark:border-gray-700 text-[10px]">
-                  <div className="flex items-center space-x-2">
-                    <a href={fb.mediaUrl} target="_blank" rel="noreferrer" className="inline-flex items-center space-x-1 font-bold text-blue-600 dark:text-blue-400 hover:underline">
-                      {fb.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? <Video className="w-3 h-3" /> : <ImageIcon className="w-3 h-3" />}
-                      <span>View Media</span>
-                    </a>
-                    <a
-                      href={fb.mediaUrl}
-                      download
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center space-x-1 font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-200/70 dark:bg-slate-700/70 px-2 py-0.5 rounded-md transition-colors"
-                      title="Download Media File"
-                    >
-                      <Download className="w-3 h-3" />
-                      <span>Download</span>
-                    </a>
-                  </div>
-                  <span className="text-gray-500 font-mono text-[9.5px]">
-                    Captured: {fb.capturedAt || new Date(fb.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
-                  </span>
-                </div>
-              )}
+              <GrievanceMediaGallery mediaUrl={fb.mediaUrl} capturedAt={fb.capturedAt} createdAt={fb.createdAt} />
 
               {/* Admin Remark Input */}
               <div className="space-y-1.5 pt-1">

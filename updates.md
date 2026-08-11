@@ -24,10 +24,17 @@ This document tracks all feature implementations, bug fixes, UI/UX enhancements,
 - **Automated Expire Cleanup:** Mess Duty Gallery records (`GalleryImage` in Prisma) older than 30 days from `createdAt` are automatically auto-purged from both Supabase PostgreSQL DB and Cloudinary storage during `/api/gallery` queries.
 - **Retention Disclaimers:** Added explicit 30-day auto-purge retention notices to both public ([src/app/gallery/page.tsx](src/app/gallery/page.tsx)) and admin ([src/app/admin/gallery/page.tsx](src/app/admin/gallery/page.tsx)) gallery pages.
 
-### 4. 🖼️ Low-Res Preview Media & Download Options
-- **Inline Media Previews:** Added low-resolution image thumbnail and video player previews inline directly inside grievance cards across student portals and admin dashboards (`/feedback`, `/maintenance`, `/night-canteen`, `/maintenance/admin`, `/night-canteen/admin`).
-- **Grievance Media Downloads:** Added inline **"Full Media"** links and **"Download"** buttons (`<Download />`) next to preview thumbnails.
-- **Admin Gallery Bulk Download:** Added a **"Download All Media"** button in [src/app/admin/gallery/page.tsx](src/app/admin/gallery/page.tsx) available exclusively to authenticated admins.
+### 4. 🖼️ Multi-Media Attachments & `+N` Expandable Thumbnail Gallery
+- **Multi-File Selection:** Boarders can select and attach multiple photos/videos on complaint forms across Mess, Maintenance, and Night Canteen portals (`/feedback`, `/maintenance`, `/night-canteen`).
+- **`+N` Expandable Preview Grid:** Grievance cards display small low-res thumbnail previews inline. If multiple media files are attached (e.g. 5 files), a `+4` overlay thumbnail is displayed. Tapping `+N` expands/collapses the full media thumbnail grid seamlessly with individual download options.
+- **Admin & Student Portals Sync:** Reusable `GrievanceMediaGallery` component powers preview thumbnails across all student views and admin dashboards ([/admin](file:///d:/IITKGP_projects/BRH-Mess-management-system/src/app/admin/page.tsx), [/maintenance/admin](file:///d:/IITKGP_projects/BRH-Mess-management-system/src/app/maintenance/admin/page.tsx), [/night-canteen/admin](file:///d:/IITKGP_projects/BRH-Mess-management-system/src/app/night-canteen/admin/page.tsx)).
+
+### 5. 📷 20 MB Limit & OTP-Free Direct Upload for Mess Duty Gallery
+- **20 MB Limit:** Increased file size limit from 5 MB to **20 MB** for Mess Duty Gallery photos and video uploads in [src/app/gallery/page.tsx](src/app/gallery/page.tsx).
+- **Direct Submission:** Removed OTP authentication requirement for Mess Duty uploads. Boarders upload files directly to Cloudinary; items are saved in the PostgreSQL DB with status `PENDING` awaiting Mess Admin approval.
+
+### 6. 🥗 Merged Live Compliance Widget & Weekly Menu Builder
+- **Unified Mess Admin Dashboard:** Merged the Live Compliance Widget (Weekly Cost, Salad Count, Mandatory Rice/Dal/Roti checks) directly inside the Weekly Menu Builder section in [src/app/admin/page.tsx](src/app/admin/page.tsx).
 
 ### 5. 📷 Picture & Video Metadata Timestamp (`capturedAt`) in IST (GMT +5:30)
 - **Metadata Extraction:** Client-side form handlers extract `file.lastModified` (camera capture / creation timestamp) from uploaded photos/videos in Grievances and Mess Duty Gallery.

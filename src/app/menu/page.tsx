@@ -26,7 +26,7 @@ export default function RegularMessMenuPage() {
       <div className="flex items-center justify-between p-4 glass-card rounded-2xl">
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-white">Regular Mess Weekly Schedule</h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">Official BROS Comprehensive Menu</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Official BRH Mess Menu</p>
         </div>
         <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/40">
           <Utensils className="w-5 h-5" />

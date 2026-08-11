@@ -154,6 +154,9 @@ export function SplashScreen() {
               <span className="w-1 h-1 rounded-full bg-blue-500/70" />
               <span>Transparency</span>
             </div>
+            <p className="text-[10px] sm:text-[11px] font-black tracking-[0.25em] uppercase text-indigo-400 pt-2">
+              IIT Kharagpur
+            </p>
           </div>
         </div>
       </div>
