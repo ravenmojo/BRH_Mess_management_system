@@ -159,59 +159,64 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
 
       {/* Lock Overlay Modal (rendered when unauthenticated, preserving children state underneath) */}
       {!isAuthenticated && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md transition-opacity">
-          <div className="w-full max-w-md p-8 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 space-y-6 text-center animate-in fade-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto text-white shadow-lg shadow-blue-500/30">
-              <Lock className="w-8 h-8" />
-            </div>
+        <>
+          {/* Backdrop Blur Overlay - Separate DOM element with pointer-events-none to prevent WebKit GPU blur clipping */}
+          <div className="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-md pointer-events-none" />
 
-            <div className="space-y-1.5">
-              <h2 className="text-xl font-black text-slate-900 dark:text-white">{title}</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                Your progress (including typed remarks) is saved. Enter admin password to resume.
-              </p>
-            </div>
-
-            {error && (
-              <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center justify-center space-x-1.5">
-                <ShieldAlert className="w-4 h-4 flex-shrink-0" />
-                <span>{error}</span>
+          {/* Modal Container Layer - High z-index with independent scrolling context */}
+          <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+            <div className="relative z-10 isolate w-full max-w-md p-6 sm:p-8 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 space-y-6 text-center animate-in fade-in zoom-in-95 duration-200 my-auto">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto text-white shadow-lg shadow-blue-500/30">
+                <Lock className="w-8 h-8" />
               </div>
-            )}
 
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-1.5 text-left">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-1">Admin Password</label>
-                <div className="relative">
-                  <KeyRound className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter admin password"
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                    required
-                    autoFocus
-                  />
+              <div className="space-y-1.5">
+                <h2 className="text-xl font-black text-slate-900 dark:text-white">{title}</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                  Your progress (including typed remarks) is saved. Enter admin password to resume.
+                </p>
+              </div>
+
+              {error && (
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center justify-center space-x-1.5">
+                  <ShieldAlert className="w-4 h-4 flex-shrink-0" />
+                  <span>{error}</span>
                 </div>
-              </div>
+              )}
 
-              <button
-                type="submit"
-                disabled={loading || !password.trim()}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition-all disabled:opacity-50 flex items-center justify-center space-x-2"
-              >
-                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                <span>Unlock & Resume Working</span>
-              </button>
-            </form>
+              <form onSubmit={handleLogin} className="space-y-4 text-left">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-1">Admin Password</label>
+                  <div className="relative">
+                    <KeyRound className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400 pointer-events-none z-10" />
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter admin password"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all relative z-0"
+                      required
+                    />
+                  </div>
+                </div>
 
-            <Link href="/" className="inline-flex items-center space-x-1.5 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white font-semibold transition-colors pt-1">
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Return to Public Dashboard</span>
-            </Link>
+                <button
+                  type="submit"
+                  disabled={loading || !password.trim()}
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition-all disabled:opacity-50 flex items-center justify-center space-x-2"
+                >
+                  {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <span>Unlock & Resume Working</span>
+                </button>
+              </form>
+
+              <Link href="/" className="inline-flex items-center space-x-1.5 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white font-semibold transition-colors pt-1">
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Return to Public Dashboard</span>
+              </Link>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
