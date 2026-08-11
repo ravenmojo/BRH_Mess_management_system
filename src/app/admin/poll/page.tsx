@@ -23,7 +23,7 @@ const SEASONAL_CURRIES = [
   "Chickpeas Curry", "Alu Cabbage", "Cauliflower Cur"
 ];
 
-import { AdminAuthGate } from '@/components/admin-auth-gate';
+import { AdminAuthGate, useAdminAuth } from '@/components/admin-auth-gate';
 
 export default function AdminPollPage() {
   return (
@@ -34,6 +34,7 @@ export default function AdminPollPage() {
 }
 
 function AdminPollContent() {
+  const { isAuthenticated } = useAdminAuth();
   const [polls, setPolls] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -44,8 +45,10 @@ function AdminPollContent() {
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    loadPolls();
-  }, []);
+    if (isAuthenticated) {
+      loadPolls();
+    }
+  }, [isAuthenticated]);
 
   const loadPolls = () => {
     fetch('/api/poll?active=false') // fetch all

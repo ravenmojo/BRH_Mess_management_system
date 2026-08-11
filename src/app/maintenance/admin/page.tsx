@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, MessageSquare, CheckCircle, ChevronDown, Trash2, Video, ImageIcon, Clock, Download } from 'lucide-react';
-import { AdminAuthGate } from '@/components/admin-auth-gate';
+import { AdminAuthGate, useAdminAuth } from '@/components/admin-auth-gate';
 import { GrievanceMediaGallery } from '@/components/grievance-media-gallery';
 
 export default function MaintenanceAdminDashboard() {
@@ -14,6 +14,7 @@ export default function MaintenanceAdminDashboard() {
 }
 
 function MaintenanceAdminContent() {
+  const { isAuthenticated } = useAdminAuth();
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [remarkInputs, setRemarkInputs] = useState<{ [id: string]: string }>({});
 
@@ -28,8 +29,10 @@ function MaintenanceAdminContent() {
   };
 
   useEffect(() => {
-    fetchFeedbacks();
-  }, []);
+    if (isAuthenticated) {
+      fetchFeedbacks();
+    }
+  }, [isAuthenticated]);
 
   const handleUpdateFeedback = async (id: string, newStatus: string) => {
     const remark = remarkInputs[id];
