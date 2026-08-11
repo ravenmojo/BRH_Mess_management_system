@@ -100,15 +100,17 @@ export default function HubPage() {
   return (
     <div className="space-y-6 pb-8">
       {/* Hero Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-600 via-indigo-600 to-slate-900 p-6 text-white shadow-xl shadow-purple-500/10">
-        <div className="relative z-10 space-y-2">
-          <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-[11px] font-bold border border-white/15">
-            <Star className="w-3.5 h-3.5 text-amber-300" />
-            <span>BRH Information Hub</span>
-          </div>
-          <h1 className="text-2xl font-black tracking-tight">Hall Info & Community</h1>
-          <p className="text-xs text-purple-100/80 max-w-sm font-medium">
-            Stay updated with movie screenings, hall activities, council contacts, and hall achievements.
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-600 via-indigo-600 to-slate-900 p-3.5 text-white shadow-md shadow-purple-500/10 group">
+        <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/10 blur-2xl group-hover:scale-125 transition-transform duration-700 ease-out pointer-events-none" />
+        <div className="absolute right-4 -bottom-6 w-24 h-24 rounded-full bg-purple-400/20 blur-xl group-hover:bg-indigo-400/35 transition-all duration-700 ease-out pointer-events-none" />
+
+        <div className="relative z-10 space-y-0.5">
+          <h2 className="text-base sm:text-lg font-black tracking-tight drop-shadow-sm flex items-center space-x-2">
+            <Star className="w-4 h-4 text-amber-300 shrink-0" />
+            <span>BROS Hall Info & Community</span>
+          </h2>
+          <p className="text-xs text-purple-100 font-medium leading-snug">
+            Movies, Contacts & Ideas — staying connected, bros! 🍿
           </p>
         </div>
       </div>

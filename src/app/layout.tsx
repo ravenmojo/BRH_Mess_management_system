@@ -56,9 +56,6 @@ export default function RootLayout({
                   <span className="text-[9px] sm:text-[10px] uppercase tracking-wider sm:tracking-widest text-indigo-600 dark:text-indigo-400 font-bold mt-0.5">
                     BR Ambedkar Hall <span className="text-fuchsia-600 dark:text-fuchsia-400">Online Services portal</span>
                   </span>
-                  <span className="text-[8px] sm:text-[9px] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-bold mt-0.5">
-                    IIT Kharagpur
-                  </span>
                 </div>
               </div>
               <div className="flex items-center shrink-0">
