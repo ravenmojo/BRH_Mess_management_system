@@ -61,13 +61,13 @@ export default function PublicGalleryPage() {
     }
   }, []);
 
-  const handleUploadSubmit = (e: React.FormEvent) => {
+  const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) return;
 
-    // 5 MB limit check
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadError('File size exceeds the 5 MB limit.');
+    // 20 MB limit check
+    if (file.size > 20 * 1024 * 1024) {
+      setUploadError('File size exceeds the 20 MB limit.');
       return;
     }
 
@@ -76,25 +76,16 @@ export default function PublicGalleryPage() {
       return;
     }
 
-    setUploadError(null);
-    setIsOtpModalOpen(true);
-  };
-
-  const handleExecuteSubmit = async (verifiedEmail: string) => {
-    if (!file) return;
-
     setUploading(true);
     setUploadError(null);
 
     try {
-      // 1. Upload to Cloudinary ONLY AFTER email OTP verification succeeds
-      const formData = new FormData();
       setUploading(true);
       setUploadProgress(0);
       
       const secureUrl = await uploadToCloudinary(file, (pct) => setUploadProgress(pct));
 
-      const lastMod = file!.lastModified ? new Date(file!.lastModified) : new Date();
+      const lastMod = file.lastModified ? new Date(file.lastModified) : new Date();
       const capturedStr = lastMod.toLocaleString('en-IN', {
         timeZone: 'Asia/Kolkata',
         day: '2-digit',
@@ -105,7 +96,7 @@ export default function PublicGalleryPage() {
         hour12: true,
       }) + ' IST';
 
-      // 2. Save to database
+      // Save to database with status PENDING for admin approval
       const dbRes = await fetch('/api/gallery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -116,18 +107,19 @@ export default function PublicGalleryPage() {
           uploaderName,
           uploaderRollNo,
           capturedAt: capturedStr,
-          email: verifiedEmail,
-        })
+          email: uploaderEmail,
+        }),
       });
 
-      if (!dbRes.ok) {
-        const errorData = await dbRes.json();
-        throw new Error(errorData.error || 'Failed to save to database');
+      if (dbRes.ok) {
+        setUploadSuccess(true);
+        setFile(null);
+        setCaption('');
+        fetchImages();
+      } else {
+        const errData = await dbRes.json();
+        setUploadError(errData.error || 'Failed to submit upload.');
       }
-
-      setUploadSuccess(true);
-      setFile(null);
-      setCaption('');
       setTimeout(() => {
         setShowUpload(false);
         setUploadSuccess(false);
@@ -311,7 +303,7 @@ export default function PublicGalleryPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">File (Max 5MB)</label>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">File (Max 20MB)</label>
                     <input type="file" required accept="image/*,video/*" onChange={e => setFile(e.target.files?.[0] || null)} className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 dark:file:bg-emerald-900/30 dark:file:text-emerald-400" />
                   </div>
 
@@ -353,13 +345,6 @@ export default function PublicGalleryPage() {
           </div>
         </div>
       )}
-
-      <OtpVerificationModal
-        isOpen={isOtpModalOpen}
-        onClose={() => setIsOtpModalOpen(false)}
-        initialEmail={uploaderEmail}
-        onVerified={handleExecuteSubmit}
-      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { uploadToCloudinary } from '@/lib/cloudinary-upload';
 import { useRouter } from 'next/navigation';
 import { OtpVerificationModal } from '@/components/otp-modal';
+import { GrievanceMediaGallery } from '@/components/grievance-media-gallery';
 
 // Smart room number formatter: auto-capitalize wing, auto-insert dash
 function formatRoomNo(value: string): string {
@@ -34,12 +35,12 @@ export default function StudentFeedbackPage() {
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
   
   // Upload state
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [capturedAt, setCapturedAt] = useState<string>('');
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isUploading, setIsUploading] = useState(false);
   const [mediaUrl, setMediaUrl] = useState<string>('');
-  
+
   const router = useRouter();
 
   useEffect(() => {
@@ -59,22 +60,25 @@ export default function StudentFeedbackPage() {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      if (selectedFile.size > 20 * 1024 * 1024) {
-        alert("File size exceeds 20MB limit.");
+    if (e.target.files && e.target.files.length > 0) {
+      const selectedFiles = Array.from(e.target.files);
+      const invalid = selectedFiles.find(f => f.size > 20 * 1024 * 1024);
+      if (invalid) {
+        alert(`File "${invalid.name}" exceeds the 20MB limit.`);
         return;
       }
-      setFile(selectedFile);
-      const lastMod = selectedFile.lastModified ? new Date(selectedFile.lastModified) : new Date();
+      setFiles(selectedFiles);
+      const firstFile = selectedFiles[0];
+      const lastMod = firstFile.lastModified ? new Date(firstFile.lastModified) : new Date();
       const capturedStr = lastMod.toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
         day: '2-digit',
         month: 'short',
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
-      });
+      }) + ' IST';
       setCapturedAt(capturedStr);
     }
   };
@@ -97,16 +101,23 @@ export default function StudentFeedbackPage() {
     setStatusMessage('');
 
     try {
-      let uploadedMediaUrl = '';
+      let uploadedUrls: string[] = [];
 
-      if (file) {
+      if (files.length > 0) {
         setIsUploading(true);
         setUploadProgress(0);
         try {
-          uploadedMediaUrl = await uploadToCloudinary(file, (percent) => {
-            setUploadProgress(percent);
-          });
-          setMediaUrl(uploadedMediaUrl);
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const url = await uploadToCloudinary(file, (percent) => {
+              const overall = Math.round(((i + percent / 100) / files.length) * 100);
+              setUploadProgress(overall);
+            });
+            uploadedUrls.push(url);
+          }
+          setUploadProgress(100);
+          const finalPayload = uploadedUrls.length > 1 ? JSON.stringify(uploadedUrls) : (uploadedUrls[0] || '');
+          setMediaUrl(finalPayload);
         } catch (err: any) {
           alert('Media upload failed: ' + (err.message || 'Error uploading file'));
           setSubmitting(false);
@@ -117,6 +128,8 @@ export default function StudentFeedbackPage() {
         }
       }
 
+      const finalMediaPayload = uploadedUrls.length > 1 ? JSON.stringify(uploadedUrls) : (uploadedUrls[0] || '');
+
       const res = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -126,8 +139,8 @@ export default function StudentFeedbackPage() {
           email: verifiedEmail,
           comment,
           facilityType: 'REGULAR_MESS',
-          mediaUrl: uploadedMediaUrl,
-          capturedAt: uploadedMediaUrl ? capturedAt : null,
+          mediaUrl: finalMediaPayload,
+          capturedAt: finalMediaPayload ? capturedAt : null,
         }),
       });
 
@@ -136,7 +149,8 @@ export default function StudentFeedbackPage() {
         setStudentName('');
         setRoomNo('');
         setComment('');
-        setFile(null);
+        setFiles([]);
+        setMediaUrl('');
         setMediaUrl('');
         setUploadProgress(0);
         loadFeedbacks();
@@ -226,10 +240,11 @@ export default function StudentFeedbackPage() {
           <label className="flex items-center justify-between cursor-pointer">
             <div className="flex items-center space-x-2 text-xs font-medium text-slate-600 dark:text-slate-400">
               <Paperclip className="w-4 h-4" />
-              <span>{file ? file.name : 'Attach a photo/video (Max 20MB)'}</span>
+              <span>{files.length > 0 ? `${files.length} File(s) Selected` : 'Attach Photos/Videos (Multiple, Max 20MB each)'}</span>
             </div>
             <input 
               type="file" 
+              multiple
               accept="image/*,video/*" 
               className="hidden" 
               onChange={handleFileChange}
@@ -240,19 +255,20 @@ export default function StudentFeedbackPage() {
                 {uploadProgress}%
               </span>
             )}
-            {mediaUrl && (
+            {files.length > 0 && (
               <CheckCircle2 className="w-4 h-4 text-emerald-500" />
             )}
           </label>
-          {isUploading && (
-            <div className="w-full h-1 bg-slate-200 dark:bg-slate-700 rounded-full mt-2 overflow-hidden">
-              <div 
-                className="h-full bg-blue-600 transition-all duration-300"
-                style={{ width: `${uploadProgress}%` }}
-              ></div>
-            </div>
-          )}
         </div>
+
+        {isUploading && (
+          <div className="w-full h-1 bg-slate-200 dark:bg-slate-700 rounded-full mt-2 overflow-hidden">
+            <div 
+              className="h-full bg-blue-600 transition-all duration-300"
+              style={{ width: `${uploadProgress}%` }}
+            ></div>
+          </div>
+        )}
 
         {submitting && (
           <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 space-y-1.5 shadow-sm">
@@ -323,43 +339,7 @@ export default function StudentFeedbackPage() {
 
               <p className="text-slate-700 dark:text-slate-300">{item.comment}</p>
               
-              {item.mediaUrl && (
-                <div className="space-y-2 p-2 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 text-[10px]">
-                  {/* Low Res Preview Media */}
-                  <div className="w-full max-h-48 overflow-hidden rounded-lg bg-black/90 flex items-center justify-center border border-slate-200/50 dark:border-slate-700/50">
-                    {item.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
-                      <video src={item.mediaUrl} className="w-full max-h-48 object-contain" controls preload="metadata" />
-                    ) : (
-                      <a href={item.mediaUrl} target="_blank" rel="noreferrer" className="w-full h-full flex items-center justify-center p-0.5">
-                        <img src={item.mediaUrl} alt="Grievance Media Proof" className="w-full max-h-48 object-contain rounded-md hover:scale-[1.02] transition-transform duration-200" />
-                      </a>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
-                    <div className="flex items-center space-x-2">
-                      <a href={item.mediaUrl} target="_blank" rel="noreferrer" className="inline-flex items-center space-x-1 font-bold text-blue-600 dark:text-blue-400 hover:underline">
-                        {item.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? <Video className="w-3 h-3" /> : <ImageIcon className="w-3 h-3" />}
-                        <span>Full Media</span>
-                      </a>
-                      <a
-                        href={item.mediaUrl}
-                        download
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center space-x-1 font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-200/70 dark:bg-slate-700/70 px-2 py-0.5 rounded-md transition-colors"
-                        title="Download Media File"
-                      >
-                        <Download className="w-3 h-3" />
-                        <span>Download</span>
-                      </a>
-                    </div>
-                    <span className="text-slate-500 font-mono text-[9.5px] flex items-center space-x-1">
-                      <Clock className="w-3 h-3 text-slate-400 inline" />
-                      <span>Captured: {item.capturedAt || new Date(item.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })} IST</span>
-                    </span>
-                  </div>
-                </div>
-              )}
+              <GrievanceMediaGallery mediaUrl={item.mediaUrl} capturedAt={item.capturedAt} createdAt={item.createdAt} />
 
               {item.remark && (
                 <div className="mt-2 p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/50 text-[11px] text-blue-900 dark:text-blue-200 flex items-start space-x-1.5">
