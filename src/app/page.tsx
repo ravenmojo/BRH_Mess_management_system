@@ -54,15 +54,15 @@ export default function StudentDashboard() {
     <div className="space-y-6 pb-8">
       <SplashScreen />
       {/* Top Banner Card */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-sky-700 p-5 text-white shadow-xl shadow-blue-500/15 group">
-        <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10 blur-2xl group-hover:scale-125 transition-transform duration-700 ease-out" />
-        <div className="absolute right-4 -bottom-6 w-28 h-28 rounded-full bg-blue-400/25 blur-xl group-hover:bg-sky-400/40 transition-all duration-700 ease-out" />
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-sky-700 p-3.5 text-white shadow-md shadow-blue-500/15 group">
+        <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/10 blur-2xl group-hover:scale-125 transition-transform duration-700 ease-out pointer-events-none" />
+        <div className="absolute right-4 -bottom-6 w-24 h-24 rounded-full bg-blue-400/20 blur-xl group-hover:bg-sky-400/35 transition-all duration-700 ease-out pointer-events-none" />
 
-        <div className="relative z-10 space-y-1">
-          <h2 className="text-xl font-black tracking-tight drop-shadow-sm flex items-center space-x-2">
-            <span>BROS Mess</span>
+        <div className="relative z-10 space-y-0.5">
+          <h2 className="text-base sm:text-lg font-black tracking-tight drop-shadow-sm flex items-center space-x-2">
+            <span>BROS Mess Management</span>
           </h2>
-          <p className="text-xs text-blue-100 font-medium max-w-[280px]">
+          <p className="text-xs text-blue-100 font-medium leading-snug">
             Who are we to Mess with you, bros! 🗿
           </p>
         </div>

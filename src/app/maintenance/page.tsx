@@ -190,14 +190,17 @@ export default function MaintenancePage() {
   return (
     <div className="space-y-5 pb-8">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-800 via-indigo-950 to-slate-900 p-5 text-white shadow-xl shadow-slate-950/20">
-        <div className="relative z-10 space-y-1">
-          <h2 className="text-xl font-black tracking-tight drop-shadow-sm flex items-center space-x-2">
-            <Wrench className="w-5 h-5 text-blue-400" />
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-800 via-indigo-950 to-slate-900 p-3.5 text-white shadow-md shadow-slate-950/20 group">
+        <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/10 blur-2xl group-hover:scale-125 transition-transform duration-700 ease-out pointer-events-none" />
+        <div className="absolute right-4 -bottom-6 w-24 h-24 rounded-full bg-indigo-400/20 blur-xl group-hover:bg-blue-400/35 transition-all duration-700 ease-out pointer-events-none" />
+
+        <div className="relative z-10 space-y-0.5">
+          <h2 className="text-base sm:text-lg font-black tracking-tight drop-shadow-sm flex items-center space-x-2">
+            <Wrench className="w-4 h-4 text-blue-400 shrink-0" />
             <span>BROS Maintenance</span>
           </h2>
-          <p className="text-xs text-slate-300 font-medium max-w-[280px]">
-            Log grievances for washrooms, electrical faults, civil issues, cleaning, and outdoor areas.
+          <p className="text-xs text-slate-300 font-medium leading-snug">
+            Fixing faults before they test your patience, bros! 🛠️
           </p>
         </div>
       </div>
