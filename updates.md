@@ -33,10 +33,11 @@ This document tracks all feature implementations, bug fixes, UI/UX enhancements,
 - **20 MB Limit:** Increased file size limit from 5 MB to **20 MB** for Mess Duty Gallery photos and video uploads in [src/app/gallery/page.tsx](src/app/gallery/page.tsx).
 - **Direct Submission:** Removed OTP authentication requirement for Mess Duty uploads. Boarders upload files directly to Cloudinary; items are saved in the PostgreSQL DB with status `PENDING` awaiting Mess Admin approval.
 
-### 7. 🔒 Admin Auth Gate WebKit Stacking Context & Touch Glitch Fix
-- **Separate Stacking Layers:** Separated `backdrop-blur-md` overlay (`z-40 pointer-events-none`) into an independent DOM layer from the modal card container (`z-50 isolate`).
-- **Mobile Touch Glitch Resolved:** Fixed a WebKit/Mobile GPU compositing bug where focusing or touching the password input field caused the modal card to vanish behind the blur overlay layer.
-- **Scrollable Modal Container:** Wrapped modal content in `overflow-y-auto` to prevent layout clipping when virtual keyboards pop up on mobile devices.
+### 7. 🔒 No-Scroll Blurred Public Dashboard Overlay for Admin Auth
+- **Zero Scroll:** Disabled page scrolling completely on unauthenticated admin pages by locking body overflow (`overflow-hidden fixed inset-0`).
+- **Deferred Admin Loading:** Admin portal components (`children`) are **not loaded or mounted at all** until the user authenticates with the admin password.
+- **Public Dashboard Backdrop:** Overlaid the password authentication modal directly over a blurred preview of the Public BROS Dashboard (`<PublicDashboardPreview />`).
+- **Post-Auth Session Restore:** Loads and renders the admin section and restores the 30-minute session strictly upon password entry.
 
 ### 5. 📷 Picture & Video Metadata Timestamp (`capturedAt`) in IST (GMT +5:30)
 - **Metadata Extraction:** Client-side form handlers extract `file.lastModified` (camera capture / creation timestamp) from uploaded photos/videos in Grievances and Mess Duty Gallery.
