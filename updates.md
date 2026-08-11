@@ -33,11 +33,10 @@ This document tracks all feature implementations, bug fixes, UI/UX enhancements,
 - **20 MB Limit:** Increased file size limit from 5 MB to **20 MB** for Mess Duty Gallery photos and video uploads in [src/app/gallery/page.tsx](src/app/gallery/page.tsx).
 - **Direct Submission:** Removed OTP authentication requirement for Mess Duty uploads. Boarders upload files directly to Cloudinary; items are saved in the PostgreSQL DB with status `PENDING` awaiting Mess Admin approval.
 
-### 7. 🔒 No-Scroll Blurred Public Dashboard Overlay for Admin Auth
-- **Zero Scroll:** Disabled page scrolling completely on unauthenticated admin pages by locking body overflow (`overflow-hidden fixed inset-0`).
-- **Deferred Admin Loading:** Admin portal components (`children`) are **not loaded or mounted at all** until the user authenticates with the admin password.
-- **Public Dashboard Backdrop:** Overlaid the password authentication modal directly over a blurred preview of the Public BROS Dashboard (`<PublicDashboardPreview />`).
-- **Post-Auth Session Restore:** Loads and renders the admin section and restores the 30-minute session strictly upon password entry.
+### 7. 🔒 Pre-Loaded Admin Visual Layout with Deferred Data Fetching
+- **Visual Layout & Resources:** Admin page structures, cards, action tabs, buttons, and UI framework (`children`) load and render in the background under a blurred, non-interactive overlay (`blur-md opacity-35 pointer-events-none select-none`).
+- **Deferred Data Fetching:** Data fetching (`useEffect`) across all 6 admin portals is gated behind `useAdminAuth()` context (`if (isAuthenticated)`). Zero database queries or confidential grievance records are requested over the network until authentication succeeds.
+- **Instant Unlocking:** Entering `adminBRH` sets `isAuthenticated = true`, unlocking the interactive admin controls and loading real-time database records seamlessly.
 
 ### 5. 📷 Picture & Video Metadata Timestamp (`capturedAt`) in IST (GMT +5:30)
 - **Metadata Extraction:** Client-side form handlers extract `file.lastModified` (camera capture / creation timestamp) from uploaded photos/videos in Grievances and Mess Duty Gallery.

@@ -20,7 +20,7 @@ import {
   Download,
 } from 'lucide-react';
 import { validateWeeklyMenu, DailyMenuInput } from '@/lib/mess-rules';
-import { AdminAuthGate } from '@/components/admin-auth-gate';
+import { AdminAuthGate, useAdminAuth } from '@/components/admin-auth-gate';
 import { GrievanceMediaGallery } from '@/components/grievance-media-gallery';
 
 export default function AdminDashboard() {
@@ -32,6 +32,7 @@ export default function AdminDashboard() {
 }
 
 function AdminDashboardContent() {
+  const { isAuthenticated } = useAdminAuth();
   const [weeklyMenu, setWeeklyMenu] = useState<DailyMenuInput[]>([]);
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -74,10 +75,12 @@ function AdminDashboardContent() {
   };
 
   useEffect(() => {
-    fetchMenu();
-    fetchFeedbacks();
-    fetchPendingGallery();
-  }, []);
+    if (isAuthenticated) {
+      fetchMenu();
+      fetchFeedbacks();
+      fetchPendingGallery();
+    }
+  }, [isAuthenticated]);
 
   // Live Real-Time Validation Engine
   const validation = validateWeeklyMenu(weeklyMenu);

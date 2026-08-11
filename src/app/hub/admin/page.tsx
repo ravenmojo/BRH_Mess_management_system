@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Film, Trophy, Users, Phone, ShieldCheck, Plus, Trash2, Sparkles, Loader2, ArrowLeft, CheckCircle2, UploadCloud, Upload, Image as ImageIcon, Video, Download } from 'lucide-react';
 import Link from 'next/link';
 import { uploadToCloudinary } from '@/lib/cloudinary-upload';
-import { AdminAuthGate } from '@/components/admin-auth-gate';
+import { AdminAuthGate, useAdminAuth } from '@/components/admin-auth-gate';
 
 export default function HubAdminPage() {
   return (
@@ -15,6 +15,7 @@ export default function HubAdminPage() {
 }
 
 function HubAdminContent() {
+  const { isAuthenticated } = useAdminAuth();
   const [activeTab, setActiveTab] = useState<'MOVIES' | 'ACTIVITIES' | 'ACHIEVEMENTS' | 'CONTACTS'>('MOVIES');
   const [data, setData] = useState<any>({ movies: [], activities: [], achievements: [], emergencyContacts: [] });
   const [loading, setLoading] = useState(true);
@@ -66,8 +67,10 @@ function HubAdminContent() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (isAuthenticated) {
+      loadData();
+    }
+  }, [isAuthenticated]);
 
   const handleSeedAll = async () => {
     if (!confirm('Are you sure you want to populate all sub-sections with clean dummy data? This will seed sample movies, activities, achievements, and emergency contacts.')) return;

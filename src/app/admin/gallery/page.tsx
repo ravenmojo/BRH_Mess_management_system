@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Camera, UploadCloud, Loader2, Trash2, Video, ImageIcon, Download, Clock, AlertTriangle, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinary-upload';
-import { AdminAuthGate } from '@/components/admin-auth-gate';
+import { AdminAuthGate, useAdminAuth } from '@/components/admin-auth-gate';
 
 const CATEGORIES = [
   { id: 'GENERAL', label: 'General' },
@@ -22,6 +22,7 @@ export default function AdminGalleryPage() {
 }
 
 function AdminGalleryContent() {
+  const { isAuthenticated } = useAdminAuth();
   const [images, setImages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -37,8 +38,10 @@ function AdminGalleryContent() {
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    loadImages();
-  }, []);
+    if (isAuthenticated) {
+      loadImages();
+    }
+  }, [isAuthenticated]);
 
   const loadImages = () => {
     fetch('/api/gallery')
