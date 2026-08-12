@@ -110,7 +110,7 @@ export default function HubPage() {
             <span>BROS Hall Info & Community</span>
           </h2>
           <p className="text-xs text-purple-100 font-medium leading-snug">
-            Movies, Contacts & Ideas — staying connected, bros! 🍿
+            Just the chill stuff (if the chill goes sideways,there's also emergency contacts). 🍿
           </p>
         </div>
       </div>
