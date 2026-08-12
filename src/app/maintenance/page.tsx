@@ -200,7 +200,7 @@ export default function MaintenancePage() {
             <span>BROS Maintenance</span>
           </h2>
           <p className="text-xs text-slate-300 font-medium leading-snug">
-            Fixing faults before they test your patience! 🛠️
+            Fixing faults before they unfix you... 🛠️
           </p>
         </div>
       </div>
