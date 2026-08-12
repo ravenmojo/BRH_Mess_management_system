@@ -14,6 +14,195 @@ export default function HubAdminPage() {
   );
 }
 
+interface PosterUploadZoneProps {
+  posterFile: File | null;
+  setPosterFile: (file: File | null) => void;
+  posterUrl: string;
+  setPosterUrl: (url: string) => void;
+  uploading: boolean;
+  progress: number;
+}
+
+function PosterUploadZone({
+  posterFile,
+  setPosterFile,
+  posterUrl,
+  setPosterUrl,
+  uploading,
+  progress,
+}: PosterUploadZoneProps) {
+  const [isDragging, setIsDragging] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
+
+  useEffect(() => {
+    if (posterFile) {
+      const url = URL.createObjectURL(posterFile);
+      setPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } else if (posterUrl) {
+      setPreviewUrl(posterUrl);
+    } else {
+      setPreviewUrl('');
+    }
+  }, [posterFile, posterUrl]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setPosterFile(e.target.files[0]);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setPosterFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handlePasteEvent = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/') || items[i].type.startsWith('video/')) {
+        const blob = items[i].getAsFile();
+        if (blob) {
+          const ext = blob.type.split('/')[1] || 'png';
+          const file = new File([blob], `pasted_poster_${Date.now()}.${ext}`, { type: blob.type });
+          setPosterFile(file);
+          e.preventDefault();
+          return;
+        }
+      }
+    }
+  };
+
+  const triggerClipboardRead = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.read) {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          const imageType = item.types.find((t) => t.startsWith('image/'));
+          if (imageType) {
+            const blob = await item.getType(imageType);
+            const ext = imageType.split('/')[1] || 'png';
+            const file = new File([blob], `pasted_poster_${Date.now()}.${ext}`, { type: imageType });
+            setPosterFile(file);
+            return;
+          }
+        }
+      }
+
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text && (text.startsWith('http') || text.startsWith('data:image'))) {
+          setPosterUrl(text.trim());
+          setPosterFile(null);
+          return;
+        }
+      }
+
+      alert('No image found in clipboard. Copy an image or screenshot to your clipboard and press "Paste Image from Clipboard" or Ctrl+V!');
+    } catch (err) {
+      alert('Clipboard permission denied. Press Ctrl+V or Cmd+V directly over this box to paste your image!');
+    }
+  };
+
+  return (
+    <div
+      onDragOver={(e) => {
+        e.preventDefault();
+        setIsDragging(true);
+      }}
+      onDragLeave={() => setIsDragging(false)}
+      onDrop={handleDrop}
+      onPaste={handlePasteEvent}
+      tabIndex={0}
+      className={`relative border-2 border-dashed rounded-3xl p-5 text-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500/50 ${
+        isDragging
+          ? 'border-purple-500 bg-purple-500/10 scale-[1.01]'
+          : 'border-purple-300 dark:border-purple-800/80 bg-purple-50/40 dark:bg-purple-950/20 hover:border-purple-400 dark:hover:border-purple-700'
+      }`}
+    >
+      <input
+        type="file"
+        id="poster-zone-file-input"
+        accept="image/*,video/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      {previewUrl ? (
+        <div className="space-y-3">
+          <div className="relative w-full max-w-xs mx-auto aspect-video rounded-2xl overflow-hidden bg-slate-950 border border-purple-300 dark:border-purple-800 shadow-md group">
+            {posterFile?.type.startsWith('video/') || previewUrl.match(/\.(mp4|webm|ogg)$/i) ? (
+              <video src={previewUrl} className="w-full h-full object-contain" controls />
+            ) : (
+              <img src={previewUrl} alt="Poster preview" className="w-full h-full object-contain" />
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setPosterFile(null);
+                setPosterUrl('');
+              }}
+              className="absolute top-2 right-2 p-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-md"
+              title="Remove poster"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center justify-center space-x-1">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>{posterFile ? `Attached: ${posterFile.name}` : 'Poster URL attached'}</span>
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3 py-2">
+          <div className="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-900/60 text-purple-600 dark:text-purple-300 flex items-center justify-center mx-auto shadow-sm">
+            <UploadCloud className="w-6 h-6" />
+          </div>
+
+          <div>
+            <h4 className="text-xs font-black text-slate-800 dark:text-slate-100">
+              Drop your poster image here or browse
+            </h4>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+              Supports PNG, JPG, WebP, GIF, MP4 • Press <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[10px] font-mono font-bold">Ctrl+V</kbd> to paste image from clipboard
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+            <label
+              htmlFor="poster-zone-file-input"
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-extrabold cursor-pointer transition-all shadow-md shadow-purple-600/25 flex items-center space-x-1.5"
+            >
+              <ImageIcon className="w-3.5 h-3.5" />
+              <span>Select Image</span>
+            </label>
+
+            <button
+              type="button"
+              onClick={triggerClipboardRead}
+              className="px-4 py-2 bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 rounded-xl text-xs font-extrabold hover:bg-purple-200 dark:hover:bg-purple-900 transition-all flex items-center space-x-1.5"
+            >
+              <Clipboard className="w-3.5 h-3.5" />
+              <span>Paste Image from Clipboard</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {uploading && (
+        <div className="mt-3 w-full h-1.5 bg-purple-200 dark:bg-purple-900 rounded-full overflow-hidden">
+          <div className="h-full bg-purple-600 transition-all duration-300" style={{ width: `${progress}%` }}></div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function HubAdminContent() {
   const { isAuthenticated } = useAdminAuth();
   const [activeTab, setActiveTab] = useState<'MOVIES' | 'ACTIVITIES' | 'ACHIEVEMENTS' | 'CONTACTS'>('MOVIES');
@@ -22,8 +211,7 @@ function HubAdminContent() {
   const [submitting, setSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  // Form States - Add New
-  // 1. Movie Form
+  // Form States - Add New Movie
   const [movieTitle, setMovieTitle] = useState('');
   const [moviePosterUrl, setMoviePosterUrl] = useState('');
   const [movieShowTime, setMovieShowTime] = useState('');
@@ -82,20 +270,6 @@ function HubAdminContent() {
       loadData();
     }
   }, [isAuthenticated]);
-
-  const handlePasteFromClipboard = async (setter: (val: string) => void) => {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (text && text.trim()) {
-        setter(text.trim());
-        setStatusMessage('Pasted content from clipboard!');
-      } else {
-        alert('Clipboard is empty or does not contain plain text/URL.');
-      }
-    } catch {
-      alert('Clipboard permission denied. Please paste directly using Ctrl+V or Cmd+V.');
-    }
-  };
 
   const handleSeedAll = async () => {
     if (!confirm('Are you sure you want to populate all sub-sections with clean dummy data? This will seed sample movies, activities, achievements, and emergency contacts.')) return;
@@ -451,82 +625,50 @@ function HubAdminContent() {
           {/* TAB 1: MOVIES */}
           {activeTab === 'MOVIES' && (
             <div className="space-y-6">
-              <form onSubmit={handleAddMovie} className="p-5 rounded-2xl glass-card space-y-3.5">
+              <form onSubmit={handleAddMovie} className="p-5 rounded-2xl glass-card space-y-4">
                 <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center space-x-2">
                   <Plus className="w-4 h-4 text-purple-600" />
                   <span>Add Movie Screening</span>
                 </h3>
-                <div className="space-y-2">
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <input
-                      type="text"
-                      placeholder="Movie Title *"
-                      value={movieTitle}
-                      onChange={(e) => setMovieTitle(e.target.value)}
-                      required
-                      className="w-full px-3.5 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Venue (e.g. BRH Common Room)"
-                      value={movieVenue}
-                      onChange={(e) => setMovieVenue(e.target.value)}
-                      className="w-full px-3.5 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                    />
-                    <input
-                      type="datetime-local"
-                      value={movieShowTime}
-                      onChange={(e) => setMovieShowTime(e.target.value)}
-                      className="w-full px-3.5 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                    />
-                    <div className="relative flex items-center">
-                      <input
-                        type="url"
-                        placeholder="Poster Image URL (Optional)"
-                        value={moviePosterUrl}
-                        onChange={(e) => setMoviePosterUrl(e.target.value)}
-                        className="w-full pr-20 px-3.5 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handlePasteFromClipboard(setMoviePosterUrl)}
-                        className="absolute right-1.5 px-2 py-1 bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 rounded-lg text-[10px] font-bold flex items-center space-x-1 hover:bg-purple-200 dark:hover:bg-purple-900 transition-colors"
-                        title="Paste URL from clipboard"
-                      >
-                        <Clipboard className="w-3 h-3" />
-                        <span>Paste</span>
-                      </button>
-                    </div>
-                  </div>
 
-                  {/* Direct Poster File Upload */}
-                  <div className="border border-dashed border-purple-300 dark:border-purple-800/70 rounded-xl p-3 bg-purple-50/40 dark:bg-purple-950/20 text-center">
-                    <input
-                      type="file"
-                      id="poster-file-input"
-                      accept="image/*,video/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          setPosterFile(e.target.files[0]);
-                        }
-                      }}
-                    />
-                    <label htmlFor="poster-file-input" className="cursor-pointer flex items-center justify-center space-x-2 text-xs text-purple-700 dark:text-purple-300 font-bold">
-                      <UploadCloud className="w-4 h-4 text-purple-600" />
-                      <span>{posterFile ? `Selected Poster: ${posterFile.name}` : 'Click to Upload Movie Poster / Video File'}</span>
-                    </label>
-                    {uploadingPoster && (
-                      <div className="mt-2 w-full h-1.5 bg-purple-200 dark:bg-purple-900 rounded-full overflow-hidden">
-                        <div className="h-full bg-purple-600 transition-all duration-300" style={{ width: `${posterProgress}%` }}></div>
-                      </div>
-                    )}
-                  </div>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <input
+                    type="text"
+                    placeholder="Movie Title *"
+                    value={movieTitle}
+                    onChange={(e) => setMovieTitle(e.target.value)}
+                    required
+                    className="w-full px-3.5 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Venue (e.g. BRH Common Room)"
+                    value={movieVenue}
+                    onChange={(e) => setMovieVenue(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  />
+                  <input
+                    type="datetime-local"
+                    value={movieShowTime}
+                    onChange={(e) => setMovieShowTime(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50 col-span-2 sm:col-span-1"
+                  />
                 </div>
+
+                {/* Drop Zone & Direct Clipboard Image Paste Container */}
+                <PosterUploadZone
+                  posterFile={posterFile}
+                  setPosterFile={setPosterFile}
+                  posterUrl={moviePosterUrl}
+                  setPosterUrl={setMoviePosterUrl}
+                  uploading={uploadingPoster}
+                  progress={posterProgress}
+                />
+
                 <button
                   type="submit"
                   disabled={submitting || !movieTitle.trim()}
-                  className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center space-x-2"
+                  className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center space-x-2 shadow-md shadow-purple-600/30"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Film className="w-4 h-4" />}
                   <span>{submitting ? 'Publishing Movie...' : 'Publish Movie Screening'}</span>
@@ -884,48 +1026,15 @@ function HubAdminContent() {
                   </div>
 
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-[11px] font-bold text-slate-400">Poster Image / Video URL</label>
-                      <button
-                        type="button"
-                        onClick={() => handlePasteFromClipboard((val) => setEditingItem({ ...editingItem, payload: { ...editingItem.payload, posterUrl: val } }))}
-                        className="px-2 py-0.5 bg-purple-950 text-purple-300 border border-purple-800 rounded text-[10px] font-bold flex items-center space-x-1 hover:bg-purple-900 transition-colors"
-                      >
-                        <Clipboard className="w-3 h-3" />
-                        <span>Paste Clipboard</span>
-                      </button>
-                    </div>
-                    <input
-                      type="url"
-                      placeholder="Paste image/video URL here..."
-                      value={editingItem.payload.posterUrl}
-                      onChange={(e) => setEditingItem({ ...editingItem, payload: { ...editingItem.payload, posterUrl: e.target.value } })}
-                      className="w-full px-3.5 py-2 rounded-xl text-xs bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    <label className="text-[11px] font-bold text-slate-400 block mb-1">Replace Poster Image / Video</label>
+                    <PosterUploadZone
+                      posterFile={editFile}
+                      setPosterFile={setEditFile}
+                      posterUrl={editingItem.payload.posterUrl}
+                      setPosterUrl={(url) => setEditingItem({ ...editingItem, payload: { ...editingItem.payload, posterUrl: url } })}
+                      uploading={editUploadingPoster}
+                      progress={editPosterProgress}
                     />
-                  </div>
-
-                  {/* Replace Poster File Upload */}
-                  <div className="border border-dashed border-purple-500/60 rounded-2xl p-3.5 bg-purple-950/30 text-center">
-                    <input
-                      type="file"
-                      id="edit-poster-file-input"
-                      accept="image/*,video/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          setEditFile(e.target.files[0]);
-                        }
-                      }}
-                    />
-                    <label htmlFor="edit-poster-file-input" className="cursor-pointer flex items-center justify-center space-x-2 text-xs text-purple-300 font-bold">
-                      <UploadCloud className="w-4 h-4 text-purple-400" />
-                      <span>{editFile ? `Selected: ${editFile.name}` : 'Upload / Replace Poster File (Image/Video)'}</span>
-                    </label>
-                    {editUploadingPoster && (
-                      <div className="mt-2 w-full h-1.5 bg-purple-950 rounded-full overflow-hidden">
-                        <div className="h-full bg-purple-500 transition-all duration-300" style={{ width: `${editPosterProgress}%` }}></div>
-                      </div>
-                    )}
                   </div>
                 </div>
               )}
