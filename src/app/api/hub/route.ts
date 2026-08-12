@@ -3,19 +3,28 @@ import prisma from '@/lib/prisma';
 
 export async function GET(request: Request) {
   try {
-    const movies = await prisma.movieScreening.findMany({ orderBy: { showTime: 'desc' } });
-    const activities = await prisma.activityParticipant.findMany({ orderBy: { createdAt: 'desc' } });
-    const achievements = await prisma.achievement.findMany({ orderBy: { date: 'desc' } });
-    const emergencyContacts = await prisma.emergencyContact.findMany({ orderBy: { order: 'asc' } });
-    const suggestions = await prisma.suggestion.findMany({ orderBy: { createdAt: 'desc' } });
+    const [movies, activities, achievements, emergencyContacts, suggestions] = await Promise.all([
+      prisma.movieScreening.findMany({ orderBy: { showTime: 'desc' } }),
+      prisma.activityParticipant.findMany({ orderBy: { createdAt: 'desc' } }),
+      prisma.achievement.findMany({ orderBy: { date: 'desc' } }),
+      prisma.emergencyContact.findMany({ orderBy: { order: 'asc' } }),
+      prisma.suggestion.findMany({ orderBy: { createdAt: 'desc' } }),
+    ]);
     
-    return NextResponse.json({
-      movies,
-      activities,
-      achievements,
-      emergencyContacts,
-      suggestions
-    });
+    return NextResponse.json(
+      {
+        movies,
+        activities,
+        achievements,
+        emergencyContacts,
+        suggestions,
+      },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=59',
+        },
+      }
+    );
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
