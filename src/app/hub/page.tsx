@@ -167,9 +167,9 @@ export default function HubPage() {
         {[
           { id: 'MOVIE', label: 'Movies', icon: Film },
           { id: 'ACTIVITIES', label: 'Activities', icon: Users },
+          { id: 'ACHIEVEMENTS', label: 'Awards', icon: Trophy },
           { id: 'SUGGESTION', label: 'Ideas', icon: Lightbulb },
           { id: 'CONTACTS', label: 'Contacts', icon: Phone },
-          { id: 'ACHIEVEMENTS', label: 'Awards', icon: Trophy },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
