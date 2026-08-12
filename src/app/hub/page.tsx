@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Film, Lightbulb, Users, Phone, Trophy, Send, Loader2, Star, ShieldCheck, AlertTriangle, Download, Video, Image as ImageIcon } from 'lucide-react';
+import { Film, Lightbulb, Users, Phone, Trophy, Send, Loader2, Star, ShieldCheck, AlertTriangle, Download, Video, Image as ImageIcon, Calendar, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { Footer } from '@/components/footer';
 import { OtpVerificationModal } from '@/components/otp-modal';
@@ -16,6 +16,35 @@ function formatRoomNo(value: string): string {
   }
   if (v.length > 5) v = v.slice(0, 5);
   return v;
+}
+
+function formatMovieDateIST(dateStr: string) {
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
+function formatMovieTimeIST(dateStr: string) {
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+  } catch {
+    return '';
+  }
 }
 
 const DUMMY_EMERGENCY_CONTACTS = [
@@ -47,10 +76,28 @@ export default function HubPage() {
       setEmail(savedEmail);
     }
 
+    // Try loading from sessionStorage for instant 0ms rendering
+    try {
+      const cached = sessionStorage.getItem('bros_hub_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && Array.isArray(parsed.movies)) {
+          setData(parsed);
+          setLoading(false);
+        }
+      }
+    } catch {}
+
+    // Fetch latest in background (stale-while-revalidate)
     fetch('/api/hub')
-      .then(res => res.json())
-      .then(d => setData(d))
-      .catch(() => { })
+      .then((res) => res.json())
+      .then((d) => {
+        if (d && Array.isArray(d.movies)) {
+          setData(d);
+          sessionStorage.setItem('bros_hub_cache', JSON.stringify(d));
+        }
+      })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
@@ -155,14 +202,20 @@ export default function HubPage() {
               <div className="space-y-4">
                 {data.movies.length > 0 ? (
                   data.movies.map((movie: any) => (
-                    <div key={movie.id} className="glass-card rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 space-y-0">
+                    <div key={movie.id} className="glass-card rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 space-y-0 shadow-sm">
                       {movie.posterUrl && (
                         <div className="w-full aspect-video relative bg-slate-950 flex items-center justify-center overflow-hidden">
                           {movie.posterUrl.match(/\.(mp4|webm|ogg)$/i) ? (
                             <video src={movie.posterUrl} className="w-full h-full object-contain" controls preload="metadata" />
                           ) : (
                             <a href={movie.posterUrl} target="_blank" rel="noreferrer" className="w-full h-full flex items-center justify-center p-1">
-                              <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-contain transition-transform duration-300 hover:scale-105" />
+                              <img
+                                src={movie.posterUrl}
+                                alt={movie.title}
+                                loading="eager"
+                                decoding="async"
+                                className="w-full h-full object-contain transition-transform duration-300 hover:scale-105"
+                              />
                             </a>
                           )}
                           <a
@@ -177,16 +230,33 @@ export default function HubPage() {
                           </a>
                         </div>
                       )}
-                      <div className="p-4 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
+                      <div className="p-4 space-y-3">
+                        {/* Title & Venue Header */}
+                        <div className="flex items-start justify-between">
+                          <h3 className="font-extrabold text-slate-900 dark:text-white text-base sm:text-lg leading-tight">
+                            {movie.title}
+                          </h3>
+                          <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 shrink-0 ml-2 border border-purple-200/60 dark:border-purple-800/60">
                             {movie.venue || 'BRH Common Room'}
                           </span>
-                          <span className="text-[10px] font-semibold text-slate-400 font-mono">
-                            {new Date(movie.showTime).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' })} IST
-                          </span>
                         </div>
-                        <h3 className="font-extrabold text-slate-900 dark:text-white text-base">{movie.title}</h3>
+
+                        {/* Prominent High-Contrast Date & Time Card */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950/70 dark:to-indigo-950/70 border border-purple-200/80 dark:border-purple-800/80 text-purple-900 dark:text-purple-100 shadow-xs">
+                          <div className="flex items-center space-x-1.5 font-bold text-xs">
+                            <Calendar className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
+                            <span className="font-black text-slate-900 dark:text-white">
+                              {formatMovieDateIST(movie.showTime)}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-1.5 font-mono font-bold text-xs text-purple-800 dark:text-purple-200">
+                            <Clock className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 shrink-0" />
+                            <span>{formatMovieTimeIST(movie.showTime)}</span>
+                            <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-purple-200 dark:bg-purple-800 text-purple-900 dark:text-purple-100 ml-1">
+                              IST
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))
