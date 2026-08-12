@@ -86,7 +86,7 @@ export default function HubPage() {
           setLoading(false);
         }
       }
-    } catch {}
+    } catch { }
 
     // Fetch latest in background (stale-while-revalidate)
     fetch('/api/hub')
@@ -97,7 +97,7 @@ export default function HubPage() {
           sessionStorage.setItem('bros_hub_cache', JSON.stringify(d));
         }
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, []);
 
@@ -157,7 +157,7 @@ export default function HubPage() {
             <span>BROS Hall Info & Community</span>
           </h2>
           <p className="text-xs text-purple-100 font-medium leading-snug">
-            Just the chill stuff (if the chill goes sideways,there's also emergency contacts). 🍿
+            Just the chill stuff! (and if it goes sideways, there's also emergency contacts🙃)
           </p>
         </div>
       </div>
