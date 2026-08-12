@@ -53,7 +53,7 @@ export default function RootLayout({
                 </div>
                 <div className="flex flex-col justify-center">
                   <h1 className="text-lg font-black tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent leading-none">BROS</h1>
-                  <span className="text-[9px] sm:text-[10px] uppercase tracking-wider sm:tracking-widest text-indigo-600 dark:text-indigo-400 font-bold mt-0.5">
+                  <span className="text-[9px] sm:text-[10px] tracking-wider sm:tracking-widest text-indigo-600 dark:text-indigo-400 font-bold mt-0.5">
                     BR Ambedkar Hall <span className="text-fuchsia-600 dark:text-fuchsia-400">Online Services portal</span>
                   </span>
                 </div>
