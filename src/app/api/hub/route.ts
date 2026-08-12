@@ -216,6 +216,74 @@ export async function POST(request: Request) {
   }
 }
 
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    const { type, id, payload } = body;
+
+    if (!id || !type) {
+      return NextResponse.json({ error: 'ID and Type are required for update.' }, { status: 400 });
+    }
+
+    if (type === 'MOVIE') {
+      const updated = await prisma.movieScreening.update({
+        where: { id },
+        data: {
+          title: payload.title,
+          posterUrl: payload.posterUrl,
+          showTime: payload.showTime ? new Date(payload.showTime) : undefined,
+          venue: payload.venue,
+        },
+      });
+      return NextResponse.json(updated);
+    }
+
+    if (type === 'ACTIVITY') {
+      const updated = await prisma.activityParticipant.update({
+        where: { id },
+        data: {
+          studentName: payload.studentName,
+          hallRoll: payload.hallRoll,
+          activity: payload.activity,
+        },
+      });
+      return NextResponse.json(updated);
+    }
+
+    if (type === 'ACHIEVEMENT') {
+      const updated = await prisma.achievement.update({
+        where: { id },
+        data: {
+          studentName: payload.studentName,
+          hallRoll: payload.hallRoll,
+          title: payload.title,
+          description: payload.description,
+          category: payload.category,
+          date: payload.date ? new Date(payload.date) : undefined,
+        },
+      });
+      return NextResponse.json(updated);
+    }
+
+    if (type === 'EMERGENCY_CONTACT') {
+      const updated = await prisma.emergencyContact.update({
+        where: { id },
+        data: {
+          role: payload.role,
+          name: payload.name,
+          phone: payload.phone,
+          order: payload.order !== undefined ? Number(payload.order) : undefined,
+        },
+      });
+      return NextResponse.json(updated);
+    }
+
+    return NextResponse.json({ error: 'Invalid type for update.' }, { status: 400 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
