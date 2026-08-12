@@ -3,18 +3,44 @@
 import React, { useState } from 'react';
 import { Video, ImageIcon, Download, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 
-export function parseMediaUrls(mediaUrl: string | null | undefined): string[] {
+export function parseMediaUrls(mediaUrl: string | null | undefined | any): string[] {
   if (!mediaUrl) return [];
+  if (Array.isArray(mediaUrl)) {
+    return mediaUrl.filter((u): u is string => typeof u === 'string' && u.trim().length > 0);
+  }
+  if (typeof mediaUrl !== 'string') return [];
+  const trimmed = mediaUrl.trim();
+  if (!trimmed || trimmed === '[]' || trimmed === 'null' || trimmed === 'undefined') return [];
+
+  // Try JSON parse first
   try {
-    if (mediaUrl.trim().startsWith('[')) {
-      const parsed = JSON.parse(mediaUrl);
-      if (Array.isArray(parsed)) return parsed.filter((u): u is string => typeof u === 'string' && u.length > 0);
+    const parsed = JSON.parse(trimmed);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((item) => (typeof item === 'string' ? item.trim() : ''))
+        .filter((url) => url.length > 0);
+    } else if (typeof parsed === 'string' && parsed.trim().length > 0) {
+      return [parsed.trim()];
     }
   } catch (e) {}
-  if (mediaUrl.includes(',')) {
-    return mediaUrl.split(',').map((s) => s.trim()).filter((s) => s.length > 0);
+
+  // Clean JSON square brackets if unparsed
+  let cleaned = trimmed.replace(/^\[|\]$/g, '').trim();
+
+  // Split by comma
+  if (cleaned.includes(',')) {
+    return cleaned
+      .split(',')
+      .map((s) => s.replace(/^["']|["']$/g, '').trim())
+      .filter((s) => s.length > 0);
   }
-  return [mediaUrl];
+
+  cleaned = cleaned.replace(/^["']|["']$/g, '').trim();
+  if (cleaned.length > 0) {
+    return [cleaned];
+  }
+
+  return [];
 }
 
 interface GrievanceMediaGalleryProps {
