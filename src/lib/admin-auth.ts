@@ -40,9 +40,11 @@ export function isAllowedEmail(email: string): boolean {
  * @returns `true` if the password matches, `false` otherwise.
  */
 export function verifyAdminPassword(request: Request): boolean {
-  const expectedPassword = process.env.ADMIN_PASSWORD;
+  const rawExpected = process.env.ADMIN_PASSWORD || '';
+  const expectedPassword = rawExpected.replace(/^["']|["']$/g, '').trim();
   if (!expectedPassword) return false;
 
-  const headerPassword = request.headers.get('x-admin-password');
-  return headerPassword === expectedPassword.trim();
+  const rawHeader = request.headers.get('x-admin-password') || '';
+  const headerPassword = rawHeader.replace(/^["']|["']$/g, '').trim();
+  return headerPassword === expectedPassword;
 }
