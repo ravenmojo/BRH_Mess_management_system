@@ -10,10 +10,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Please enter your admin email.' }, { status: 400 });
     }
 
-    const expectedMasterPassword = process.env.ADMIN_PASSWORD;
+    const rawExpected = process.env.ADMIN_PASSWORD || '';
+    const expectedMasterPassword = rawExpected.replace(/^["']|["']$/g, '').trim();
+    const cleanIdentifier = identifier.replace(/^["']|["']$/g, '').trim();
 
     // 1. Check if the entered string matches the stealth master password
-    if (expectedMasterPassword && identifier === expectedMasterPassword.trim()) {
+    if (expectedMasterPassword && cleanIdentifier === expectedMasterPassword) {
       return NextResponse.json({
         authenticated: true,
         isMasterAdmin: true,
