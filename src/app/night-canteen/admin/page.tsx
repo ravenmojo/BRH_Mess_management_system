@@ -105,8 +105,8 @@ function CanteenAdminContent() {
         </div>
       </div>
 
-      {/* GRIEVANCES MANAGEMENT */}
-      <details className="group space-y-2" open>
+      {/* GRIEVANCES & COMPLAINTS MANAGEMENT */}
+      <details className="group space-y-2">
         <summary className="flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
           <h3 className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider flex items-center space-x-1.5">
             <MessageSquare className="w-4 h-4 text-blue-600" />

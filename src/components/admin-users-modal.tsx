@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ShieldCheck, Plus, Trash2, Edit2, Check, X, Loader2, UserCheck, AlertCircle, Mail, Briefcase } from 'lucide-react';
 
 interface AdminUserRecord {
@@ -29,6 +30,7 @@ function getAdminPassword(): string {
 }
 
 export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
+  const [mounted, setMounted] = useState(false);
   const [admins, setAdmins] = useState<AdminUserRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +45,27 @@ export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingDesignation, setEditingDesignation] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Prevent background scroll & listen for Escape key
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') onClose();
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = 'unset';
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+  }, [isOpen, onClose]);
 
   const fetchAdmins = async () => {
     setLoading(true);
@@ -74,8 +97,6 @@ export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
       setEditingId(null);
     }
   }, [isOpen]);
-
-  if (!isOpen) return null;
 
   const handleAddAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,67 +192,79 @@ export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[99999] overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
-      <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200 text-left max-h-[90vh] flex flex-col">
-        
+  if (!isOpen || !mounted) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[999999] overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-2.5 sm:p-6 min-h-[100dvh]"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6 space-y-3.5 sm:space-y-4 animate-in fade-in zoom-in-95 duration-200 text-left max-h-[92dvh] sm:max-h-[86vh] flex flex-col my-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-blue-600/10 dark:bg-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
-              <ShieldCheck className="w-5 h-5" />
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 gap-2">
+          <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-blue-600/10 dark:bg-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+              <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center space-x-1.5">
-                <span>Manage Hall Administrators</span>
-                <span className="text-[10px] font-bold uppercase bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center space-x-1.5 flex-wrap gap-1">
+                <h2 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
+                  Manage Administrators
+                </h2>
+                <span className="text-[9px] sm:text-[10px] font-bold uppercase bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-full">
                   Master Admin
                 </span>
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Grant or revoke admin access and assign designations.
+              </div>
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 truncate">
+                Grant or revoke admin access and assign roles.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-2 sm:p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+            aria-label="Close"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
 
         {/* Alerts */}
         {error && (
-          <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center space-x-2">
+          <div className="p-2.5 sm:p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center space-x-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
+            <span className="break-words">{error}</span>
           </div>
         )}
 
         {success && (
-          <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-semibold flex items-center space-x-2">
+          <div className="p-2.5 sm:p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-semibold flex items-center space-x-2">
             <UserCheck className="w-4 h-4 shrink-0" />
-            <span>{success}</span>
+            <span className="break-words">{success}</span>
           </div>
         )}
 
         {/* Add Administrator Form */}
         <form
           onSubmit={handleAddAdmin}
-          className="p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-3 shrink-0"
+          className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-2.5 sm:space-y-3 shrink-0"
         >
           <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center space-x-1.5">
-            <Plus className="w-3.5 h-3.5 text-blue-600" />
+            <Plus className="w-3.5 h-3.5 text-blue-600 shrink-0" />
             <span>Register New Administrator</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
             <div className="relative">
               <Mail className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <input
                 type="email"
-                placeholder="Admin Email (e.g. roll@kgpian.iitkgp.ac.in) *"
+                placeholder="Admin Email *"
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
                 required
@@ -243,7 +276,7 @@ export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
               <Briefcase className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Designation (e.g. Mess Secretary, Maintenance)"
+                placeholder="Designation (e.g. Mess Secretary)"
                 value={newDesignation}
                 onChange={(e) => setNewDesignation(e.target.value)}
                 className="w-full pl-8 pr-3 py-2 rounded-xl text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -251,11 +284,11 @@ export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
             </div>
           </div>
 
-          <div className="flex justify-end pt-1">
+          <div className="flex justify-end pt-0.5">
             <button
               type="submit"
               disabled={adding || !newEmail.trim()}
-              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all flex items-center space-x-1.5 disabled:opacity-50"
+              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50"
             >
               {adding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
               <span>Add Administrator</span>
@@ -264,9 +297,9 @@ export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
         </form>
 
         {/* Registered Administrators List */}
-        <div className="space-y-2 flex-1 overflow-y-auto min-h-[160px] pr-1">
+        <div className="space-y-2 flex-1 overflow-y-auto min-h-[140px] pr-1">
           <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400 px-1">
-            <span>Authorized Admin Accounts ({admins.length})</span>
+            <span>Authorized Accounts ({admins.length})</span>
             {loading && <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />}
           </div>
 
@@ -282,19 +315,19 @@ export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
                 return (
                   <div
                     key={admin.id}
-                    className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between flex-wrap gap-2 text-xs"
+                    className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-start sm:items-center justify-between gap-2 text-xs flex-col sm:flex-row"
                   >
-                    <div className="space-y-1 min-w-0 flex-1">
+                    <div className="space-y-1 min-w-0 w-full sm:w-auto flex-1">
                       <div className="flex items-center space-x-2 flex-wrap gap-1">
-                        <span className="font-bold text-slate-900 dark:text-white font-mono text-[11px] truncate">
+                        <span className="font-bold text-slate-900 dark:text-white font-mono text-[11px] break-all">
                           {admin.email}
                         </span>
                         {admin.designation ? (
-                          <span className="text-[10px] font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
+                          <span className="text-[10px] font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800 shrink-0">
                             {admin.designation}
                           </span>
                         ) : (
-                          <span className="text-[10px] text-slate-400 italic">
+                          <span className="text-[10px] text-slate-400 italic shrink-0">
                             (No designation set)
                           </span>
                         )}
@@ -302,26 +335,26 @@ export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
 
                       {/* Edit Designation Field */}
                       {isEditing && (
-                        <div className="flex items-center space-x-1.5 pt-1.5 max-w-sm">
+                        <div className="flex items-center space-x-1.5 pt-1.5 w-full max-w-sm">
                           <input
                             type="text"
                             value={editingDesignation}
                             onChange={(e) => setEditingDesignation(e.target.value)}
                             placeholder="Enter designation..."
-                            className="px-2 py-1 rounded-lg text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500 flex-1"
+                            className="px-2 py-1 rounded-lg text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500 flex-1 min-w-0"
                             autoFocus
                           />
                           <button
                             onClick={() => handleUpdateDesignation(admin.id)}
                             disabled={savingEdit}
-                            className="p-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
+                            className="p-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors shrink-0"
                             title="Save"
                           >
                             <Check className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => setEditingId(null)}
-                            className="p-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors"
+                            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors shrink-0"
                             title="Cancel"
                           >
                             <X className="w-3.5 h-3.5" />
@@ -331,14 +364,14 @@ export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
                     </div>
 
                     {/* Action buttons */}
-                    <div className="flex items-center space-x-1 shrink-0">
+                    <div className="flex items-center space-x-1 shrink-0 self-end sm:self-center">
                       {!isEditing && (
                         <button
                           onClick={() => {
                             setEditingId(admin.id);
                             setEditingDesignation(admin.designation || '');
                           }}
-                          className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                          className="p-2 sm:p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                           title="Edit Designation"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
@@ -346,7 +379,7 @@ export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
                       )}
                       <button
                         onClick={() => handleDeleteAdmin(admin.id, admin.email)}
-                        className="p-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800/60 transition-colors"
+                        className="p-2 sm:p-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800/60 transition-colors"
                         title="Revoke Admin Access"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -360,16 +393,19 @@ export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
         </div>
 
         {/* Footer info */}
-        <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500">
-          <span>OTP authentication is required on login for all email accounts.</span>
+        <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] sm:text-[11px] text-slate-500">
+          <span className="text-center sm:text-left">
+            OTP email authentication is required for all admin accounts.
+          </span>
           <button
             onClick={onClose}
-            className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold transition-colors"
+            className="w-full sm:w-auto px-4 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold transition-colors text-center"
           >
             Close
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
