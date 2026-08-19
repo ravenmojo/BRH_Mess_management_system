@@ -86,7 +86,7 @@ A comprehensive, mobile-first Next.js web application built as a centralized dig
 
 ## 🔐 Admin Access & Security
 - Passkey protected via `AdminAuthGate` component with 30-minute session expiration & live countdown timer.
-- Passkey: Configured in `admin-auth-gate.tsx` (`adminBRH`).
+- Server-Side Verification: Securely authenticated via `/api/admin/auth` using the `ADMIN_PASSWORD` environment variable (never exposed in repository or client JS bundle).
 - Admin Portals:
   - `/admin` — Mess Menu Builder, Compliance Widgets, Grievance Moderation, Gallery Approvals, Poll Manager
   - `/maintenance/admin` — Infrastructure Grievance Resolution
@@ -96,6 +96,6 @@ A comprehensive, mobile-first Next.js web application built as a centralized dig
 ---
 
 ## 📄 License & Footnote
-- **Version:** `BROS v0.9.0`
+- **Version:** `BROS v0.9.5`
 - **Developed by:** Souradeep Satpathy (TeNSoRE Lab, IIT Kharagpur)
 - Open Source — Give credits to this repository for usage or forks.

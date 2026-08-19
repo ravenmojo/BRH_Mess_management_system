@@ -108,13 +108,21 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
     return () => clearInterval(interval);
   }, [isAuthenticated]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    setTimeout(() => {
-      if (password === 'adminBRH') {
+    try {
+      const res = await fetch('/api/admin/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: password.trim() }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.authenticated) {
         const session: AdminSession = {
           authenticated: true,
           expiresAt: Date.now() + SESSION_DURATION_MS,
@@ -124,10 +132,13 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
         setTimeLeftMs(SESSION_DURATION_MS);
         setPassword('');
       } else {
-        setError('Incorrect Admin Password. Access Denied.');
+        setError(data.error || 'Incorrect Admin Password. Access Denied.');
       }
+    } catch (err: any) {
+      setError('Authentication request failed. Please check your network connection.');
+    } finally {
       setLoading(false);
-    }, 300);
+    }
   };
 
   const handleLogout = () => {
@@ -162,7 +173,7 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
           <div className="flex items-center justify-between bg-blue-50/80 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40 px-4 py-2 rounded-2xl text-xs">
             <div className="flex items-center space-x-2 text-blue-700 dark:text-blue-300 font-bold">
               <Lock className="w-3.5 h-3.5" />
-              <span>Admin Authenticated (`adminBRH`)</span>
+              <span>Admin Session Active</span>
               <span className="text-[10px] font-mono bg-blue-100 dark:bg-blue-900/60 px-2 py-0.5 rounded-full text-blue-800 dark:text-blue-200 flex items-center space-x-1">
                 <Clock className="w-3 h-3 text-blue-600 dark:text-blue-400" />
                 <span>{formatRemainingTime(timeLeftMs)}</span>

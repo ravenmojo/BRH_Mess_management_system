@@ -4,6 +4,60 @@ This document tracks all feature implementations, bug fixes, UI/UX enhancements,
 
 ---
 
+## 📌 Version 0.9.5 (v0.9.5) — Automated Grievance Ticketing & Hall Hub Overhaul
+
+**Release Date:** August 19, 2026  
+**Package Version:** `0.9.5`  
+**Status:** Tested & Verified (`npm run build` — 26/26 routes compiled cleanly)
+
+### 1. 🎫 Automated Grievance Ticket Number Generation System
+- **Structured Ticket Specification:** Implemented auto-generated ticket numbers for every grievance across the platform using the format: **`<room no><two letter category code><date><count>`** (e.g. `D-515MS1908261`, `D-515DW1908261`).
+- **Standardised 2-Letter Subcategory Codes:**
+  - `REGULAR_MESS` ➔ **`MS`** (Mess Food & Hygiene)
+  - `NIGHT_CANTEEN` ➔ **`NC`** (Night Canteen Services)
+  - `MAINTENANCE_WASHROOM` ➔ **`WR`** (Washroom & Plumbing)
+  - `MAINTENANCE_WATER` ➔ **`DW`** (Drinking Water & Coolers)
+  - `MAINTENANCE_ELECTRICAL` ➔ **`EL`** (Electrical & Lighting)
+  - `MAINTENANCE_CIVIL` ➔ **`CV`** (Civil, Carpentry & Masonry)
+  - `MAINTENANCE_CLEANING` ➔ **`CL`** (Sanitation & Housekeeping)
+  - `MAINTENANCE_OUTDOOR` ➔ **`OD`** (Lawns, Courtyards & Grounds)
+- **Database Schema Sync:** Added `ticketNumber String? @unique` to `model Feedback` in [prisma/schema.prisma](prisma/schema.prisma) and synchronised the database via `prisma db push`.
+- **Ticket Utility Library:** Created [src/lib/ticket.ts](src/lib/ticket.ts) with category code lookup, IST `DDMMYY` date formatting, sequential daily count resolution, and fallback generation for legacy/in-memory records.
+- **Interactive Monospace Ticket Badge:** Built [src/components/ticket-badge.tsx](src/components/ticket-badge.tsx) featuring a monospace pill badge with instant 1-click clipboard copy and animated checkmark confirmation.
+- **Student Portals Integration:** Submission confirmation alerts display the generated Ticket ID, and recent grievance cards feature prominent `TicketBadge` indicators across Mess (`/feedback`), Maintenance (`/maintenance`), and Night Canteen (`/night-canteen`) pages.
+
+### 2. 🔍 Universal Admin Grievance Search & Filtering
+- **Multi-Field Search Bar:** Integrated real-time search inputs across all 3 grievance admin dashboards:
+  - **Mess Admin** ([src/app/admin/page.tsx](src/app/admin/page.tsx))
+  - **Maintenance Admin** ([src/app/maintenance/admin/page.tsx](src/app/maintenance/admin/page.tsx))
+  - **Night Canteen Admin** ([src/app/night-canteen/admin/page.tsx](src/app/night-canteen/admin/page.tsx))
+- **Instant Filtering:** Allows hall secretaries and administrators to filter grievances by **Ticket Number**, **Room Number**, student name, or complaint keyword with live card updates.
+
+### 3. 🏆 Hall Info Hub Reordering & Full Admin Management
+- **Tab Reordering:** Reordered Hall Info Hub tabs so **Awards / Achievements** appears before **Ideas / Suggestions**:
+  > **Movies** ➔ **Activities** ➔ 🏆 **Awards** ➔ 💡 **Ideas** ➔ 📞 **Contacts**
+- **Comprehensive Admin Control:** Added full management portals for adding, editing, and deleting Movie Screenings, Hall Achievements, Activity Registrations, Suggestions, and Emergency Contacts in [src/app/hub/admin/page.tsx](src/app/hub/admin/page.tsx).
+- **Poster File Upload & Clipboard Paste:** Admins can upload movie poster files or paste image files directly from their clipboard with real-time preview and upload progress indicators.
+- **Enhanced Screening Typography:** Movie screening dates, timings, and venue typography made more prominent, legible, and optimized for fast page loading.
+
+### 4. 🖼️ Grievance Media Gallery Parser Resilience
+- **Multi-Format Media Parser:** Enhanced `parseMediaUrls` in [src/components/grievance-media-gallery.tsx](src/components/grievance-media-gallery.tsx) to handle string arrays, JSON string arrays, comma-delimited Cloudinary URLs, and escaped quote formats, ensuring preview thumbnails render reliably on all cards.
+
+### 5. 🎯 Hero Banner Size Harmonization & Catchy Taglines
+- **Equal Vertical Height:** Standardised the top hero banner height and styling across the Homepage, Maintenance page, and Hall Info Hub page.
+- **Catchy Hall Taglines:**
+  - Homepage: *"Who are we to Mess with you, bros! 🗿"*
+  - Maintenance: *"Fixing faults before they unfix you... 🛠️"*
+
+### 6. 🛠️ Maintenance Category Layout Restoration
+- **Intuitive 3-Column Grid:** Restored the 3-column category grid layout (`grid-cols-3 gap-2`) with high-contrast active state highlights, icons, and precise location description placeholders on [src/app/maintenance/page.tsx](src/app/maintenance/page.tsx).
+
+### 7. 🔐 Server-Side Admin Authentication & Secret Isolation
+- **Secure Backend Verification:** Created dedicated backend verification route [src/app/api/admin/auth/route.ts](src/app/api/admin/auth/route.ts) that authenticates passwords strictly on the server against `ADMIN_PASSWORD` environment variable.
+- **Zero Client-Side Leakage:** Removed all hardcoded password strings and client-side credential checks from [src/components/admin-auth-gate.tsx](src/components/admin-auth-gate.tsx), ensuring the admin passkey cannot be inspected or inferred from source code, JavaScript bundles, or repository files.
+
+---
+
 ## 📌 Version 0.9.0 (v0.9) — Major System Overhaul & Maintenance Release
 
 **Release Date:** August 10, 2026  
@@ -36,7 +90,7 @@ This document tracks all feature implementations, bug fixes, UI/UX enhancements,
 ### 7. 🔒 Pre-Loaded Admin Visual Layout with Deferred Data Fetching
 - **Visual Layout & Resources:** Admin page structures, cards, action tabs, buttons, and UI framework (`children`) load and render in the background under a blurred, non-interactive overlay (`blur-md opacity-35 pointer-events-none select-none`).
 - **Deferred Data Fetching:** Data fetching (`useEffect`) across all 6 admin portals is gated behind `useAdminAuth()` context (`if (isAuthenticated)`). Zero database queries or confidential grievance records are requested over the network until authentication succeeds.
-- **Instant Unlocking:** Entering `adminBRH` sets `isAuthenticated = true`, unlocking the interactive admin controls and loading real-time database records seamlessly.
+- **Instant Unlocking:** Entering the server-verified admin password sets `isAuthenticated = true`, unlocking the interactive admin controls and loading real-time database records seamlessly.
 
 ### 5. 📷 Picture & Video Metadata Timestamp (`capturedAt`) in IST (GMT +5:30)
 - **Metadata Extraction:** Client-side form handlers extract `file.lastModified` (camera capture / creation timestamp) from uploaded photos/videos in Grievances and Mess Duty Gallery.
