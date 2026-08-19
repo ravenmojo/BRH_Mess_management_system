@@ -335,37 +335,37 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
       <div className="relative space-y-4">
         {/* Top Session Banner (visible when authenticated) */}
         {isAuth && (
-          <div className="flex items-center justify-between flex-wrap gap-2 bg-blue-50/90 dark:bg-blue-950/50 border border-blue-200/80 dark:border-blue-900/60 px-4 py-2.5 rounded-2xl text-xs shadow-sm">
-            <div className="flex items-center space-x-2 flex-wrap gap-1.5 text-blue-800 dark:text-blue-200 font-bold">
+          <div className="flex items-center justify-between flex-wrap gap-2 bg-blue-50/90 dark:bg-blue-950/50 border border-blue-200/80 dark:border-blue-900/60 p-3 sm:px-4 sm:py-2.5 rounded-2xl text-xs shadow-sm">
+            <div className="flex items-center space-x-2 flex-wrap gap-1.5 text-blue-800 dark:text-blue-200 font-bold min-w-0 flex-1">
               {isMasterAdmin ? (
-                <div className="flex items-center space-x-1.5 bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-200 px-2.5 py-1 rounded-xl border border-indigo-200 dark:border-indigo-800">
+                <div className="flex items-center space-x-1.5 bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-200 px-2.5 py-1 rounded-xl border border-indigo-200 dark:border-indigo-800 shrink-0">
                   <ShieldCheck className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                  <span>Master Administrator</span>
+                  <span className="text-[11px] sm:text-xs">Master Administrator</span>
                 </div>
               ) : (
-                <div className="flex items-center space-x-1.5">
-                  <Lock className="w-3.5 h-3.5 text-blue-600" />
-                  <span className="font-mono">{adminEmail}</span>
+                <div className="flex items-center space-x-1.5 min-w-0">
+                  <Lock className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  <span className="font-mono text-[11px] sm:text-xs truncate max-w-[160px] sm:max-w-xs">{adminEmail}</span>
                   {adminDesignation && (
-                    <span className="text-[10px] bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-semibold">
+                    <span className="text-[10px] bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-semibold shrink-0">
                       {adminDesignation}
                     </span>
                   )}
                 </div>
               )}
 
-              <span className="text-[10px] font-mono bg-white dark:bg-slate-900 px-2.5 py-0.5 rounded-full text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 flex items-center space-x-1">
+              <span className="text-[10px] font-mono bg-white dark:bg-slate-900 px-2 py-0.5 rounded-full text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 flex items-center space-x-1 shrink-0">
                 <Clock className="w-3 h-3 text-blue-600 dark:text-blue-400" />
                 <span>{formatRemainingTime(timeLeftMs)}</span>
               </span>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1.5 shrink-0">
               {/* Manage Admins button visible ONLY to Master Admin */}
               {isMasterAdmin && (
                 <button
                   onClick={() => setManageModalOpen(true)}
-                  className="flex items-center space-x-1.5 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-indigo-500/20"
+                  className="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-indigo-500/20"
                 >
                   <Users className="w-3.5 h-3.5" />
                   <span>Manage Admins</span>
@@ -374,7 +374,7 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
 
               <button
                 onClick={handleLogout}
-                className="flex items-center space-x-1 px-2.5 py-1 bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 hover:bg-rose-200 dark:hover:bg-rose-900 rounded-xl font-bold transition-colors"
+                className="flex items-center space-x-1 px-2.5 py-1 bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 hover:bg-rose-200 dark:hover:bg-rose-900 rounded-xl font-bold transition-colors text-xs"
                 title="End Admin Session"
               >
                 <LogOut className="w-3 h-3" />
@@ -407,14 +407,14 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
         {!isAuth &&
           mounted &&
           createPortal(
-            <div className="fixed inset-0 z-[99999] overflow-hidden bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
-              <div className="relative z-20 w-full max-w-md p-6 sm:p-8 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 space-y-6 text-center animate-in fade-in zoom-in-95 duration-200">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto text-white shadow-lg shadow-blue-500/30">
-                  <Lock className="w-8 h-8" />
+            <div className="fixed inset-0 z-[99999] overflow-y-auto bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 min-h-[100dvh]">
+              <div className="relative z-20 w-full max-w-md p-5 sm:p-8 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5 sm:space-y-6 text-center animate-in fade-in zoom-in-95 duration-200 my-auto">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto text-white shadow-lg shadow-blue-500/30">
+                  <Lock className="w-7 h-7 sm:w-8 sm:h-8" />
                 </div>
 
-                <div className="space-y-1.5">
-                  <h2 className="text-xl font-black text-slate-900 dark:text-white">{title}</h2>
+                <div className="space-y-1">
+                  <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">{title}</h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                     {step === 'identifier'
                       ? 'Authorized admin access required. Enter your admin email to proceed.'
@@ -423,9 +423,9 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
                 </div>
 
                 {error && (
-                  <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center justify-center space-x-1.5 text-left">
+                  <div className="p-2.5 sm:p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center justify-center space-x-1.5 text-left">
                     <ShieldAlert className="w-4 h-4 flex-shrink-0" />
-                    <span>{error}</span>
+                    <span className="break-words">{error}</span>
                   </div>
                 )}
 
