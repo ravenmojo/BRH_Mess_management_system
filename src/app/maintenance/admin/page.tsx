@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, MessageSquare, CheckCircle, ChevronDown, Trash2, Video, ImageIcon, Clock, Download } from 'lucide-react';
+import { ShieldCheck, MessageSquare, CheckCircle, ChevronDown, Trash2, Video, ImageIcon, Clock, Download, Search } from 'lucide-react';
 import { AdminAuthGate, useAdminAuth } from '@/components/admin-auth-gate';
 import { GrievanceMediaGallery } from '@/components/grievance-media-gallery';
+import { TicketBadge } from '@/components/ticket-badge';
 
 export default function MaintenanceAdminDashboard() {
   return (
@@ -16,6 +17,7 @@ export default function MaintenanceAdminDashboard() {
 function MaintenanceAdminContent() {
   const { isAuthenticated } = useAdminAuth();
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [remarkInputs, setRemarkInputs] = useState<{ [id: string]: string }>({});
 
   const fetchFeedbacks = () => {
@@ -61,6 +63,18 @@ function MaintenanceAdminContent() {
     } catch (err) {}
   };
 
+  const filteredFeedbacks = feedbacks.filter((fb) => {
+    if (!searchTerm.trim()) return true;
+    const q = searchTerm.toLowerCase();
+    return (
+      (fb.ticketNumber && fb.ticketNumber.toLowerCase().includes(q)) ||
+      (fb.roomNo && fb.roomNo.toLowerCase().includes(q)) ||
+      (fb.studentName && fb.studentName.toLowerCase().includes(q)) ||
+      (fb.comment && fb.comment.toLowerCase().includes(q)) ||
+      (fb.facilityType && fb.facilityType.toLowerCase().includes(q))
+    );
+  });
+
   return (
     <div className="space-y-5 pb-12">
       {/* Header */}
@@ -75,7 +89,7 @@ function MaintenanceAdminContent() {
       </div>
 
       {/* GRIEVANCES MANAGEMENT */}
-      <details className="group space-y-2">
+      <details className="group space-y-2" open>
         <summary className="flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
           <h3 className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider flex items-center space-x-1.5">
             <MessageSquare className="w-4 h-4 text-blue-600" />
@@ -85,24 +99,41 @@ function MaintenanceAdminContent() {
         </summary>
 
         <div className="pt-2 space-y-3">
-          {feedbacks.map((fb) => (
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search by Ticket #, Room No., category, or issue..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 rounded-lg text-xs bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          {filteredFeedbacks.map((fb) => (
             <div
               key={fb.id}
               className="p-3.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 space-y-2 text-xs shadow-sm"
             >
-              <div className="flex items-center justify-between flex-wrap gap-1">
-                <div>
+              <div className="flex items-center justify-between flex-wrap gap-1.5">
+                <div className="flex items-center space-x-1.5 flex-wrap gap-1">
                   <span className="font-bold text-gray-900 dark:text-white">{fb.studentName || 'Anonymous'}</span>
-                  <span className="text-gray-500 text-[11px] ml-1.5 font-mono">
-                    {fb.roomNo ? `Room: ${fb.roomNo}` : fb.hallRoll ? `(${fb.hallRoll})` : ''}
-                  </span>
-                  <span className="ml-2 text-[10px] font-mono font-semibold text-gray-500 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">
+                  {fb.roomNo && (
+                    <span className="text-gray-500 text-[11px] font-mono">
+                      Room: {fb.roomNo}
+                    </span>
+                  )}
+                  {fb.ticketNumber && (
+                    <TicketBadge ticketNumber={fb.ticketNumber} size="sm" />
+                  )}
+                  <span className="text-[10px] font-mono font-semibold text-gray-500 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">
                     {fb.facilityType.replace('MAINTENANCE_', '')}
                   </span>
-                  {fb.email && <span className="text-gray-400 text-[10px] ml-2 block sm:inline">{fb.email}</span>}
+                  {fb.email && <span className="text-gray-400 text-[10px] block sm:inline">{fb.email}</span>}
                 </div>
                 <span
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
                     fb.status === 'RESOLVED'
                       ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
                       : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'

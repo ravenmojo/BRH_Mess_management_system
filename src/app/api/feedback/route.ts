@@ -1,10 +1,17 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { deleteFromCloudinary } from '@/lib/cloudinary-delete';
+import {
+  getCategoryCode,
+  formatTicketDate,
+  buildTicketNumber,
+  ensureTicketNumber,
+} from '@/lib/ticket';
 
 let inMemoryFeedbacks: any[] = [
   {
     id: 'fb-1',
+    ticketNumber: 'A-515MS1908261',
     studentName: 'Sourav Roy',
     roomNo: 'A-515',
     email: 'sourav@iitkgp.ac.in',
@@ -16,6 +23,7 @@ let inMemoryFeedbacks: any[] = [
   },
   {
     id: 'fb-2',
+    ticketNumber: 'B-312NC1908261',
     studentName: 'Rahul Verma',
     roomNo: 'B-312',
     email: 'rahul@iitkgp.ac.in',
@@ -27,6 +35,7 @@ let inMemoryFeedbacks: any[] = [
   },
   {
     id: 'fb-3',
+    ticketNumber: 'C-201WR1908261',
     studentName: 'Amit Kumar',
     roomNo: 'C-201',
     email: 'amit@iitkgp.ac.in',
@@ -55,6 +64,7 @@ const MAINTENANCE_TYPES = [
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const facility = searchParams.get('facility');
+  const search = searchParams.get('search')?.trim().toLowerCase();
 
   try {
     const whereClause: any = {};
@@ -72,22 +82,69 @@ export async function GET(request: Request) {
     });
 
     if (feedbacks.length === 0) {
-      const filtered = facility
+      let filtered = facility
         ? facility === 'MAINTENANCE'
           ? inMemoryFeedbacks.filter((f) => f.facilityType.startsWith('MAINTENANCE_'))
           : inMemoryFeedbacks.filter((f) => f.facilityType === facility)
         : inMemoryFeedbacks;
-      return NextResponse.json(filtered);
+
+      if (search) {
+        filtered = filtered.filter(
+          (f) =>
+            (f.ticketNumber && f.ticketNumber.toLowerCase().includes(search)) ||
+            (f.roomNo && f.roomNo.toLowerCase().includes(search)) ||
+            (f.studentName && f.studentName.toLowerCase().includes(search)) ||
+            (f.comment && f.comment.toLowerCase().includes(search))
+        );
+      }
+
+      const sanitized = filtered.map((f, idx) => ({
+        ...f,
+        ticketNumber: f.ticketNumber || ensureTicketNumber(f, idx + 1),
+      }));
+
+      return NextResponse.json(sanitized);
     }
 
-    return NextResponse.json(feedbacks);
+    let sanitizedFeedbacks = feedbacks.map((fb, idx) => ({
+      ...fb,
+      ticketNumber: fb.ticketNumber || ensureTicketNumber(fb, idx + 1),
+    }));
+
+    if (search) {
+      sanitizedFeedbacks = sanitizedFeedbacks.filter(
+        (f) =>
+          (f.ticketNumber && f.ticketNumber.toLowerCase().includes(search)) ||
+          (f.roomNo && f.roomNo.toLowerCase().includes(search)) ||
+          (f.studentName && f.studentName.toLowerCase().includes(search)) ||
+          (f.comment && f.comment.toLowerCase().includes(search))
+      );
+    }
+
+    return NextResponse.json(sanitizedFeedbacks);
   } catch (error) {
-    const filtered = facility
+    let filtered = facility
       ? facility === 'MAINTENANCE'
         ? inMemoryFeedbacks.filter((f) => f.facilityType.startsWith('MAINTENANCE_'))
         : inMemoryFeedbacks.filter((f) => f.facilityType === facility)
       : inMemoryFeedbacks;
-    return NextResponse.json(filtered);
+
+    if (search) {
+      filtered = filtered.filter(
+        (f) =>
+          (f.ticketNumber && f.ticketNumber.toLowerCase().includes(search)) ||
+          (f.roomNo && f.roomNo.toLowerCase().includes(search)) ||
+          (f.studentName && f.studentName.toLowerCase().includes(search)) ||
+          (f.comment && f.comment.toLowerCase().includes(search))
+      );
+    }
+
+    const sanitized = filtered.map((f, idx) => ({
+      ...f,
+      ticketNumber: f.ticketNumber || ensureTicketNumber(f, idx + 1),
+    }));
+
+    return NextResponse.json(sanitized);
   }
 }
 
@@ -174,9 +231,42 @@ export async function POST(request: Request) {
 
     const normalizedRoomNo = roomNo.trim().toUpperCase();
     const finalStudentName = (studentName && studentName.trim()) || 'Anonymous';
+    const catCode = getCategoryCode(finalFacility);
+    const dateStr = formatTicketDate(new Date());
+    const ticketPrefix = `${normalizedRoomNo}${catCode}${dateStr}`;
+
+    // Calculate count for today
+    let count = 1;
+    try {
+      const existingCount = await prisma.feedback.count({
+        where: {
+          roomNo: normalizedRoomNo,
+          facilityType: finalFacility,
+          createdAt: { gte: todayStart },
+        },
+      });
+      count = existingCount + 1;
+    } catch (e) {
+      const matchingInMemory = inMemoryFeedbacks.filter(
+        (f) =>
+          f.roomNo === normalizedRoomNo &&
+          f.facilityType === finalFacility &&
+          formatTicketDate(f.createdAt) === dateStr
+      );
+      count = matchingInMemory.length + 1;
+    }
+
+    let generatedTicketNumber = `${ticketPrefix}${count}`;
+
+    // Ensure uniqueness against memory list
+    while (inMemoryFeedbacks.some((f) => f.ticketNumber === generatedTicketNumber)) {
+      count++;
+      generatedTicketNumber = `${ticketPrefix}${count}`;
+    }
 
     const newFeedback = {
       id: `fb-${Date.now()}`,
+      ticketNumber: generatedTicketNumber,
       studentName: finalStudentName,
       roomNo: normalizedRoomNo,
       email: trimmedEmail,
@@ -194,6 +284,7 @@ export async function POST(request: Request) {
     try {
       await prisma.feedback.create({
         data: {
+          ticketNumber: generatedTicketNumber,
           studentName: finalStudentName,
           hallRoll: normalizedRoomNo, // Legacy field — store roomNo here for backward compat
           roomNo: normalizedRoomNo,

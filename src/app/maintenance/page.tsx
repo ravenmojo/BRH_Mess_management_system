@@ -8,6 +8,7 @@ import { uploadToCloudinary } from '@/lib/cloudinary-upload';
 import { useRouter } from 'next/navigation';
 import { OtpVerificationModal } from '@/components/otp-modal';
 import { GrievanceMediaGallery } from '@/components/grievance-media-gallery';
+import { TicketBadge } from '@/components/ticket-badge';
 
 type MaintenanceCategory =
   | 'MAINTENANCE_WASHROOM'
@@ -19,7 +20,7 @@ type MaintenanceCategory =
 
 const CATEGORIES = [
   { id: 'MAINTENANCE_WASHROOM', label: 'Washroom', icon: ShowerHead },
-  { id: 'MAINTENANCE_WATER', label: 'Water', icon: Droplet },
+  { id: 'MAINTENANCE_WATER', label: 'Drinking Water', icon: Droplet },
   { id: 'MAINTENANCE_ELECTRICAL', label: 'Electrical', icon: Zap },
   { id: 'MAINTENANCE_CIVIL', label: 'Civil', icon: Hammer },
   { id: 'MAINTENANCE_CLEANING', label: 'Cleaning', icon: Sparkles },
@@ -47,6 +48,7 @@ export default function MaintenancePage() {
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+  const [submittedTicket, setSubmittedTicket] = useState<string | null>(null);
 
   // OTP Modal state
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
@@ -118,6 +120,7 @@ export default function MaintenancePage() {
   const handleExecuteSubmit = async (verifiedEmail: string) => {
     setSubmitting(true);
     setStatusMessage('');
+    setSubmittedTicket(null);
 
     try {
       let uploadedUrls: string[] = [];
@@ -164,6 +167,8 @@ export default function MaintenancePage() {
       });
 
       if (res.ok) {
+        const createdData = await res.json();
+        setSubmittedTicket(createdData.ticketNumber || null);
         setStatusMessage('Maintenance grievance logged successfully!');
         setStudentName('');
         setRoomNo('');
@@ -246,8 +251,14 @@ export default function MaintenancePage() {
         </h3>
 
         {statusMessage && (
-          <div className={`p-3 rounded-xl text-xs font-medium border ${statusMessage.includes('success') ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' : 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'}`}>
-            {statusMessage}
+          <div className={`p-3 rounded-xl text-xs font-medium border space-y-1.5 ${statusMessage.includes('success') ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' : 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'}`}>
+            <div>{statusMessage}</div>
+            {submittedTicket && (
+              <div className="flex items-center space-x-2 pt-1">
+                <span className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-200">Your Ticket Number:</span>
+                <TicketBadge ticketNumber={submittedTicket} size="md" />
+              </div>
+            )}
           </div>
         )}
 
@@ -302,24 +313,20 @@ export default function MaintenancePage() {
               onChange={handleFileChange}
               disabled={isUploading}
             />
-            {isUploading && (
-              <span className="text-[10px] font-bold text-blue-600">
-                {uploadProgress}%
-              </span>
-            )}
             {files.length > 0 && (
               <CheckCircle2 className="w-4 h-4 text-emerald-500" />
             )}
           </label>
-          {isUploading && (
-            <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mt-2 overflow-hidden">
-              <div
-                className="h-full bg-blue-600 transition-all duration-300"
-                style={{ width: `${uploadProgress}%` }}
-              ></div>
-            </div>
-          )}
         </div>
+
+        {isUploading && (
+          <div className="w-full h-1 bg-slate-200 dark:bg-slate-700 rounded-full mt-2 overflow-hidden">
+            <div
+              className="h-full bg-blue-600 transition-all duration-300"
+              style={{ width: `${uploadProgress}%` }}
+            ></div>
+          </div>
+        )}
 
         {submitting && (
           <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 space-y-1.5 shadow-sm">
@@ -365,11 +372,14 @@ export default function MaintenancePage() {
               key={item.id}
               className="p-4 rounded-2xl glass-card space-y-2 text-xs"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2 min-w-0">
+              <div className="flex items-center justify-between flex-wrap gap-1.5">
+                <div className="flex items-center space-x-2 flex-wrap gap-1 min-w-0">
                   <span className="font-bold text-slate-900 dark:text-white truncate">{item.studentName || 'Anonymous'}</span>
                   {item.roomNo && (
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 font-mono shrink-0">{item.roomNo}</span>
+                  )}
+                  {item.ticketNumber && (
+                    <TicketBadge ticketNumber={item.ticketNumber} size="sm" />
                   )}
                   <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold uppercase tracking-wider shrink-0 ${item.facilityType === 'MAINTENANCE_WASHROOM' ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800' :
                     item.facilityType === 'MAINTENANCE_WATER' ? 'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-950/50 dark:text-cyan-400 dark:border-cyan-800' :

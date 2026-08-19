@@ -65,6 +65,7 @@ model MenuItem {
 
 model Feedback {
   id           String       @id @default(uuid())
+  ticketNumber String?      @unique
   studentName  String
   hallRoll     String
   roomNo       String?
