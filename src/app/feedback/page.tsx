@@ -356,6 +356,17 @@ export default function StudentFeedbackPage() {
               
               <GrievanceMediaGallery mediaUrl={item.mediaUrl} capturedAt={item.capturedAt} createdAt={item.createdAt} />
 
+              {/* Resolution Attribution */}
+              {item.status === 'RESOLVED' && (
+                <div className="flex items-center space-x-1.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800/60">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>
+                    Resolved by <strong className="font-semibold">{item.resolvedBy || item.resolvedByRole || 'Admin'}</strong>
+                    {item.resolvedAt && ` • ${new Date(item.resolvedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })} IST`}
+                  </span>
+                </div>
+              )}
+
               {item.remark && (
                 <div className="mt-2 p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/50 text-[11px] text-blue-900 dark:text-blue-200 flex items-start space-x-1.5">
                   <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />

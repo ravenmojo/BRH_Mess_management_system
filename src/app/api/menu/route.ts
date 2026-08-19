@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { validateWeeklyMenu, DailyMenuInput } from '@/lib/mess-rules';
+import { verifyAdminPassword } from '@/lib/admin-auth';
 
 // Initial Mock Data populated from April Menu 2026 PDF
 const mockWeeklyMenu: DailyMenuInput[] = [
@@ -648,6 +649,10 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!verifyAdminPassword(request)) {
+    return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { weeklyMenu } = body;

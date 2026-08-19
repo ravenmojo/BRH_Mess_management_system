@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { createClient } from '@/utils/supabase/server';
 import { deleteFromCloudinary } from '@/lib/cloudinary-delete';
+import { verifyAdminPassword } from '@/lib/admin-auth';
 
 export async function GET(request: Request) {
   try {
@@ -75,11 +76,15 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    let isAuthorized = verifyAdminPassword(request);
+    if (!isAuthorized) {
+      const supabase = createClient();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (!authError && user) isAuthorized = true;
+    }
 
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!isAuthorized) {
+      return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);

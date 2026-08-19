@@ -10,6 +10,8 @@
 *.cert
 *.pfx
 Readme_copy.md
+security_audit.md
+security_audit_report.md
 
 # Sensitive logs & diagnostics
 supabase_logs.json

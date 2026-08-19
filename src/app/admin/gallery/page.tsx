@@ -22,7 +22,7 @@ export default function AdminGalleryPage() {
 }
 
 function AdminGalleryContent() {
-  const { isAuthenticated } = useAdminAuth();
+  const { isAuthenticated, adminPassword } = useAdminAuth();
   const [images, setImages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -93,7 +93,12 @@ function AdminGalleryContent() {
     if (!confirm('Are you sure you want to delete this media?')) return;
     setNoticeMessage(null);
     try {
-      const res = await fetch(`/api/gallery?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/gallery?id=${id}`, {
+        method: 'DELETE',
+        headers: {
+          ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+        },
+      });
       const data = await res.json();
       if (data.cloudinaryNotice) {
         setNoticeMessage(data.cloudinaryNotice);
