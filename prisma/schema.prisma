@@ -64,20 +64,32 @@ model MenuItem {
 }
 
 model Feedback {
-  id           String       @id @default(uuid())
-  ticketNumber String?      @unique
-  studentName  String
-  hallRoll     String
-  roomNo       String?
-  email        String?
-  comment      String
-  facilityType FacilityType @default(REGULAR_MESS)
-  status       String       @default("PENDING") // PENDING, RESOLVED
-  remark       String?
-  mediaUrl     String?      // Cloudinary URL for uploaded photos/videos
-  capturedAt   String?      // Picture metadata capture timestamp
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id              String       @id @default(uuid())
+  ticketNumber    String?      @unique
+  studentName     String
+  hallRoll        String
+  roomNo          String?
+  email           String?
+  comment         String
+  facilityType    FacilityType @default(REGULAR_MESS)
+  status          String       @default("PENDING") // PENDING, RESOLVED
+  remark          String?
+  mediaUrl        String?      // Cloudinary URL for uploaded photos/videos
+  capturedAt      String?      // Picture metadata capture timestamp
+  resolvedBy      String?      // Resolver name or identifier
+  resolvedByEmail String?      // Resolver admin email
+  resolvedByRole  String?      // Resolver designation / role
+  resolvedAt      DateTime?    // Resolution timestamp
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model AdminUser {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  designation String?  @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model User {

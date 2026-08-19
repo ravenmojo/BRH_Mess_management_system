@@ -379,6 +379,17 @@ export default function NightCanteenPage() {
 
                   <GrievanceMediaGallery mediaUrl={fb.mediaUrl} capturedAt={fb.capturedAt} createdAt={fb.createdAt} />
 
+                  {/* Resolution Attribution */}
+                  {fb.status === 'RESOLVED' && (
+                    <div className="flex items-center space-x-1.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800/60">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>
+                        Resolved by <strong className="font-semibold">{fb.resolvedBy || fb.resolvedByRole || 'Canteen Admin'}</strong>
+                        {fb.resolvedAt && ` • ${new Date(fb.resolvedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })} IST`}
+                      </span>
+                    </div>
+                  )}
+
                   {fb.remark && (
                     <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/50 text-[11px] text-blue-900 dark:text-blue-200">
                       <strong>Admin Remark:</strong> {fb.remark}

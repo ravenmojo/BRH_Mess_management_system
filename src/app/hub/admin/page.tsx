@@ -204,7 +204,7 @@ function PosterUploadZone({
 }
 
 function HubAdminContent() {
-  const { isAuthenticated } = useAdminAuth();
+  const { isAuthenticated, adminPassword } = useAdminAuth();
   const [activeTab, setActiveTab] = useState<'MOVIES' | 'ACTIVITIES' | 'ACHIEVEMENTS' | 'CONTACTS'>('MOVIES');
   const [data, setData] = useState<any>({ movies: [], activities: [], achievements: [], emergencyContacts: [] });
   const [loading, setLoading] = useState(true);
@@ -279,7 +279,10 @@ function HubAdminContent() {
     try {
       const res = await fetch('/api/hub', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+        },
         body: JSON.stringify({ type: 'SEED_ALL' }),
       });
       const resData = await res.json();
@@ -299,7 +302,12 @@ function HubAdminContent() {
   const handleDelete = async (type: string, id: string) => {
     if (!confirm('Are you sure you want to delete this entry?')) return;
     try {
-      const res = await fetch(`/api/hub?type=${type}&id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/hub?type=${type}&id=${id}`, {
+        method: 'DELETE',
+        headers: {
+          ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+        },
+      });
       if (res.ok) {
         loadData();
       }
@@ -387,7 +395,10 @@ function HubAdminContent() {
 
       await fetch('/api/hub', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+        },
         body: JSON.stringify({
           type: 'MOVIE',
           payload: {
@@ -416,7 +427,10 @@ function HubAdminContent() {
     try {
       await fetch('/api/hub', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+        },
         body: JSON.stringify({
           type: 'ACTIVITY',
           payload: {
@@ -442,7 +456,10 @@ function HubAdminContent() {
     try {
       await fetch('/api/hub', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+        },
         body: JSON.stringify({
           type: 'ACHIEVEMENT',
           payload: {
@@ -471,7 +488,10 @@ function HubAdminContent() {
     try {
       await fetch('/api/hub', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+        },
         body: JSON.stringify({
           type: 'EMERGENCY_CONTACT',
           payload: {
@@ -521,7 +541,10 @@ function HubAdminContent() {
 
       const res = await fetch('/api/hub', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+        },
         body: JSON.stringify({
           type: editingItem.type,
           id: editingItem.id,

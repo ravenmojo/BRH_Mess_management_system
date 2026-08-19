@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { createClient } from '@/utils/supabase/server';
+import { isAllowedEmail } from '@/lib/admin-auth';
 
 export async function POST(request: Request) {
   try {
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email verification is required to vote.' }, { status: 401 });
     }
 
-    if (!voterEmail.endsWith('.iitkgp.ac.in') && voterEmail !== 'soura7@gmail.com') {
+    if (!isAllowedEmail(voterEmail)) {
       return NextResponse.json({ error: 'Only .iitkgp.ac.in emails are allowed.' }, { status: 403 });
     }
 

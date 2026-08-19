@@ -2,15 +2,19 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { createClient } from '@/utils/supabase/server';
 import { deleteFromCloudinary } from '@/lib/cloudinary-delete';
+import { verifyAdminPassword } from '@/lib/admin-auth';
 
 export async function PATCH(request: Request) {
   try {
-    const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    let isAuthorized = verifyAdminPassword(request);
+    if (!isAuthorized) {
+      const supabase = createClient();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (!authError && user) isAuthorized = true;
+    }
 
-    // Check if admin
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!isAuthorized) {
+      return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -50,12 +54,15 @@ export async function PATCH(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    let isAuthorized = verifyAdminPassword(request);
+    if (!isAuthorized) {
+      const supabase = createClient();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (!authError && user) isAuthorized = true;
+    }
 
-    // Check if admin
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!isAuthorized) {
+      return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
     }
 
     // Auto-purge Mess Duty Gallery images older than 30 days

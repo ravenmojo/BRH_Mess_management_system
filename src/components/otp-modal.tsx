@@ -92,7 +92,7 @@ export function OtpVerificationModal({
 
     const trimmedEmail = email.trim().toLowerCase();
 
-    if (!trimmedEmail.endsWith('.iitkgp.ac.in') && trimmedEmail !== 'soura7@gmail.com' && trimmedEmail !== 'souradeep.satpathy@gmail.com') {
+    if (!trimmedEmail.endsWith('.iitkgp.ac.in')) {
       setError('Only .iitkgp.ac.in institute email addresses are allowed.');
       return;
     }
@@ -254,15 +254,15 @@ export function OtpVerificationModal({
               </div>
             </div>
 
-            {/* OTP Input - 8-Dot Numeric PIN Visualization */}
+            {/* OTP Input - 6-Dot Numeric PIN Visualization */}
             <div className="space-y-2">
               <div className="flex items-center justify-between ml-1">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
                   <KeyRound className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Enter 8-Digit OTP</span>
+                  <span>Enter 6-Digit OTP</span>
                 </label>
                 <span className="text-[10px] font-bold text-slate-400">
-                  {otp.length}/8 digits
+                  {otp.length}/6 digits
                 </span>
               </div>
 
@@ -274,16 +274,16 @@ export function OtpVerificationModal({
                   pattern="[0-9]*"
                   autoComplete="one-time-code"
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, '').slice(0, 8))}
-                  maxLength={8}
+                  onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                  maxLength={6}
                   className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
                   required
                   autoFocus
                 />
 
-                {/* 8-Dot / Box PIN Visualization */}
-                <div className="grid grid-cols-8 gap-1 sm:gap-1.5 pointer-events-none">
-                  {Array.from({ length: 8 }).map((_, index) => {
+                {/* 6-Dot / Box PIN Visualization */}
+                <div className="grid grid-cols-6 gap-1.5 sm:gap-2 pointer-events-none">
+                  {Array.from({ length: 6 }).map((_, index) => {
                     const char = otp[index];
                     const isFilled = char !== undefined;
                     const isCurrent = otp.length === index;

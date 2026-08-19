@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { isAllowedEmail, verifyAdminPassword } from '@/lib/admin-auth';
 
 export async function GET(request: Request) {
   try {
@@ -34,6 +35,12 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { type, payload } = body;
+
+    if (type !== 'SUGGESTION') {
+      if (!verifyAdminPassword(request)) {
+        return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
+      }
+    }
 
     if (type === 'MOVIE') {
       const movie = await prisma.movieScreening.create({
@@ -90,7 +97,7 @@ export async function POST(request: Request) {
       if (!email) {
         return NextResponse.json({ error: 'Email address is required.' }, { status: 400 });
       }
-      if (!email.endsWith('.iitkgp.ac.in') && email !== 'soura7@gmail.com' && email !== 'souradeep.satpathy@gmail.com') {
+      if (!isAllowedEmail(email)) {
         return NextResponse.json({ error: 'Only .iitkgp.ac.in emails are allowed.' }, { status: 403 });
       }
       if (!payload.content?.trim()) {
@@ -217,6 +224,10 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  if (!verifyAdminPassword(request)) {
+    return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { type, id, payload } = body;
@@ -285,6 +296,10 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  if (!verifyAdminPassword(request)) {
+    return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

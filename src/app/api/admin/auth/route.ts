@@ -1,29 +1,54 @@
 import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { password } = body;
+    const identifier = (body.identifier || body.password || body.email || '').trim();
 
-    if (!password || typeof password !== 'string') {
-      return NextResponse.json({ error: 'Admin password is required.' }, { status: 400 });
+    if (!identifier) {
+      return NextResponse.json({ error: 'Please enter your admin email.' }, { status: 400 });
     }
 
-    const expectedPassword = process.env.ADMIN_PASSWORD;
+    const expectedMasterPassword = process.env.ADMIN_PASSWORD;
 
-    if (!expectedPassword) {
-      return NextResponse.json(
-        { error: 'Admin password is not configured on server. Please set ADMIN_PASSWORD in environment variables.' },
-        { status: 500 }
-      );
+    // 1. Check if the entered string matches the stealth master password
+    if (expectedMasterPassword && identifier === expectedMasterPassword.trim()) {
+      return NextResponse.json({
+        authenticated: true,
+        isMasterAdmin: true,
+        adminEmail: 'master.admin@kgp',
+        adminDesignation: 'Master Administrator',
+      });
     }
 
-    if (password.trim() === expectedPassword.trim()) {
-      return NextResponse.json({ success: true, authenticated: true });
-    } else {
-      return NextResponse.json({ error: 'Incorrect Admin Password. Access Denied.' }, { status: 401 });
+    // 2. Otherwise, treat the input as an admin email to verify
+    const normalizedEmail = identifier.toLowerCase();
+
+    // Query database for admin registration
+    let admin = null;
+    try {
+      admin = await prisma.adminUser.findUnique({
+        where: { email: normalizedEmail },
+      });
+    } catch (dbErr) {
+      console.error('Error checking AdminUser in DB:', dbErr);
     }
+
+    if (admin) {
+      return NextResponse.json({
+        isRegisteredAdmin: true,
+        email: admin.email,
+        designation: admin.designation || '',
+      });
+    }
+
+    // If not found in admin list
+    return NextResponse.json(
+      { error: 'Access Denied: This email is not registered as an authorized administrator.' },
+      { status: 403 }
+    );
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Authentication error' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Authentication error occurred.' }, { status: 500 });
   }
 }

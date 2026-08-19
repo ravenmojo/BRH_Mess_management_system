@@ -34,7 +34,7 @@ export default function AdminDashboard() {
 }
 
 function AdminDashboardContent() {
-  const { isAuthenticated } = useAdminAuth();
+  const { isAuthenticated, adminEmail, adminDesignation, isMasterAdmin, adminPassword } = useAdminAuth();
   const [weeklyMenu, setWeeklyMenu] = useState<DailyMenuInput[]>([]);
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -69,7 +69,11 @@ function AdminDashboardContent() {
   };
 
   const fetchPendingGallery = () => {
-    fetch('/api/gallery/approve')
+    fetch('/api/gallery/approve', {
+      headers: {
+        ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+      },
+    })
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) setPendingGallery(data);
@@ -135,7 +139,10 @@ function AdminDashboardContent() {
     try {
       const res = await fetch('/api/menu', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+        },
         body: JSON.stringify({ weeklyMenu }),
       });
 
@@ -158,11 +165,26 @@ function AdminDashboardContent() {
   // Update Feedback Remark / Resolution
   const handleUpdateFeedback = async (id: string, newStatus: string) => {
     const remark = remarkInputs[id];
+    const resolvedByRole = adminDesignation || (isMasterAdmin ? 'Master Admin' : 'Admin');
+    const resolvedBy = isMasterAdmin
+      ? 'Master Admin'
+      : (adminDesignation ? `${adminEmail} (${adminDesignation})` : adminEmail || 'Admin');
+
     try {
       const res = await fetch('/api/feedback', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status: newStatus, remark }),
+        headers: {
+          'Content-Type': 'application/json',
+          ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+        },
+        body: JSON.stringify({
+          id,
+          status: newStatus,
+          remark,
+          resolvedBy,
+          resolvedByEmail: isMasterAdmin ? 'master.admin@kgp' : adminEmail,
+          resolvedByRole,
+        }),
       });
 
       if (res.ok) {
@@ -176,6 +198,9 @@ function AdminDashboardContent() {
     try {
       const res = await fetch(`/api/feedback?id=${id}`, {
         method: 'DELETE',
+        headers: {
+          ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+        },
       });
       if (res.ok) {
         fetchFeedbacks();
@@ -187,7 +212,10 @@ function AdminDashboardContent() {
     try {
       const res = await fetch('/api/gallery/approve', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+        },
         body: JSON.stringify({ id, status }),
       });
       if (res.ok) {
@@ -506,6 +534,17 @@ function AdminDashboardContent() {
                 </p>
 
                 <GrievanceMediaGallery mediaUrl={fb.mediaUrl} capturedAt={fb.capturedAt} createdAt={fb.createdAt} />
+
+                {/* Resolution Attribution */}
+                {fb.status === 'RESOLVED' && (
+                  <div className="flex items-center space-x-1.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800/60">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>
+                      Resolved by <strong className="font-semibold">{fb.resolvedBy || fb.resolvedByRole || 'Admin'}</strong>
+                      {fb.resolvedAt && ` • ${new Date(fb.resolvedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })} IST`}
+                    </span>
+                  </div>
+                )}
 
                 {/* Admin Remark Input */}
                 <div className="space-y-1.5 pt-1">

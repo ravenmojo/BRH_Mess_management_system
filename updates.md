@@ -8,7 +8,7 @@ This document tracks all feature implementations, bug fixes, UI/UX enhancements,
 
 **Release Date:** August 19, 2026  
 **Package Version:** `0.9.5`  
-**Status:** Tested & Verified (`npm run build` — 26/26 routes compiled cleanly)
+**Status:** Tested & Verified (`npm run build` — 28/28 routes compiled cleanly)
 
 ### 1. 🎫 Automated Grievance Ticket Number Generation System
 - **Structured Ticket Specification:** Implemented auto-generated ticket numbers for every grievance across the platform using the format: **`<room no><two letter category code><date><count>`** (e.g. `D-515MS1908261`, `D-515DW1908261`).
@@ -52,9 +52,15 @@ This document tracks all feature implementations, bug fixes, UI/UX enhancements,
 ### 6. 🛠️ Maintenance Category Layout Restoration
 - **Intuitive 3-Column Grid:** Restored the 3-column category grid layout (`grid-cols-3 gap-2`) with high-contrast active state highlights, icons, and precise location description placeholders on [src/app/maintenance/page.tsx](src/app/maintenance/page.tsx).
 
-### 7. 🔐 Server-Side Admin Authentication & Secret Isolation
-- **Secure Backend Verification:** Created dedicated backend verification route [src/app/api/admin/auth/route.ts](src/app/api/admin/auth/route.ts) that authenticates passwords strictly on the server against `ADMIN_PASSWORD` environment variable.
-- **Zero Client-Side Leakage:** Removed all hardcoded password strings and client-side credential checks from [src/components/admin-auth-gate.tsx](src/components/admin-auth-gate.tsx), ensuring the admin passkey cannot be inspected or inferred from source code, JavaScript bundles, or repository files.
+### 7. 👥 Multilevel Stakeholder Resolution Attribution
+- **Resolver Attribution Tracking:** When a grievance is resolved or remarked upon, the backend records `resolvedBy`, `resolvedByEmail`, `resolvedByRole`, and `resolvedAt` in the database.
+- **Public & Admin Verification Badge:** Both student and admin grievance cards display a timestamped resolution stamp: `✓ Resolved by: <Email / Designation> • <Date & Time in IST>`.
+
+### 8. 🔒 Stealth Master Password & OTP-Based Admin Access
+- **Clean Single-Input Gateway:** The admin access gate in [src/components/admin-auth-gate.tsx](src/components/admin-auth-gate.tsx) presents a single prompt: *"Enter Admin Email"*.
+- **Stealth Master Admin Access:** Entering the master password silently authenticates with full Master Admin privileges without revealing any password cues.
+- **OTP Email Authentication:** Entering a registered admin email dispatches a 6-digit OTP via Supabase Auth and authenticates the specific stakeholder.
+- **Dynamic Admin User Management:** Master Admins can access the **"Manage Admins"** panel ([src/components/admin-users-modal.tsx](src/components/admin-users-modal.tsx)) from the top session banner to add new admin emails, update designations, or revoke access with zero credentials stored in git.
 
 ---
 

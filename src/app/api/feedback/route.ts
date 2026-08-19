@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { deleteFromCloudinary } from '@/lib/cloudinary-delete';
+import { isAllowedEmail, verifyAdminPassword } from '@/lib/admin-auth';
 import {
   getCategoryCode,
   formatTicketDate,
@@ -157,8 +158,8 @@ export async function POST(request: Request) {
     }
 
     const trimmedEmail = email.trim().toLowerCase();
-    if (!trimmedEmail.endsWith('.iitkgp.ac.in') && trimmedEmail !== 'soura7@gmail.com' && trimmedEmail !== 'souradeep.satpathy@gmail.com') {
-      return NextResponse.json({ error: 'Only .iitkgp.ac.in emails or super admin are allowed.' }, { status: 403 });
+    if (!isAllowedEmail(trimmedEmail)) {
+      return NextResponse.json({ error: 'Only .iitkgp.ac.in emails or authorized accounts are allowed.' }, { status: 403 });
     }
 
     if (!roomNo || !isValidRoomNo(roomNo)) {
@@ -306,30 +307,41 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  if (!verifyAdminPassword(request)) {
+    return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
-    const { id, status, remark } = body;
+    const { id, status, remark, resolvedBy, resolvedByEmail, resolvedByRole } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'Feedback ID is required.' }, { status: 400 });
     }
 
+    const isResolving = status === 'RESOLVED';
+    const resolutionTimestamp = isResolving ? new Date() : (status === 'PENDING' ? null : undefined);
+
+    const updateData: any = {};
+    if (status) updateData.status = status;
+    if (remark !== undefined) updateData.remark = remark;
+    if (resolvedBy !== undefined) updateData.resolvedBy = resolvedBy;
+    if (resolvedByEmail !== undefined) updateData.resolvedByEmail = resolvedByEmail;
+    if (resolvedByRole !== undefined) updateData.resolvedByRole = resolvedByRole;
+    if (resolutionTimestamp !== undefined) updateData.resolvedAt = resolutionTimestamp;
+
     const index = inMemoryFeedbacks.findIndex((f) => f.id === id);
     if (index !== -1) {
-      if (status) inMemoryFeedbacks[index].status = status;
-      if (remark !== undefined) inMemoryFeedbacks[index].remark = remark;
+      Object.assign(inMemoryFeedbacks[index], updateData);
     }
 
     try {
       await prisma.feedback.update({
         where: { id },
-        data: {
-          ...(status && { status }),
-          ...(remark !== undefined && { remark }),
-        },
+        data: updateData,
       });
     } catch (dbErr) {
-      console.warn('DB bypass for feedback PATCH');
+      console.warn('DB bypass for feedback PATCH:', dbErr);
     }
 
     return NextResponse.json({ message: 'Feedback updated successfully!' });
@@ -339,6 +351,10 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  if (!verifyAdminPassword(request)) {
+    return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
