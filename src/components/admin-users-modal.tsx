@@ -247,7 +247,7 @@ export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
                 Admin User Management
               </h2>
               <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium">
-                Add, manage designations & override rights (Master Admin)
+                Add, manage designations & override permissions
               </p>
             </div>
           </div>

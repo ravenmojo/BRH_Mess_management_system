@@ -5,7 +5,7 @@ import { verifyAdminPassword } from '@/lib/admin-auth';
 // GET: Retrieve list of registered admin users
 export async function GET(request: Request) {
   if (!verifyAdminPassword(request)) {
-    return NextResponse.json({ error: 'Unauthorized: Master admin access required.' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized: Administrator access required.' }, { status: 401 });
   }
 
   try {
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
 // POST: Add new admin user
 export async function POST(request: Request) {
   if (!verifyAdminPassword(request)) {
-    return NextResponse.json({ error: 'Unauthorized: Master admin access required.' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized: Administrator access required.' }, { status: 401 });
   }
 
   try {
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
 // PATCH: Update admin designation or permissions
 export async function PATCH(request: Request) {
   if (!verifyAdminPassword(request)) {
-    return NextResponse.json({ error: 'Unauthorized: Master admin access required.' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized: Administrator access required.' }, { status: 401 });
   }
 
   try {
@@ -106,7 +106,7 @@ export async function PATCH(request: Request) {
 // DELETE: Remove admin user
 export async function DELETE(request: Request) {
   if (!verifyAdminPassword(request)) {
-    return NextResponse.json({ error: 'Unauthorized: Master admin access required.' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized: Administrator access required.' }, { status: 401 });
   }
 
   try {

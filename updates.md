@@ -51,9 +51,9 @@ This document tracks all feature implementations, bug fixes, UI/UX enhancements,
 - **Design Language Alignment:** All movie screenings, student activities, idea submission portals, and achievement award cards unified with the core frosted glass system.
 - **Colorful Contacts Directory:** Emergency and council contacts feature individual vibrant glassy initial badges (Blue, Emerald, Purple, Amber, Rose, Cyan) with standardized Emerald Green call buttons.
 
-### 7. 👥 Two-Way Verifiable Resolution & Stealth Admin Override
+### 7. 👥 Two-Way Verifiable Resolution & Administrative Override
 - **Two-Way Resolution Verification:** Differentiates between grievances resolved by admin only vs verified by both admin and student.
-- **Discretionary Resolution Override:** Master Admins can designate authorized admins to override resolution status when necessary, maintaining an admin-only audit log while preserving student privacy publicly.
+- **Discretionary Resolution Override:** Authorized administrators can be designated to override resolution status when necessary, maintaining an admin-only audit log while preserving student privacy publicly.
 
 ### 8. 📊 45-Day Retention & Statistical Aggregate Preservation
 - **45-Day Grievance Archive:** Detailed complaint records purged after 45 days.
@@ -113,11 +113,11 @@ This document tracks all feature implementations, bug fixes, UI/UX enhancements,
 - **Resolver Attribution Tracking:** When a grievance is resolved or remarked upon, the backend records `resolvedBy`, `resolvedByEmail`, `resolvedByRole`, and `resolvedAt` in the database.
 - **Public & Admin Verification Badge:** Both student and admin grievance cards display a timestamped resolution stamp: `✓ Resolved by: <Email / Designation> • <Date & Time in IST>`.
 
-### 8. 🔒 Stealth Master Password & OTP-Based Admin Access
+### 8. 🔒 Secure OTP-Based Admin Access Control
 - **Clean Single-Input Gateway:** The admin access gate in [src/components/admin-auth-gate.tsx](src/components/admin-auth-gate.tsx) presents a single prompt: *"Enter Admin Email"*.
-- **Stealth Master Admin Access:** Entering the master password silently authenticates with full Master Admin privileges without revealing any password cues.
+- **Seamless Authentication:** Authenticates authorized administration with zero leaked credentials in client bundles.
 - **OTP Email Authentication:** Entering a registered admin email dispatches a 6-digit OTP via Supabase Auth and authenticates the specific stakeholder.
-- **Dynamic Admin User Management:** Master Admins can access the **"Manage Admins"** panel ([src/components/admin-users-modal.tsx](src/components/admin-users-modal.tsx)) from the top session banner to add new admin emails, update designations, or revoke access with zero credentials stored in git.
+- **Dynamic Admin User Management:** Authorized administrators can access the **"Manage Admins"** panel ([src/components/admin-users-modal.tsx](src/components/admin-users-modal.tsx)) from the top session banner to add new admin emails, update designations, or revoke access with zero credentials stored in git.
 
 ---
 

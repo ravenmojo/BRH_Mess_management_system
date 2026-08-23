@@ -182,7 +182,7 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
 
       const data = await res.json();
 
-      // Case 1: Master Admin password matched (stealth)
+      // Case 1: Primary admin credential matched
       if (res.ok && data.isMasterAdmin) {
         const session: AdminSession = {
           authenticated: true,
@@ -359,7 +359,7 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
               {isMasterAdmin ? (
                 <div className="flex items-center space-x-1.5 bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-200 px-2.5 py-1 rounded-xl border border-indigo-200 dark:border-indigo-800 shrink-0">
                   <ShieldCheck className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                  <span className="text-[11px] sm:text-xs">Master Administrator</span>
+                  <span className="text-[11px] sm:text-xs">System Administrator</span>
                 </div>
               ) : (
                 <div className="flex items-center space-x-1.5 min-w-0">
@@ -390,7 +390,7 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
                 <span>Stats</span>
               </button>
 
-              {/* Manage Admins button visible ONLY to Master Admin */}
+              {/* Manage Admins button */}
               {isMasterAdmin && (
                 <button
                   onClick={() => setManageModalOpen(true)}
@@ -419,7 +419,7 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
           onClose={() => setStatsModalOpen(false)}
         />
 
-        {/* Master Admin Management Modal */}
+        {/* Admin Management Modal */}
         {isMasterAdmin && (
           <AdminUsersModal
             isOpen={manageModalOpen}

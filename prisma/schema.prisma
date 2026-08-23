@@ -97,7 +97,7 @@ model AdminUser {
   id          String   @id @default(uuid())
   email       String   @unique
   designation String?  @default("")
-  canOverride Boolean  @default(false) // Granted by Master Admin to override user status
+  canOverride Boolean  @default(false) // Permission to override user status
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

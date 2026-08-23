@@ -3,7 +3,7 @@
  *
  * - Reads the super-admin email allowlist from SUPER_ADMIN_EMAILS env var
  *   (comma-separated) instead of hardcoding Gmail addresses in source code.
- * - Provides a helper to verify the master admin password from request headers
+ * - Provides a helper to verify the administrative password from request headers
  *   for protecting admin-only API routes.
  */
 

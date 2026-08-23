@@ -39,9 +39,9 @@ function MaintenanceAdminContent() {
 
   const handleUpdateFeedback = async (id: string, newStatus: string) => {
     const remark = remarkInputs[id];
-    const resolvedByRole = adminDesignation || (isMasterAdmin ? 'Master Admin' : 'Admin');
+    const resolvedByRole = adminDesignation || (isMasterAdmin ? 'System Admin' : 'Admin');
     const resolvedBy = isMasterAdmin
-      ? 'Master Admin'
+      ? 'System Admin'
       : (adminDesignation ? `${adminEmail} (${adminDesignation})` : adminEmail || 'Admin');
 
     const updatePayload: any = {
@@ -49,7 +49,7 @@ function MaintenanceAdminContent() {
       status: newStatus,
       remark,
       resolvedBy,
-      resolvedByEmail: isMasterAdmin ? 'master.admin@kgp' : adminEmail,
+      resolvedByEmail: isMasterAdmin ? 'admin@kgp' : adminEmail,
       resolvedByRole,
       adminResolved: newStatus === 'RESOLVED',
     };
@@ -84,7 +84,7 @@ function MaintenanceAdminContent() {
         body: JSON.stringify({
           id: fb.id,
           isEscalated: willEscalate,
-          escalatedBy: willEscalate ? (isMasterAdmin ? 'Master Admin' : adminEmail) : null,
+          escalatedBy: willEscalate ? (isMasterAdmin ? 'System Admin' : adminEmail) : null,
           escalatedRemark: willEscalate ? remark : null,
         }),
       });
@@ -98,7 +98,7 @@ function MaintenanceAdminContent() {
 
   const handleOverrideUserResolution = async (fb: any) => {
     if (!canOverride && !isMasterAdmin) {
-      alert('You do not have master-delegated permissions to override student resolution status.');
+      alert('You do not have delegated permissions to override student resolution status.');
       return;
     }
 
@@ -118,7 +118,7 @@ function MaintenanceAdminContent() {
           id: fb.id,
           userResolved: targetStatus,
           status: targetStatus && fb.adminResolved ? 'RESOLVED' : (targetStatus ? 'RESOLVED' : (fb.adminResolved ? 'RESOLVED' : 'PENDING')),
-          overriddenBy: isMasterAdmin ? 'Master Admin' : adminEmail,
+          overriddenBy: isMasterAdmin ? 'System Admin' : adminEmail,
           overriddenReason: reason.trim() || 'Admin Discretion',
         }),
       });
@@ -358,7 +358,7 @@ function MaintenanceAdminContent() {
                         <span>{isEscalated ? 'De-escalate' : 'Escalate'}</span>
                       </button>
 
-                      {/* Override User Resolution (Master Admin or delegated admins) */}
+                      {/* Override User Resolution (Authorized admins) */}
                       {(canOverride || isMasterAdmin) && (
                         <button
                           onClick={() => handleOverrideUserResolution(fb)}

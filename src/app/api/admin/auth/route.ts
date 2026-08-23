@@ -14,13 +14,13 @@ export async function POST(request: Request) {
     const expectedMasterPassword = rawExpected.replace(/^["']|["']$/g, '').trim();
     const cleanIdentifier = identifier.replace(/^["']|["']$/g, '').trim();
 
-    // 1. Check if the entered string matches the stealth master password
+    // 1. Check if the entered string matches the primary administrator credential
     if (expectedMasterPassword && cleanIdentifier === expectedMasterPassword) {
       return NextResponse.json({
         authenticated: true,
         isMasterAdmin: true,
-        adminEmail: 'master.admin@kgp',
-        adminDesignation: 'Master Administrator',
+        adminEmail: 'admin@kgp',
+        adminDesignation: 'System Administrator',
       });
     }
 

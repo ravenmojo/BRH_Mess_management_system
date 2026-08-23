@@ -105,7 +105,7 @@ function AdminDashboardContent() {
         body: JSON.stringify({
           id: fb.id,
           isEscalated: willEscalate,
-          escalatedBy: willEscalate ? (isMasterAdmin ? 'Master Admin' : adminEmail) : null,
+          escalatedBy: willEscalate ? (isMasterAdmin ? 'System Admin' : adminEmail) : null,
           escalatedRemark: willEscalate ? remark : null,
         }),
       });
@@ -193,9 +193,9 @@ function AdminDashboardContent() {
   // Update Feedback Remark / Resolution
   const handleUpdateFeedback = async (id: string, newStatus: string) => {
     const remark = remarkInputs[id];
-    const resolvedByRole = adminDesignation || (isMasterAdmin ? 'Master Admin' : 'Admin');
+    const resolvedByRole = adminDesignation || (isMasterAdmin ? 'System Admin' : 'Admin');
     const resolvedBy = isMasterAdmin
-      ? 'Master Admin'
+      ? 'System Admin'
       : (adminDesignation ? `${adminEmail} (${adminDesignation})` : adminEmail || 'Admin');
 
     try {

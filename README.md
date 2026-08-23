@@ -29,9 +29,9 @@ A comprehensive, mobile-first Next.js web application built as a centralized dig
 - **🏛️ Hall Info Hub Redesign & Colorful Contacts Directory:**
   - Unified all movie screenings, student activities, idea submissions, and hall achievements into the core glassmorphism design language.
   - Vibrantly colored contact initial badges with standardized quick-dial call buttons.
-- **👥 Two-Way Verifiable Resolution & Stealth Admin Override:**
+- **👥 Two-Way Verifiable Resolution & Administrative Override:**
   - Differentiates between admin-only resolved vs two-way verified (admin + student) grievances.
-  - Master Admin configurable override permissions with admin-only audit trails.
+  - Configurable resolution override permissions with internal audit trails.
 - **📊 45-Day Archive & Permanent Statistical Aggregates:**
   - Resolved maintenance grievances are archived after 45 days while statistical metrics (turnaround times, category frequencies, resolution rates) are permanently retained for administrative analytics.
 
@@ -96,7 +96,7 @@ A comprehensive, mobile-first Next.js web application built as a centralized dig
   - `/maintenance/admin` — Maintenance Grievance Resolution & Remark Management
   - `/night-canteen/admin` — Canteen Grievance Management
   - `/hub/admin` — Hall Info Content Management, Movie Poster Uploads & Emergency Contacts
-- **Stealth Access & Dynamic Admin Management:** Master Admin password bypasses UI cues, granting full administrative privileges and access to the dynamic **Manage Admins** modal.
+- **Secure Dynamic Admin Management:** Direct authentication grants administrative management capabilities and access to the dynamic **Manage Admins** console.
 
 ---
 
