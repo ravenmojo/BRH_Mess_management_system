@@ -4,6 +4,63 @@ This document tracks all feature implementations, bug fixes, UI/UX enhancements,
 
 ---
 
+## 📌 Version 0.9.9 (v0.9.9) — Swipe Gestures, Design System Polish & Advanced Maintenance Governance
+
+**Release Date:** August 23, 2026  
+**Package Version:** `0.9.9`  
+**Status:** Tested & Verified (`npm run build` — 28/28 routes compiled cleanly)
+
+### 1. 📲 Seamless Homepage Swipe Navigation System
+- **Hardware-Accelerated Touch Navigation:** Implemented [src/components/swipe-navigation-provider.tsx](src/components/swipe-navigation-provider.tsx) providing seamless left/right horizontal swipe transitions between the 3 core homepages:
+  > **`/` (Mess)** ⇄ **`/maintenance` (Maintenance)** ⇄ **`/hub` (Hall Info Hub)**
+- **Directional Slide Animations:** Smooth GPU-accelerated CSS keyframe animations (`.slide-in-right` and `.slide-in-left`) in [src/app/globals.css](src/app/globals.css).
+- **Touch Gesture Filtering:** Intelligently ignores swipes starting inside textareas, input fields, sliders, horizontal card carousels, or open modal dialogs.
+- **Instant Route Prefetching:** Automatic prefetching of adjacent routes for 0ms transition latency.
+
+### 2. 💎 Executive Glassmorphism & Jewel-Tone Palette Refinement
+- **Classy Active Nav Pills:** Bottom navigation bar active indicators updated to sophisticated, executive jewel tones:
+  - Mess: **Royal Blue** (`bg-blue-600 shadow-blue-600/25`)
+  - Maintenance: **Steel Sky Blue** (`bg-sky-600 shadow-sky-600/25`)
+  - Info Hub: **Slate Indigo** (`bg-indigo-600 shadow-indigo-600/25`)
+- **De-Blinged, High-Legibility Visual Identity:** Replaced overly poppy neon gradients across the entire app with frosted glass cards, subtle luminous borders, and tailored hover states (`hover:border-{color}-400/60 hover:bg-{color}-50/30`).
+
+### 3. 🍲 Professional Glassy Icon Badges & Meal Schedule Polish
+- **Meal Schedule Icons:** Subtly tinted frosted glass badges for Breakfast (Amber Coffee ☕), Lunch (Orange Sun ☀️), Dinner (Indigo Moon 🌙), and Serving Now (Emerald 🟢).
+- **Decluttered Day Selector Header:** Removed duplicate "Full Week" header link above Today's Menu chips in favor of the prominent Full Menu tile.
+
+### 4. 🛠️ Maintenance Categories & Common Areas Governance
+- **Tailored Category Color Coding:**
+  - **Washroom 🚿:** Cyan Glass (`border-cyan-500/30 text-cyan-600`)
+  - **Drinking Water 💧:** Blue Glass (`border-blue-500/30 text-blue-600`)
+  - **Electrical ⚡:** Amber Glass (`border-amber-500/30 text-amber-600`)
+  - **Civil & Furniture 🔨:** Warm Wood / Ochre Orange (`border-orange-500/30 text-orange-600` — strictly non-red)
+  - **Cleaning & Sanitation ✨:** Royal Purple Glass (`border-purple-500/30 text-purple-600`)
+  - **Gym & Outdoors 🏋️:** Emerald Green Glass (`border-emerald-500/30 text-emerald-600`)
+- **Common Area Cleaning Notice:** Selecting the Cleaning category dynamically presents a helpful policy banner: *"Cleaning requests are dedicated to hall corridors, lounges, staircases, and shared facilities (not personal room cleaning)."*
+
+### 5. 🗳️ Quick Access Tile Harmonization & Mess Poll Theme
+- **Differentiated Quick Access Palette:**
+  - Full Menu: **Royal Blue**
+  - Night Canteen: **Celestial Charcoal & Royal Purple**
+  - Grievances: **Coral Rose**
+  - Mess Poll: **Warm Sunburst Amber / Gold**
+  - Duty Gallery: **Mint Emerald Green**
+- **Unified Poll Experience:** Monthly Mess Poll page (`/poll`) styled with matching warm amber / sunburst gradient theme, custom progress bars, and vote buttons.
+
+### 6. 🏛️ Hall Info Hub Design Language Overhaul & Vibrant Contacts
+- **Design Language Alignment:** All movie screenings, student activities, idea submission portals, and achievement award cards unified with the core frosted glass system.
+- **Colorful Contacts Directory:** Emergency and council contacts feature individual vibrant glassy initial badges (Blue, Emerald, Purple, Amber, Rose, Cyan) with standardized Emerald Green call buttons.
+
+### 7. 👥 Two-Way Verifiable Resolution & Stealth Admin Override
+- **Two-Way Resolution Verification:** Differentiates between grievances resolved by admin only vs verified by both admin and student.
+- **Discretionary Resolution Override:** Master Admins can designate authorized admins to override resolution status when necessary, maintaining an admin-only audit log while preserving student privacy publicly.
+
+### 8. 📊 45-Day Retention & Statistical Aggregate Preservation
+- **45-Day Grievance Archive:** Detailed complaint records purged after 45 days.
+- **Permanent Statistical Memory:** Grievance counts, average resolution turnaround times per category, and resolution trends are permanently aggregated in `GrievanceStatSummary` for executive analytics.
+
+---
+
 ## 📌 Version 0.9.5 (v0.9.5) — Automated Grievance Ticketing & Hall Hub Overhaul
 
 **Release Date:** August 19, 2026  

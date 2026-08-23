@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, MessageSquare, CheckCircle, ChevronDown, Trash2, Video, ImageIcon, Clock, Download, Search } from 'lucide-react';
+import { ShieldCheck, MessageSquare, CheckCircle, ChevronDown, Trash2, Clock, Search, Flame } from 'lucide-react';
 import { AdminAuthGate, useAdminAuth } from '@/components/admin-auth-gate';
 import { GrievanceMediaGallery } from '@/components/grievance-media-gallery';
 import { TicketBadge } from '@/components/ticket-badge';
@@ -19,13 +19,14 @@ function CanteenAdminContent() {
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [remarkInputs, setRemarkInputs] = useState<{ [id: string]: string }>({});
+  const [escalateRemarkInputs, setEscalateRemarkInputs] = useState<{ [id: string]: string }>({});
+  const [activeEscalateId, setActiveEscalateId] = useState<string | null>(null);
 
   const fetchFeedbacks = () => {
-    fetch('/api/feedback')
+    fetch('/api/feedback?facility=NIGHT_CANTEEN&isAdmin=true')
       .then((res) => res.json())
       .then((data) => {
-        const canteenFb = data.filter((f: any) => f.facilityType === 'NIGHT_CANTEEN');
-        setFeedbacks(canteenFb);
+        setFeedbacks(Array.isArray(data) ? data : []);
       })
       .catch(() => {});
   };
@@ -66,6 +67,32 @@ function CanteenAdminContent() {
     } catch (err) {}
   };
 
+  const handleToggleEscalate = async (fb: any) => {
+    const willEscalate = !fb.isEscalated;
+    const remark = escalateRemarkInputs[fb.id] || '';
+
+    try {
+      const res = await fetch('/api/feedback', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+        },
+        body: JSON.stringify({
+          id: fb.id,
+          isEscalated: willEscalate,
+          escalatedBy: willEscalate ? (isMasterAdmin ? 'Master Admin' : adminEmail) : null,
+          escalatedRemark: willEscalate ? remark : null,
+        }),
+      });
+
+      if (res.ok) {
+        setActiveEscalateId(null);
+        fetchFeedbacks();
+      }
+    } catch (err) {}
+  };
+
   const handleDeleteFeedback = async (id: string) => {
     if (!confirm('Are you sure you want to permanently remove this complaint?')) return;
     try {
@@ -97,119 +124,203 @@ function CanteenAdminContent() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center space-x-1.5">
-            <ShieldCheck className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            <span>Canteen Admin Panel</span>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center space-x-1.5">
+            <ShieldCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+            <span>Canteen Admin Portal</span>
           </h2>
-          <p className="text-xs text-gray-500">Manage Night Canteen Issues</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Manage Night Canteen Issues & Escalations</p>
         </div>
       </div>
 
       {/* GRIEVANCES & COMPLAINTS MANAGEMENT */}
-      <details className="group space-y-2">
-        <summary className="flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <h3 className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider flex items-center space-x-1.5">
-            <MessageSquare className="w-4 h-4 text-blue-600" />
-            <span>Night Canteen Grievances & Remarks ({feedbacks.length})</span>
+      <details className="group space-y-2" open>
+        <summary className="flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-200 dark:border-slate-700">
+          <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
+            <MessageSquare className="w-4 h-4 text-indigo-600" />
+            <span>Night Canteen Grievances ({feedbacks.length})</span>
           </h3>
-          <ChevronDown className="w-4 h-4 text-gray-500 transition-transform group-open:rotate-180" />
+          <ChevronDown className="w-4 h-4 text-slate-500 transition-transform group-open:rotate-180" />
         </summary>
 
         <div className="pt-2 space-y-3">
           {/* Search Bar */}
           <div className="relative">
-            <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search by Ticket #, Room No., name, or issue..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 rounded-lg text-xs bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full pl-8 pr-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
 
-          {filteredFeedbacks.map((fb) => (
-            <div
-              key={fb.id}
-              className="p-3.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 space-y-2 text-xs shadow-sm"
-            >
-              <div className="flex items-center justify-between flex-wrap gap-1.5">
-                <div className="flex items-center space-x-1.5 flex-wrap gap-1">
-                  <span className="font-bold text-gray-900 dark:text-white">{fb.studentName || 'Anonymous'}</span>
-                  {fb.roomNo && (
-                    <span className="text-gray-500 text-[11px] font-mono">
-                      Room: {fb.roomNo}
-                    </span>
-                  )}
-                  {fb.ticketNumber && (
-                    <TicketBadge ticketNumber={fb.ticketNumber} size="sm" />
-                  )}
-                  {fb.email && <span className="text-gray-400 text-[10px] block sm:inline">{fb.email}</span>}
-                </div>
-                <span
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
-                    fb.status === 'RESOLVED'
-                      ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
-                      : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
-                  }`}
-                >
-                  {fb.status}
-                </span>
-              </div>
+          {filteredFeedbacks.map((fb) => {
+            const isEscalated = Boolean(fb.isEscalated);
 
-              <p className="text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/50 p-2 rounded">
-                "{fb.comment}"
-              </p>
+            return (
+              <div
+                key={fb.id}
+                className={`p-4 rounded-2xl space-y-3 text-xs shadow-sm border transition-all ${
+                  isEscalated
+                    ? 'border-amber-400/80 dark:border-amber-500/80 bg-amber-50/20 dark:bg-amber-950/25 ring-1 ring-amber-400/30'
+                    : fb.status === 'RESOLVED'
+                      ? 'border-emerald-200/80 dark:border-emerald-800/60 bg-white dark:bg-slate-900'
+                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+                }`}
+              >
+                {/* Escalation Highlight Banner */}
+                {isEscalated && (
+                  <div className="p-2.5 rounded-xl bg-amber-100/90 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 flex items-start justify-between gap-2">
+                    <div className="flex items-start space-x-2 min-w-0">
+                      <Flame className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5 animate-pulse" />
+                      <div className="text-[11px] leading-tight">
+                        <span className="font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-400 mr-1.5">
+                          ⚡ Priority Escalated:
+                        </span>
+                        <span>Escalated by <strong className="font-semibold font-mono">{fb.escalatedBy || 'Admin'}</strong></span>
+                        {fb.escalatedAt && (
+                          <span className="text-amber-600/80 dark:text-amber-400/80 ml-1">
+                            • {new Date(fb.escalatedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })} IST
+                          </span>
+                        )}
+                        {fb.escalatedRemark && (
+                          <div className="text-[11px] text-amber-800 dark:text-amber-300 font-medium italic mt-0.5">
+                            "{fb.escalatedRemark}"
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-              <GrievanceMediaGallery mediaUrl={fb.mediaUrl} capturedAt={fb.capturedAt} createdAt={fb.createdAt} />
-
-              {/* Resolution Attribution */}
-              {fb.status === 'RESOLVED' && (
-                <div className="flex items-center space-x-1.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800/60">
-                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>
-                    Resolved by <strong className="font-semibold">{fb.resolvedBy || fb.resolvedByRole || 'Admin'}</strong>
-                    {fb.resolvedAt && ` • ${new Date(fb.resolvedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })} IST`}
+                <div className="flex items-center justify-between flex-wrap gap-1.5">
+                  <div className="flex items-center space-x-1.5 flex-wrap gap-1">
+                    {fb.ticketNumber && (
+                      <TicketBadge ticketNumber={fb.ticketNumber} size="sm" />
+                    )}
+                    <span className="font-bold text-slate-900 dark:text-white">{fb.studentName || 'Anonymous'}</span>
+                    {fb.roomNo && (
+                      <span className="text-slate-500 text-[11px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800">
+                        {fb.roomNo}
+                      </span>
+                    )}
+                    {fb.email && <span className="text-slate-400 text-[10px] font-mono truncate max-w-[140px] sm:max-w-none">{fb.email}</span>}
+                  </div>
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+                      fb.status === 'RESOLVED'
+                        ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/80'
+                        : 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/80'
+                    }`}
+                  >
+                    {fb.status}
                   </span>
                 </div>
-              )}
 
-              {/* Admin Remark Input */}
-              <div className="space-y-1.5 pt-1">
-                <input
-                  type="text"
-                  placeholder="Enter official Admin Remark / Resolution..."
-                  value={remarkInputs[fb.id] ?? fb.remark ?? ''}
-                  onChange={(e) => setRemarkInputs({ ...remarkInputs, [fb.id]: e.target.value })}
-                  className="w-full px-2.5 py-1.5 rounded-lg text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
+                <p className="text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50 leading-relaxed font-normal">
+                  "{fb.comment}"
+                </p>
 
-                <div className="flex space-x-2 justify-end">
-                  <button
-                    onClick={() => handleDeleteFeedback(fb.id)}
-                    className="px-2.5 py-1 rounded text-[11px] font-bold bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 transition-colors flex items-center space-x-1 border border-rose-200 dark:border-rose-800"
-                    title="Remove Complaint"
-                  >
-                    <Trash2 className="w-3 h-3 text-rose-500" />
-                    <span>Remove</span>
-                  </button>
-                  <button
-                    onClick={() => handleUpdateFeedback(fb.id, 'PENDING')}
-                    className="px-2.5 py-1 rounded text-[11px] font-semibold bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
-                  >
-                    Mark Pending
-                  </button>
-                  <button
-                    onClick={() => handleUpdateFeedback(fb.id, 'RESOLVED')}
-                    className="px-2.5 py-1 rounded text-[11px] font-bold bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center space-x-1"
-                  >
-                    <CheckCircle className="w-3 h-3" />
-                    <span>Mark Resolved</span>
-                  </button>
+                <GrievanceMediaGallery mediaUrl={fb.mediaUrl} capturedAt={fb.capturedAt} createdAt={fb.createdAt} />
+
+                {/* Resolution Attribution */}
+                {fb.status === 'RESOLVED' && (
+                  <div className="flex items-center space-x-1.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-xl border border-emerald-200 dark:border-emerald-800/60">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>
+                      Resolved by <strong className="font-semibold">{fb.resolvedBy || fb.resolvedByRole || 'Admin'}</strong>
+                      {fb.resolvedAt && ` • ${new Date(fb.resolvedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })} IST`}
+                    </span>
+                  </div>
+                )}
+
+                {/* Admin Remark Input */}
+                <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-slate-800/80">
+                  <input
+                    type="text"
+                    placeholder="Enter official Admin Remark / Resolution..."
+                    value={remarkInputs[fb.id] ?? fb.remark ?? ''}
+                    onChange={(e) => setRemarkInputs({ ...remarkInputs, [fb.id]: e.target.value })}
+                    className="w-full px-3 py-1.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+
+                  {/* Optional Escalation Remark Drawer */}
+                  {activeEscalateId === fb.id && (
+                    <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 space-y-2 animate-in fade-in duration-150">
+                      <input
+                        type="text"
+                        placeholder="Reason for escalation (optional)..."
+                        value={escalateRemarkInputs[fb.id] || ''}
+                        onChange={(e) => setEscalateRemarkInputs({ ...escalateRemarkInputs, [fb.id]: e.target.value })}
+                        className="w-full px-2.5 py-1 rounded-lg text-xs bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-800 text-slate-900 dark:text-slate-100 focus:outline-none"
+                        autoFocus
+                      />
+                      <div className="flex justify-end space-x-1.5">
+                        <button
+                          onClick={() => setActiveEscalateId(null)}
+                          className="px-2 py-0.5 rounded text-[10px] font-semibold text-slate-500 hover:text-slate-700"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => handleToggleEscalate(fb)}
+                          className="px-3 py-1 rounded-lg text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
+                        >
+                          Confirm Escalation
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
+                    {/* Escalate Toggle Button */}
+                    <button
+                      onClick={() => {
+                        if (isEscalated) {
+                          handleToggleEscalate(fb);
+                        } else {
+                          setActiveEscalateId(activeEscalateId === fb.id ? null : fb.id);
+                        }
+                      }}
+                      className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1 touch-spring ${
+                        isEscalated
+                          ? 'bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/60 dark:hover:bg-amber-900 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700'
+                          : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                      }`}
+                      title={isEscalated ? 'De-escalate this grievance' : 'Escalate to top priority'}
+                    >
+                      <Flame className={`w-3.5 h-3.5 ${isEscalated ? 'text-amber-600 animate-pulse' : 'text-slate-400'}`} />
+                      <span>{isEscalated ? 'De-escalate' : 'Escalate'}</span>
+                    </button>
+
+                    <div className="flex items-center space-x-1.5">
+                      <button
+                        onClick={() => handleDeleteFeedback(fb.id)}
+                        className="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 transition-colors border border-rose-200 dark:border-rose-800 touch-spring"
+                        title="Remove Complaint"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                      </button>
+                      <button
+                        onClick={() => handleUpdateFeedback(fb.id, 'PENDING')}
+                        className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors touch-spring"
+                      >
+                        Mark Pending
+                      </button>
+                      <button
+                        onClick={() => handleUpdateFeedback(fb.id, 'RESOLVED')}
+                        className="px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-all shadow-sm shadow-indigo-500/20 flex items-center space-x-1 touch-spring"
+                      >
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        <span>Mark Resolved</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </details>
     </div>

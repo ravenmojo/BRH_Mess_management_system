@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Moon, Utensils, MessageSquare, Send, CheckCircle, Clock, ShieldCheck, Video, ImageIcon, Download, Camera, Upload, CheckCircle2, Loader2 } from 'lucide-react';
+import { Moon, Utensils, MessageSquare, Send, CheckCircle, Clock, ShieldCheck, Video, ImageIcon, Download, Camera, Upload, CheckCircle2, Loader2, Paperclip } from 'lucide-react';
 import Link from 'next/link';
 import { uploadToCloudinary } from '@/lib/cloudinary-upload';
 import { OtpVerificationModal } from '@/components/otp-modal';
 import { GrievanceMediaGallery } from '@/components/grievance-media-gallery';
 import { TicketBadge } from '@/components/ticket-badge';
+import { MyGrievancesView } from '@/components/my-grievances-view';
 
 // Smart room number formatter
 function formatRoomNo(value: string): string {
@@ -21,7 +22,7 @@ function formatRoomNo(value: string): string {
 }
 
 export default function NightCanteenPage() {
-  const [activeTab, setActiveTab] = useState<'menu' | 'grievance'>('menu');
+  const [activeTab, setActiveTab] = useState<'menu' | 'grievance' | 'my_grievances'>('menu');
 
   // Hardcoded Canteen Menu Data
   const canteenMenuItems = [
@@ -53,7 +54,7 @@ export default function NightCanteenPage() {
   const fetchCanteenFeedbacks = () => {
     fetch('/api/feedback?facility=NIGHT_CANTEEN')
       .then((res) => res.json())
-      .then((data) => setFeedbacks(data))
+      .then((data) => setFeedbacks(Array.isArray(data) ? data : []))
       .catch(() => {});
   };
 
@@ -112,8 +113,6 @@ export default function NightCanteenPage() {
             uploadedUrls.push(url);
           }
           setUploadProgress(100);
-          const finalPayload = uploadedUrls.length > 1 ? JSON.stringify(uploadedUrls) : (uploadedUrls[0] || '');
-          setMediaUrl(finalPayload);
         } catch (err: any) {
           alert('Media upload failed: ' + (err.message || 'Error uploading file'));
           setSubmitting(false);
@@ -143,7 +142,7 @@ export default function NightCanteenPage() {
       if (res.ok) {
         const createdData = await res.json();
         setSubmittedTicket(createdData.ticketNumber || null);
-        setMessage('Grievance submitted successfully!');
+        setMessage('Canteen grievance submitted successfully!');
         setRoomNo('');
         setComment('');
         setFiles([]);
@@ -152,10 +151,10 @@ export default function NightCanteenPage() {
         fetchCanteenFeedbacks();
       } else {
         const data = await res.json();
-        setMessage(data.error || 'Failed to submit grievance.');
+        setMessage(data.error || 'Failed to submit grievance. Please try again.');
       }
     } catch (err) {
-      setMessage('Failed to submit grievance.');
+      setMessage('Network error occurred.');
     } finally {
       setSubmitting(false);
     }
@@ -163,91 +162,109 @@ export default function NightCanteenPage() {
 
   return (
     <div className="space-y-5 pb-8">
-      {/* Header Banner */}
-      <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 p-5 text-white shadow-xl shadow-indigo-950/20 flex items-center justify-between ring-1 ring-white/10">
-        <div>
-          <div className="flex items-center space-x-1.5 text-xs text-blue-400 font-bold mb-1 tracking-wider uppercase">
-            <Moon className="w-3.5 h-3.5" />
-            <span>BROS NIGHT CANTEEN</span>
+      {/* Header Banner with Tabs */}
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-4 sm:p-5 text-white shadow-xl shadow-slate-950/30 group ring-1 ring-white/15">
+        <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-indigo-500/20 blur-2xl group-hover:scale-125 transition-transform duration-700 ease-out pointer-events-none" />
+        
+        <div className="relative z-10 flex items-center justify-between flex-wrap gap-2">
+          <div className="space-y-1">
+            <h2 className="text-base sm:text-lg font-black tracking-tight drop-shadow-sm flex items-center space-x-2">
+              <Moon className="w-4 h-4 text-indigo-400 shrink-0" />
+              <span>BROS Night Canteen</span>
+            </h2>
+            <p className="text-xs text-indigo-200/90 font-medium leading-snug">
+              Late night cravings & grievance desk 🌙
+            </p>
           </div>
-          <h2 className="text-base font-black">Independent Canteen Services</h2>
-          <p className="text-[11px] text-slate-300 font-medium">Open 09:30 PM - 02:00 AM Daily</p>
-        </div>
-        <div className="text-right">
-          <span className="inline-block px-2.5 py-1 rounded-full bg-blue-600/30 text-[10px] font-bold font-mono border border-blue-400/30 text-blue-200">
-            No Budget Cap
-          </span>
+
+          {/* Navigation Tab Selector */}
+          <div className="flex bg-slate-900/90 p-1 rounded-2xl border border-indigo-500/30 shadow-inner">
+            <button
+              onClick={() => setActiveTab('menu')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all touch-spring ${
+                activeTab === 'menu'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Menu
+            </button>
+            <button
+              onClick={() => setActiveTab('grievance')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all touch-spring ${
+                activeTab === 'grievance'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Grievance
+            </button>
+            <button
+              onClick={() => setActiveTab('my_grievances')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all touch-spring ${
+                activeTab === 'my_grievances'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              My Issues
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex rounded-2xl bg-slate-200/60 dark:bg-slate-800/60 p-1 backdrop-blur-md">
-        <button
-          onClick={() => setActiveTab('menu')}
-          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${
-            activeTab === 'menu'
-              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
-              : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <Utensils className="w-3.5 h-3.5" />
-          <span>Canteen Menu</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('grievance')}
-          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${
-            activeTab === 'grievance'
-              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
-              : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <MessageSquare className="w-3.5 h-3.5" />
-          <span>Feedback & Grievances</span>
-        </button>
-      </div>
+      {activeTab === 'my_grievances' ? (
+        <MyGrievancesView onBackToSubmit={() => setActiveTab('grievance')} />
+      ) : activeTab === 'menu' ? (
+        <div className="space-y-4 animate-in fade-in duration-300">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {canteenMenuItems.map((item) => {
+              const catStyles: Record<string, { bg: string; shadow: string }> = {
+                'Main Meals': { bg: 'from-amber-500 to-orange-500', shadow: 'shadow-orange-500/25' },
+                'Snacks': { bg: 'from-rose-500 to-pink-500', shadow: 'shadow-rose-500/25' },
+                'Quick Bites': { bg: 'from-amber-400 to-yellow-500', shadow: 'shadow-yellow-500/25' },
+                'Beverages': { bg: 'from-cyan-500 to-blue-500', shadow: 'shadow-cyan-500/25' },
+              };
+              const style = catStyles[item.category] || { bg: 'from-indigo-500 to-purple-500', shadow: 'shadow-indigo-500/25' };
 
-      {/* Tab 1: Menu */}
-      {activeTab === 'menu' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {canteenMenuItems.map((item) => (
-              <div
-                key={item.id}
-                className="p-3.5 rounded-2xl glass-card flex items-center justify-between group hover:border-blue-500/30 transition-all"
-              >
-                <div className="space-y-0.5">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-bold text-xs text-slate-900 dark:text-white">{item.name}</span>
+              return (
+                <div
+                  key={item.id}
+                  className="p-3.5 sm:p-4 rounded-2xl glass-card border border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between gap-3 shadow-xs hover:border-indigo-400/50 transition-all"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-2.5 rounded-xl bg-gradient-to-tr ${style.bg} text-white shadow-md ${style.shadow} shrink-0`}>
+                      <Utensils className="w-4 h-4" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <div className="font-black text-xs text-slate-900 dark:text-white leading-tight">{item.name}</div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.category}</div>
+                    </div>
                   </div>
-                  <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">{item.category}</span>
+                  <div className="text-right shrink-0">
+                    <div className="text-sm font-black text-indigo-600 dark:text-indigo-400 font-mono">₹{item.price}</div>
+                    <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">Available</span>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs font-extrabold text-blue-600 dark:text-blue-400 font-mono">
-                    ₹{item.price}
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
-      )}
-
-      {/* Tab 2: Grievance Section */}
-      {activeTab === 'grievance' && (
-        <div className="space-y-5">
-          {/* Submission Form */}
+      ) : (
+        <div className="space-y-5 animate-in fade-in slide-in-from-left-4 duration-300">
+          {/* Grievance Submission Form */}
           <form
             onSubmit={handleFormSubmit}
-            className="p-5 rounded-2xl glass-card space-y-3.5 relative overflow-hidden"
+            className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl glass-card space-y-3.5 relative overflow-hidden shadow-sm"
           >
             <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center space-x-2">
-              <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <span>Submit Night Canteen Grievance</span>
+              <MessageSquare className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <span>Log Canteen Grievance</span>
             </h3>
 
             {message && (
-              <div className={`p-3 rounded-xl text-xs font-medium border space-y-1.5 ${message.includes('success') ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' : 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'}`}>
-                <div>{message}</div>
+              <div className={`p-3 rounded-2xl text-xs font-medium border space-y-1.5 animate-in fade-in duration-200 ${message.includes('success') ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/80' : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/80'}`}>
+                <div className="font-semibold">{message}</div>
                 {submittedTicket && (
                   <div className="flex items-center space-x-2 pt-1">
                     <span className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-200">Your Ticket Number:</span>
@@ -265,7 +282,7 @@ export default function NightCanteenPage() {
                 onChange={(e) => setRoomNo(formatRoomNo(e.target.value))}
                 maxLength={5}
                 required
-                className="w-full px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 uppercase"
+                className="w-full px-3.5 py-2.5 rounded-xl text-xs font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200/90 dark:border-slate-700/80 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all uppercase"
               />
               <input
                 type="email"
@@ -273,7 +290,7 @@ export default function NightCanteenPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                className="w-full px-3.5 py-2.5 rounded-xl text-xs font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200/90 dark:border-slate-700/80 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all"
               />
             </div>
 
@@ -283,17 +300,15 @@ export default function NightCanteenPage() {
               onChange={(e) => setComment(e.target.value)}
               rows={3}
               required
-              className="w-full px-3.5 py-2.5 rounded-xl text-xs font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              className="w-full px-3.5 py-2.5 rounded-xl text-xs font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200/90 dark:border-slate-700/80 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all"
             />
 
             {/* Media Upload (Optional) */}
-            <div className="space-y-1">
-              <label className="flex items-center justify-between p-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/60 transition-colors">
-                <div className="flex items-center space-x-2">
-                  <Camera className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">
-                    {files.length > 0 ? `${files.length} File(s) Selected` : 'Attach Photos/Videos (Multiple, Max 20MB each)'}
-                  </span>
+            <div className="border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-3.5 bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-100/50 dark:hover:bg-slate-800/80 transition-colors">
+              <label className="flex items-center justify-between cursor-pointer">
+                <div className="flex items-center space-x-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+                  <Paperclip className="w-4 h-4 text-indigo-500" />
+                  <span>{files.length > 0 ? `${files.length} File(s) Selected` : 'Attach Photos/Videos (Multiple, Max 20MB each)'}</span>
                 </div>
                 <input 
                   type="file" 
@@ -309,27 +324,31 @@ export default function NightCanteenPage() {
               </label>
             </div>
 
+            {isUploading && (
+              <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mt-2 overflow-hidden">
+                <div 
+                  className="h-full bg-indigo-600 transition-all duration-300 shadow-sm shadow-indigo-500/50"
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
+            )}
+
             {submitting && (
-              <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 space-y-1.5 shadow-sm">
-                <div className="flex items-center justify-between text-xs font-bold text-blue-700 dark:text-blue-300">
+              <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 space-y-1.5 shadow-sm animate-in fade-in duration-200">
+                <div className="flex items-center justify-between text-xs font-bold text-indigo-700 dark:text-indigo-300">
                   <span className="flex items-center space-x-1.5">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />
                     <span>{isUploading ? `Uploading Media Proof (${uploadProgress}%)...` : 'Submitting Canteen Grievance...'}</span>
                   </span>
                   {isUploading && <span className="font-mono text-[11px]">{uploadProgress}%</span>}
                 </div>
-                {isUploading && (
-                  <div className="w-full h-1.5 bg-blue-200 dark:bg-blue-900 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-600 transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
-                  </div>
-                )}
               </div>
             )}
 
             <button
               type="submit"
               disabled={submitting || isUploading}
-              className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50"
+              className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-500/25 transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50 touch-spring"
             >
               {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
               <span>{submitting ? (isUploading ? `Uploading Media (${uploadProgress}%)...` : 'Submitting...') : 'Submit Canteen Grievance'}</span>
@@ -339,7 +358,7 @@ export default function NightCanteenPage() {
           {/* Canteen Grievances Timeline */}
           <div className="space-y-2.5">
             <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 px-1">
-              Canteen Grievance History ({feedbacks.length})
+              Recent Canteen Grievances ({feedbacks.length})
             </h4>
 
             {feedbacks.length === 0 ? (
@@ -350,38 +369,52 @@ export default function NightCanteenPage() {
               feedbacks.map((fb) => (
                 <div
                   key={fb.id}
-                  className="p-4 rounded-2xl glass-card space-y-1.5 text-xs"
+                  className={`p-3.5 sm:p-4 rounded-2xl glass-card space-y-2.5 text-xs shadow-sm border transition-all ${
+                    fb.status === 'RESOLVED'
+                      ? 'border-emerald-200/80 dark:border-emerald-800/60'
+                      : 'border-slate-200/80 dark:border-slate-800/80'
+                  }`}
                 >
                   <div className="flex items-center justify-between flex-wrap gap-1 text-slate-500 text-[11px]">
-                    <div className="flex items-center space-x-1.5 flex-wrap gap-1">
+                    <div className="flex items-center space-x-1.5 flex-wrap gap-1 min-w-0">
+                      {fb.ticketNumber && (
+                        <TicketBadge ticketNumber={fb.ticketNumber} size="sm" />
+                      )}
                       <span className="font-bold text-slate-900 dark:text-white">
                         {fb.studentName || 'Anonymous'}
                       </span>
                       {fb.roomNo && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 font-mono">{fb.roomNo}</span>
-                      )}
-                      {fb.ticketNumber && (
-                        <TicketBadge ticketNumber={fb.ticketNumber} size="sm" />
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono font-semibold">{fb.roomNo}</span>
                       )}
                     </div>
                     <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold flex items-center space-x-1 shrink-0 ${
                         fb.status === 'RESOLVED'
-                          ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                          : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
+                          ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/80'
+                          : 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/80'
                       }`}
                     >
-                      {fb.status}
+                      {fb.status === 'RESOLVED' ? (
+                        <>
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse-halo-emerald mr-0.5" />
+                          <span>{fb.status}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 pulse-halo-blue mr-0.5" />
+                          <span>{fb.status}</span>
+                        </>
+                      )}
                     </span>
                   </div>
 
-                  <p className="text-slate-700 dark:text-slate-300 font-medium">{fb.comment}</p>
+                  <p className="text-slate-700 dark:text-slate-300 leading-relaxed font-medium bg-slate-50/60 dark:bg-slate-900/40 p-2 rounded-xl border border-slate-200/40 dark:border-slate-800/40">{fb.comment}</p>
 
                   <GrievanceMediaGallery mediaUrl={fb.mediaUrl} capturedAt={fb.capturedAt} createdAt={fb.createdAt} />
 
                   {/* Resolution Attribution */}
                   {fb.status === 'RESOLVED' && (
-                    <div className="flex items-center space-x-1.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800/60">
+                    <div className="flex items-center space-x-1.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50/80 dark:bg-emerald-950/40 px-3 py-1.5 rounded-xl border border-emerald-200/80 dark:border-emerald-800/60 shadow-xs">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                       <span>
                         Resolved by <strong className="font-semibold">{fb.resolvedBy || fb.resolvedByRole || 'Canteen Admin'}</strong>
@@ -391,8 +424,11 @@ export default function NightCanteenPage() {
                   )}
 
                   {fb.remark && (
-                    <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/50 text-[11px] text-blue-900 dark:text-blue-200">
-                      <strong>Admin Remark:</strong> {fb.remark}
+                    <div className="p-2.5 rounded-xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/50 text-[11px] text-indigo-900 dark:text-indigo-200 flex items-start space-x-2">
+                      <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="font-semibold">Admin Remark:</strong> {fb.remark}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -404,7 +440,7 @@ export default function NightCanteenPage() {
 
       {/* Admin Link */}
       <div className="pt-2 flex justify-center">
-        <Link href="/night-canteen/admin" className="px-4 py-2 rounded-full border border-blue-200/80 dark:border-blue-800/80 bg-blue-50/80 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold flex items-center space-x-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shadow-sm">
+        <Link href="/night-canteen/admin" className="px-4 py-2 rounded-full border border-indigo-200/80 dark:border-indigo-800/80 bg-indigo-50/80 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center space-x-1.5 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors shadow-sm touch-spring">
           <ShieldCheck className="w-4 h-4" />
           <span>Access Canteen Admin Panel</span>
         </Link>

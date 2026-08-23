@@ -139,44 +139,46 @@ export default function PublicGalleryPage() {
   return (
     <div className="space-y-6 pb-20 relative">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-800 p-5 text-white shadow-lg">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-700 to-emerald-900 p-4 sm:p-5 text-white shadow-xl shadow-emerald-950/20 ring-1 ring-white/15 group">
+        <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/15 blur-2xl group-hover:scale-125 transition-transform duration-700 ease-out pointer-events-none" />
         <div className="relative z-10 space-y-1">
           <div className="flex justify-between items-start">
             <div>
-              <h2 className="text-xl font-black tracking-tight drop-shadow-sm flex items-center space-x-2">
+              <h2 className="text-base sm:text-lg font-black tracking-tight drop-shadow-sm flex items-center space-x-2">
                 <Camera className="w-5 h-5 text-emerald-300" />
                 <span>Mess Duty Gallery</span>
               </h2>
-              <p className="text-xs text-emerald-100 font-medium max-w-xs mt-1">
+              <p className="text-xs text-emerald-100 font-medium max-w-xs mt-0.5 leading-snug">
                 Transparent records of cleaning, raw materials, weight checking, and operations.
               </p>
             </div>
             <button 
               onClick={() => setShowUpload(true)}
-              className="bg-white/20 hover:bg-white/30 p-2 rounded-xl backdrop-blur-sm transition-all"
+              className="bg-white/20 hover:bg-white/30 p-2.5 rounded-2xl backdrop-blur-sm transition-all touch-spring shadow-sm"
+              title="Upload New Media"
             >
-              <Upload className="w-5 h-5 text-white" />
+              <Upload className="w-4 h-4 text-white" />
             </button>
           </div>
         </div>
       </div>
 
       {/* 30-Day Retention Notice */}
-      <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-xs font-semibold text-amber-800 dark:text-amber-300 flex items-center space-x-2">
+      <div className="p-3.5 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 text-xs font-semibold text-amber-800 dark:text-amber-300 flex items-center space-x-2 shadow-sm">
         <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
         <span><strong>Retention Notice:</strong> Mess Duty Gallery media records automatically auto-purge after 30 days.</span>
       </div>
 
       {/* Filter Chips */}
-      <div className="flex overflow-x-auto space-x-2 pb-2 scrollbar-none">
+      <div className="flex overflow-x-auto space-x-2 pb-1 scrollbar-none">
         {CATEGORIES.map(cat => (
           <button
             key={cat.id}
             onClick={() => setActiveTab(cat.id)}
-            className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
+            className={`whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs font-bold transition-all touch-spring ${
               activeTab === cat.id 
-                ? 'bg-emerald-600 text-white' 
-                : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400'
+                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30 scale-[1.02]' 
+                : 'glass-card text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             {cat.label}
@@ -188,15 +190,15 @@ export default function PublicGalleryPage() {
       {loading ? (
         <div className="flex justify-center items-center h-64"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
       ) : filteredImages.length === 0 ? (
-        <div className="text-center py-10 text-gray-500 text-sm">
+        <div className="text-center py-12 glass-card rounded-2xl text-slate-500 text-xs font-semibold">
           No media found for this category.
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 px-1">
+        <div className="grid grid-cols-2 gap-3 px-0.5">
           {filteredImages.map(img => {
             const isVideo = img.url.match(/\.(mp4|webm|ogg)$/i);
             return (
-              <div key={img.id} className="relative rounded-xl overflow-hidden bg-black shadow-sm group">
+              <div key={img.id} className="relative rounded-2xl overflow-hidden bg-slate-950 shadow-md shadow-slate-900/10 dark:shadow-black/40 group ring-1 ring-black/10 dark:ring-white/10">
                 <div className="aspect-square relative">
                   {isVideo ? (
                     <video 
@@ -215,15 +217,15 @@ export default function PublicGalleryPage() {
                     target="_blank"
                     rel="noreferrer"
                     download
-                    className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 text-white rounded-lg transition-colors shadow-md backdrop-blur-sm group-hover:scale-105"
+                    className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 text-white rounded-xl transition-colors shadow-md backdrop-blur-sm group-hover:scale-105 touch-spring z-10"
                     title="Download Media File"
                   >
                     <Download className="w-3.5 h-3.5" />
                   </a>
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent pt-6 space-y-0.5">
+                <div className="absolute bottom-0 left-0 right-0 p-2.5 bg-gradient-to-t from-black/95 via-black/70 to-transparent pt-8 space-y-0.5 pointer-events-none">
                   {img.caption && (
-                    <p className="text-[10px] text-white font-medium line-clamp-2 drop-shadow-md leading-tight">
+                    <p className="text-[10px] text-white font-semibold line-clamp-2 drop-shadow-md leading-tight">
                       {img.caption}
                     </p>
                   )}
@@ -232,7 +234,7 @@ export default function PublicGalleryPage() {
                     <span>Captured: {img.capturedAt || new Date(img.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' }) + ' IST'}</span>
                   </p>
                   {img.uploaderName && (
-                    <p className="text-[9px] text-gray-300 flex justify-between items-center opacity-80">
+                    <p className="text-[9px] text-slate-300 flex justify-between items-center opacity-85 pt-0.5">
                       <span>{img.uploaderName}</span>
                       <span className="font-mono">{img.uploaderRollNo}</span>
                     </p>

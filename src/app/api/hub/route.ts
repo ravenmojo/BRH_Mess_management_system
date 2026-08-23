@@ -4,13 +4,77 @@ import { isAllowedEmail, verifyAdminPassword } from '@/lib/admin-auth';
 
 export async function GET(request: Request) {
   try {
-    const [movies, activities, achievements, emergencyContacts, suggestions] = await Promise.all([
+    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+
+    let [movies, activities, achievements, emergencyContacts, suggestions] = await Promise.all([
       prisma.movieScreening.findMany({ orderBy: { showTime: 'desc' } }),
-      prisma.activityParticipant.findMany({ orderBy: { createdAt: 'desc' } }),
+      prisma.activityParticipant.findMany({
+        where: {
+          OR: [
+            { eventDate: { gte: fourteenDaysAgo } },
+            { eventDate: null, createdAt: { gte: fourteenDaysAgo } },
+          ],
+        },
+        orderBy: [{ eventDate: 'asc' }, { createdAt: 'desc' }],
+      }),
       prisma.achievement.findMany({ orderBy: { date: 'desc' } }),
       prisma.emergencyContact.findMany({ orderBy: { order: 'asc' } }),
       prisma.suggestion.findMany({ orderBy: { createdAt: 'desc' } }),
     ]);
+
+    // Seed realistic dummy activities if database has 0 activities
+    if (activities.length === 0) {
+      try {
+        const dummyEvents = [
+          {
+            activity: 'Inter-Wing Table Tennis Championship',
+            studentName: 'Sports Committee',
+            hallRoll: 'Sports',
+            venue: 'BRH TT Room',
+            eventDate: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow
+            description: 'Singles and doubles knockouts across Wings A, B, C, and D.',
+          },
+          {
+            activity: 'BRH Open Mic & Acoustic Night',
+            studentName: 'Cultural Sub-Committee',
+            hallRoll: 'Cultural',
+            venue: 'BRH Central Lawn',
+            eventDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // In 3 days
+            description: 'Music, poetry, stand-up comedy, and acoustic jam session under the stars.',
+          },
+          {
+            activity: 'Annual Hall General Body Meeting (GBM)',
+            studentName: 'Hall Council',
+            hallRoll: 'Council',
+            venue: 'BRH Common Room',
+            eventDate: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000), // In 6 days
+            description: 'Discussion on mess upgrades, gym maintenance, and budget allocation.',
+          },
+          {
+            activity: 'Intra-Hall BGMI & Valorant Showdown',
+            studentName: 'E-Sports Society',
+            hallRoll: 'Gaming',
+            venue: 'BRH Recreation Room',
+            eventDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago (Concluded)
+            description: 'Intense squad battles and LAN championship.',
+          },
+        ];
+
+        for (const ev of dummyEvents) {
+          await prisma.activityParticipant.create({ data: ev });
+        }
+
+        activities = await prisma.activityParticipant.findMany({
+          where: {
+            OR: [
+              { eventDate: { gte: fourteenDaysAgo } },
+              { eventDate: null, createdAt: { gte: fourteenDaysAgo } },
+            ],
+          },
+          orderBy: [{ eventDate: 'asc' }, { createdAt: 'desc' }],
+        });
+      } catch (seedErr) {}
+    }
     
     return NextResponse.json(
       {
@@ -57,9 +121,12 @@ export async function POST(request: Request) {
     if (type === 'ACTIVITY') {
       const activity = await prisma.activityParticipant.create({
         data: {
-          studentName: payload.studentName,
-          hallRoll: payload.hallRoll || '21CS10001',
+          studentName: payload.studentName || 'Council Organizer',
+          hallRoll: payload.hallRoll || 'BRH',
           activity: payload.activity,
+          venue: payload.venue || 'BRH Common Room',
+          eventDate: payload.eventDate ? new Date(payload.eventDate) : new Date(),
+          description: payload.description || '',
         }
       });
       return NextResponse.json(activity);

@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { createPortal } from 'react-dom';
-import { Lock, Mail, ShieldAlert, ArrowLeft, LogOut, Loader2, Clock, Users, ShieldCheck, RefreshCw, MailCheck, KeyRound } from 'lucide-react';
+import { Lock, Mail, ShieldAlert, ArrowLeft, LogOut, Loader2, Clock, Users, ShieldCheck, RefreshCw, MailCheck, KeyRound, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
 import { AdminUsersModal } from './admin-users-modal';
+import { AdminStatsModal } from './admin-stats-modal';
 
 const SESSION_KEY = 'bros_admin_auth';
 const SESSION_DURATION_MS = 30 * 60 * 1000; // 30 minutes
@@ -17,6 +18,7 @@ interface AdminSession {
   adminEmail?: string;
   adminDesignation?: string;
   adminPassword?: string;
+  canOverride?: boolean;
 }
 
 interface AdminAuthContextType {
@@ -25,6 +27,7 @@ interface AdminAuthContextType {
   adminEmail?: string;
   adminDesignation?: string;
   adminPassword?: string;
+  canOverride?: boolean;
 }
 
 export const AdminAuthContext = createContext<AdminAuthContextType>({
@@ -62,12 +65,13 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
   const [adminEmail, setAdminEmail] = useState<string | undefined>(undefined);
   const [adminDesignation, setAdminDesignation] = useState<string | undefined>(undefined);
   const [adminPassword, setAdminPassword] = useState<string | undefined>(undefined);
+  const [canOverride, setCanOverride] = useState(false);
 
   // Login flow state
   const [identifier, setIdentifier] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'identifier' | 'otp'>('identifier');
-  const [pendingAdminInfo, setPendingAdminInfo] = useState<{ email: string; designation?: string } | null>(null);
+  const [pendingAdminInfo, setPendingAdminInfo] = useState<{ email: string; designation?: string; canOverride?: boolean } | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
@@ -75,6 +79,7 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
   const [timeLeftMs, setTimeLeftMs] = useState<number>(0);
   const [cooldown, setCooldown] = useState(60);
   const [manageModalOpen, setManageModalOpen] = useState(false);
+  const [statsModalOpen, setStatsModalOpen] = useState(false);
 
   const supabase = createClient();
 
@@ -88,6 +93,7 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
         setAdminEmail(session.adminEmail);
         setAdminDesignation(session.adminDesignation);
         setAdminPassword(session.adminPassword);
+        setCanOverride(Boolean(session.canOverride || session.isMasterAdmin));
         setTimeLeftMs(remaining);
         return true;
       } else {
@@ -97,6 +103,7 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
         setAdminEmail(undefined);
         setAdminDesignation(undefined);
         setAdminPassword(undefined);
+        setCanOverride(false);
         setError('Admin session expired (30 min limit). Please authenticate again.');
         setTimeLeftMs(0);
         return false;
@@ -107,6 +114,7 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
       setAdminEmail(undefined);
       setAdminDesignation(undefined);
       setAdminPassword(undefined);
+      setCanOverride(false);
       setTimeLeftMs(0);
       return false;
     }
@@ -115,6 +123,10 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
   useEffect(() => {
     setMounted(true);
     checkSession();
+    const savedAdminEmail = localStorage.getItem('bros_last_admin_email');
+    if (savedAdminEmail) {
+      setIdentifier(savedAdminEmail);
+    }
   }, []);
 
   // Lock body scrolling when unauthenticated
@@ -179,6 +191,7 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
           adminEmail: data.adminEmail,
           adminDesignation: data.adminDesignation,
           adminPassword: inputVal,
+          canOverride: true,
         };
         sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
         setIsAuthenticated(true);
@@ -186,8 +199,9 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
         setAdminEmail(data.adminEmail);
         setAdminDesignation(data.adminDesignation);
         setAdminPassword(inputVal);
+        setCanOverride(true);
         setTimeLeftMs(SESSION_DURATION_MS);
-        setIdentifier('');
+        // Retain previous non-master email in state / storage
         setLoading(false);
         return;
       }
@@ -195,7 +209,7 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
       // Case 2: Registered admin email -> trigger OTP
       if (res.ok && data.isRegisteredAdmin) {
         const targetEmail = data.email;
-        setPendingAdminInfo({ email: targetEmail, designation: data.designation });
+        setPendingAdminInfo({ email: targetEmail, designation: data.designation, canOverride: data.canOverride });
 
         // Send OTP via Supabase
         const { error: otpSendError } = await supabase.auth.signInWithOtp({
@@ -243,6 +257,9 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
         return;
       }
 
+      // Save non-master email to memory
+      localStorage.setItem('bros_last_admin_email', pendingAdminInfo.email);
+
       // Successful OTP verification for registered admin
       const session: AdminSession = {
         authenticated: true,
@@ -250,14 +267,15 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
         isMasterAdmin: false,
         adminEmail: pendingAdminInfo.email,
         adminDesignation: pendingAdminInfo.designation || '',
+        canOverride: Boolean(pendingAdminInfo.canOverride),
       };
       sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
       setIsAuthenticated(true);
       setIsMasterAdmin(false);
       setAdminEmail(pendingAdminInfo.email);
       setAdminDesignation(pendingAdminInfo.designation);
+      setCanOverride(Boolean(pendingAdminInfo.canOverride));
       setTimeLeftMs(SESSION_DURATION_MS);
-      setIdentifier('');
       setOtp('');
       setStep('identifier');
     } catch (err: any) {
@@ -330,6 +348,7 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
         adminEmail,
         adminDesignation,
         adminPassword,
+        canOverride,
       }}
     >
       <div className="relative space-y-4">
@@ -361,11 +380,21 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
             </div>
 
             <div className="flex items-center space-x-1.5 shrink-0">
+              {/* Analytics & Stats Button visible to all Admins */}
+              <button
+                onClick={() => setStatsModalOpen(true)}
+                className="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold transition-all shadow-xs touch-spring"
+                title="View Grievance Analytics & Stats"
+              >
+                <BarChart3 className="w-3.5 h-3.5 text-indigo-500" />
+                <span>Stats</span>
+              </button>
+
               {/* Manage Admins button visible ONLY to Master Admin */}
               {isMasterAdmin && (
                 <button
                   onClick={() => setManageModalOpen(true)}
-                  className="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-indigo-500/20"
+                  className="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-indigo-500/20 touch-spring"
                 >
                   <Users className="w-3.5 h-3.5" />
                   <span>Manage Admins</span>
@@ -374,7 +403,7 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
 
               <button
                 onClick={handleLogout}
-                className="flex items-center space-x-1 px-2.5 py-1 bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 hover:bg-rose-200 dark:hover:bg-rose-900 rounded-xl font-bold transition-colors text-xs"
+                className="flex items-center space-x-1 px-2.5 py-1 bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 hover:bg-rose-200 dark:hover:bg-rose-900 rounded-xl font-bold transition-colors text-xs touch-spring"
                 title="End Admin Session"
               >
                 <LogOut className="w-3 h-3" />
@@ -383,6 +412,12 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
             </div>
           </div>
         )}
+
+        {/* Analytics & Resolution Stats Modal */}
+        <AdminStatsModal
+          isOpen={statsModalOpen}
+          onClose={() => setStatsModalOpen(false)}
+        />
 
         {/* Master Admin Management Modal */}
         {isMasterAdmin && (

@@ -8,6 +8,7 @@ interface AdminUserRecord {
   id: string;
   email: string;
   designation?: string | null;
+  canOverride?: boolean;
   createdAt: string;
 }
 
@@ -39,6 +40,7 @@ export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
   // New admin form state
   const [newEmail, setNewEmail] = useState('');
   const [newDesignation, setNewDesignation] = useState('');
+  const [newCanOverride, setNewCanOverride] = useState(false);
   const [adding, setAdding] = useState(false);
 
   // Edit designation state
@@ -94,6 +96,7 @@ export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
       setSuccess(null);
       setNewEmail('');
       setNewDesignation('');
+      setNewCanOverride(false);
       setEditingId(null);
     }
   }, [isOpen]);
@@ -120,6 +123,7 @@ export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
         body: JSON.stringify({
           email: emailTrimmed,
           designation: newDesignation.trim(),
+          canOverride: newCanOverride,
         }),
       });
 
@@ -129,6 +133,7 @@ export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
         setSuccess(`Administrator ${emailTrimmed} registered successfully.`);
         setNewEmail('');
         setNewDesignation('');
+        setNewCanOverride(false);
         fetchAdmins();
       } else {
         setError(data.error || 'Failed to add administrator.');
@@ -170,6 +175,32 @@ export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
     }
   };
 
+  const handleToggleOverride = async (id: string, currentOverride: boolean) => {
+    setError(null);
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-password': getAdminPassword(),
+        },
+        body: JSON.stringify({
+          id,
+          canOverride: !currentOverride,
+        }),
+      });
+
+      if (res.ok) {
+        fetchAdmins();
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Failed to update override permissions.');
+      }
+    } catch {
+      setError('Network error updating permissions.');
+    }
+  };
+
   const handleDeleteAdmin = async (id: string, email: string) => {
     if (!confirm(`Are you sure you want to revoke admin access for ${email}?`)) return;
 
@@ -202,50 +233,43 @@ export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
       }}
     >
       <div
-        className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6 space-y-3.5 sm:space-y-4 animate-in fade-in zoom-in-95 duration-200 text-left max-h-[92dvh] sm:max-h-[86vh] flex flex-col my-auto"
+        className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6 space-y-4 max-h-[90vh] flex flex-col my-auto animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 gap-2">
-          <div className="flex items-center space-x-2.5 min-w-0 flex-1">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-blue-600/10 dark:bg-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
-              <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 sm:pb-4 shrink-0">
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="p-2 sm:p-2.5 bg-indigo-50 dark:bg-indigo-950/60 rounded-xl sm:rounded-2xl text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+              <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center space-x-1.5 flex-wrap gap-1">
-                <h2 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
-                  Manage Administrators
-                </h2>
-                <span className="text-[9px] sm:text-[10px] font-bold uppercase bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-full">
-                  Master Admin
-                </span>
-              </div>
-              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 truncate">
-                Grant or revoke admin access and assign roles.
+            <div>
+              <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                Admin User Management
+              </h2>
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium">
+                Add, manage designations & override rights (Master Admin)
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 sm:p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
-            aria-label="Close"
+            className="p-1.5 sm:p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
           >
-            <X className="w-4 h-4 sm:w-5 sm:h-5" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Alerts */}
+        {/* Feedback Notifications */}
         {error && (
-          <div className="p-2.5 sm:p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center space-x-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span className="break-words">{error}</span>
+          <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center space-x-2 shrink-0">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>{error}</span>
           </div>
         )}
-
         {success && (
-          <div className="p-2.5 sm:p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-semibold flex items-center space-x-2">
-            <UserCheck className="w-4 h-4 shrink-0" />
-            <span className="break-words">{success}</span>
+          <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-semibold flex items-center space-x-2 shrink-0">
+            <UserCheck className="w-4 h-4 flex-shrink-0" />
+            <span>{success}</span>
           </div>
         )}
 
@@ -284,11 +308,21 @@ export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
             </div>
           </div>
 
-          <div className="flex justify-end pt-0.5">
+          <div className="flex items-center justify-between pt-1">
+            <label className="flex items-center space-x-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={newCanOverride}
+                onChange={(e) => setNewCanOverride(e.target.checked)}
+                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span>Grant Resolution Override Permission</span>
+            </label>
+
             <button
               type="submit"
               disabled={adding || !newEmail.trim()}
-              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50"
+              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50 touch-spring"
             >
               {adding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
               <span>Add Administrator</span>
@@ -315,7 +349,7 @@ export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
                 return (
                   <div
                     key={admin.id}
-                    className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-start sm:items-center justify-between gap-2 text-xs flex-col sm:flex-row"
+                    className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-start sm:items-center justify-between gap-2 text-xs flex-col sm:flex-row"
                   >
                     <div className="space-y-1 min-w-0 w-full sm:w-auto flex-1">
                       <div className="flex items-center space-x-2 flex-wrap gap-1">
@@ -331,6 +365,17 @@ export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
                             (No designation set)
                           </span>
                         )}
+                        <button
+                          onClick={() => handleToggleOverride(admin.id, Boolean(admin.canOverride))}
+                          className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full border transition-all ${
+                            admin.canOverride
+                              ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700'
+                          }`}
+                          title="Click to toggle status override rights"
+                        >
+                          {admin.canOverride ? '✓ Can Override Status' : 'Standard Rights'}
+                        </button>
                       </div>
 
                       {/* Edit Designation Field */}
@@ -371,7 +416,7 @@ export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
                             setEditingId(admin.id);
                             setEditingDesignation(admin.designation || '');
                           }}
-                          className="p-2 sm:p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                          className="p-2 sm:p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors touch-spring"
                           title="Edit Designation"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
@@ -379,7 +424,7 @@ export function AdminUsersModal({ isOpen, onClose }: AdminUsersModalProps) {
                       )}
                       <button
                         onClick={() => handleDeleteAdmin(admin.id, admin.email)}
-                        className="p-2 sm:p-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800/60 transition-colors"
+                        className="p-2 sm:p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 transition-colors border border-rose-200 dark:border-rose-800 touch-spring"
                         title="Revoke Admin Access"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

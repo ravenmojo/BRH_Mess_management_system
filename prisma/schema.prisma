@@ -80,6 +80,15 @@ model Feedback {
   resolvedByEmail String?      // Resolver admin email
   resolvedByRole  String?      // Resolver designation / role
   resolvedAt      DateTime?    // Resolution timestamp
+  isEscalated     Boolean      @default(false)
+  escalatedBy     String?      // Email / identifier of admin who escalated
+  escalatedRemark String?      // Optional escalation remark
+  escalatedAt     DateTime?    // Escalation timestamp
+  adminResolved   Boolean      @default(false) // Marked resolved by council/admin
+  userResolved    Boolean      @default(false) // Marked resolved by student author
+  overriddenBy    String?      // Admin email who overrode user status
+  overriddenAt    DateTime?    // Timestamp of override
+  overriddenReason String?     // Private admin override note
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 }
@@ -88,8 +97,21 @@ model AdminUser {
   id          String   @id @default(uuid())
   email       String   @unique
   designation String?  @default("")
+  canOverride Boolean  @default(false) // Granted by Master Admin to override user status
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model GrievanceStatSummary {
+  id                         String   @id @default(uuid())
+  category                   String   @unique // e.g. REGULAR_MESS, MAINTENANCE_WASHROOM, etc.
+  totalSubmitted             Int      @default(0)
+  totalResolved              Int      @default(0)
+  totalTwoWayVerified        Int      @default(0)
+  totalEscalated             Int      @default(0)
+  totalResolutionTimeMinutes BigInt   @default(0)
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
 }
 
 model User {
@@ -168,11 +190,14 @@ model Suggestion {
 }
 
 model ActivityParticipant {
-  id          String   @id @default(uuid())
-  studentName String
-  hallRoll    String
-  activity    String   // MUSIC, ARTS, SPORTS, etc.
-  createdAt   DateTime @default(now())
+  id          String    @id @default(uuid())
+  studentName String?
+  hallRoll    String?
+  activity    String    // Event name / Activity
+  venue       String?   @default("BRH Common Room")
+  eventDate   DateTime? // Event date & time
+  description String?
+  createdAt   DateTime  @default(now())
 }
 
 model WingFeedback {

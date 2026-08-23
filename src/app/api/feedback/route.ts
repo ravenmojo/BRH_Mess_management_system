@@ -66,10 +66,16 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const facility = searchParams.get('facility');
   const search = searchParams.get('search')?.trim().toLowerCase();
+  const authorEmail = searchParams.get('authorEmail')?.trim().toLowerCase();
+  const isAdmin = searchParams.get('isAdmin') === 'true';
 
   try {
     const whereClause: any = {};
-    if (facility) {
+
+    if (authorEmail) {
+      // Universal student lookup across all categories
+      whereClause.email = authorEmail;
+    } else if (facility) {
       if (facility === 'MAINTENANCE') {
         whereClause.facilityType = { in: MAINTENANCE_TYPES };
       } else {
@@ -77,35 +83,69 @@ export async function GET(request: Request) {
       }
     }
 
+    // Public feed filter: Omit grievances resolved more than 30 days ago
+    if (!isAdmin && !authorEmail) {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      whereClause.OR = [
+        { status: { not: 'RESOLVED' } },
+        { resolvedAt: { gte: thirtyDaysAgo } },
+        { resolvedAt: null },
+      ];
+    }
+
+    const orderByClause: any[] = isAdmin
+      ? [{ isEscalated: 'desc' }, { escalatedAt: 'desc' }, { createdAt: 'desc' }]
+      : [{ createdAt: 'desc' }];
+
     const feedbacks = await prisma.feedback.findMany({
       where: whereClause,
-      orderBy: { createdAt: 'desc' },
+      orderBy: orderByClause,
     });
 
-    if (feedbacks.length === 0) {
-      let filtered = facility
-        ? facility === 'MAINTENANCE'
-          ? inMemoryFeedbacks.filter((f) => f.facilityType.startsWith('MAINTENANCE_'))
-          : inMemoryFeedbacks.filter((f) => f.facilityType === facility)
-        : inMemoryFeedbacks;
+    // Background 45-day auto-purge & statistics accumulator (non-blocking)
+    (async () => {
+      try {
+        const fortyFiveDaysAgo = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000);
+        const purgeCandidates = await prisma.feedback.findMany({
+          where: {
+            status: 'RESOLVED',
+            resolvedAt: { lt: fortyFiveDaysAgo },
+          },
+          take: 10,
+        });
 
-      if (search) {
-        filtered = filtered.filter(
-          (f) =>
-            (f.ticketNumber && f.ticketNumber.toLowerCase().includes(search)) ||
-            (f.roomNo && f.roomNo.toLowerCase().includes(search)) ||
-            (f.studentName && f.studentName.toLowerCase().includes(search)) ||
-            (f.comment && f.comment.toLowerCase().includes(search))
-        );
-      }
+        for (const item of purgeCandidates) {
+          const diffMinutes = item.resolvedAt && item.createdAt
+            ? Math.max(0, Math.round((new Date(item.resolvedAt).getTime() - new Date(item.createdAt).getTime()) / (1000 * 60)))
+            : 0;
 
-      const sanitized = filtered.map((f, idx) => ({
-        ...f,
-        ticketNumber: f.ticketNumber || ensureTicketNumber(f, idx + 1),
-      }));
+          await prisma.grievanceStatSummary.upsert({
+            where: { category: item.facilityType },
+            create: {
+              category: item.facilityType,
+              totalSubmitted: 1,
+              totalResolved: 1,
+              totalTwoWayVerified: item.adminResolved && item.userResolved ? 1 : 0,
+              totalEscalated: item.isEscalated ? 1 : 0,
+              totalResolutionTimeMinutes: BigInt(diffMinutes),
+            },
+            update: {
+              totalSubmitted: { increment: 1 },
+              totalResolved: { increment: 1 },
+              totalTwoWayVerified: { increment: item.adminResolved && item.userResolved ? 1 : 0 },
+              totalEscalated: { increment: item.isEscalated ? 1 : 0 },
+              totalResolutionTimeMinutes: { increment: BigInt(diffMinutes) },
+            },
+          });
 
-      return NextResponse.json(sanitized);
-    }
+          if (item.mediaUrl) {
+            await deleteFromCloudinary(item.mediaUrl).catch(() => {});
+          }
+
+          await prisma.feedback.delete({ where: { id: item.id } }).catch(() => {});
+        }
+      } catch (purgeErr) {}
+    })();
 
     let sanitizedFeedbacks = feedbacks.map((fb, idx) => ({
       ...fb,
@@ -124,11 +164,13 @@ export async function GET(request: Request) {
 
     return NextResponse.json(sanitizedFeedbacks);
   } catch (error) {
-    let filtered = facility
-      ? facility === 'MAINTENANCE'
-        ? inMemoryFeedbacks.filter((f) => f.facilityType.startsWith('MAINTENANCE_'))
-        : inMemoryFeedbacks.filter((f) => f.facilityType === facility)
-      : inMemoryFeedbacks;
+    let filtered = authorEmail
+      ? inMemoryFeedbacks.filter((f) => f.email === authorEmail)
+      : facility
+        ? facility === 'MAINTENANCE'
+          ? inMemoryFeedbacks.filter((f) => f.facilityType.startsWith('MAINTENANCE_'))
+          : inMemoryFeedbacks.filter((f) => f.facilityType === facility)
+        : inMemoryFeedbacks;
 
     if (search) {
       filtered = filtered.filter(
@@ -159,91 +201,37 @@ export async function POST(request: Request) {
 
     const trimmedEmail = email.trim().toLowerCase();
     if (!isAllowedEmail(trimmedEmail)) {
-      return NextResponse.json({ error: 'Only .iitkgp.ac.in emails or authorized accounts are allowed.' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Grievance submission is restricted to IIT KGP students (@kgpian.iitkgp.ac.in or @iitkgp.ac.in).' },
+        { status: 403 }
+      );
+    }
+
+    if (!comment || typeof comment !== 'string' || !comment.trim()) {
+      return NextResponse.json({ error: 'Comment description is required.' }, { status: 400 });
     }
 
     if (!roomNo || !isValidRoomNo(roomNo)) {
-      return NextResponse.json(
-        { error: 'Valid Room No. is required (format: A-515, wing A-D, 3-digit room).' },
-        { status: 400 }
-      );
-    }
-
-    if (!comment) {
-      return NextResponse.json(
-        { error: 'Grievance description is required.' },
-        { status: 400 }
-      );
-    }
-
-    const validFacilities = [
-      'REGULAR_MESS', 'NIGHT_CANTEEN',
-      'MAINTENANCE_WASHROOM', 'MAINTENANCE_WATER',
-      'MAINTENANCE_ELECTRICAL', 'MAINTENANCE_CIVIL', 'MAINTENANCE_CLEANING',
-      'MAINTENANCE_OUTDOOR'
-    ];
-    const finalFacility = validFacilities.includes(facilityType) ? facilityType : 'REGULAR_MESS';
-
-    // --- Rate Limiting ---
-    // 1/hour per section type (mess/canteen OR maintenance)
-    // 3/day combined across all sections
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-
-    try {
-      // Per-hour limit: check same facilityType group
-      const isMaintenance = finalFacility.startsWith('MAINTENANCE_');
-      const hourWhereClause: any = {
-        email: trimmedEmail,
-        createdAt: { gte: oneHourAgo },
-      };
-      if (isMaintenance) {
-        hourWhereClause.facilityType = { in: MAINTENANCE_TYPES };
-      } else {
-        hourWhereClause.facilityType = finalFacility;
-      }
-
-      const hourlyCount = await prisma.feedback.count({ where: hourWhereClause });
-      if (hourlyCount >= 1) {
-        return NextResponse.json(
-          { error: 'You can only submit 1 grievance per hour in this section. Please try again later.' },
-          { status: 429 }
-        );
-      }
-
-      // Per-day limit: combined across ALL sections
-      const dailyCount = await prisma.feedback.count({
-        where: {
-          email: trimmedEmail,
-          createdAt: { gte: todayStart },
-        },
-      });
-      if (dailyCount >= 3) {
-        return NextResponse.json(
-          { error: 'Daily limit reached (3 grievances/day across all sections). Please try again tomorrow.' },
-          { status: 429 }
-        );
-      }
-    } catch (dbErr) {
-      // If DB is unavailable, allow submission (fallback)
-      console.warn('Rate limit DB check failed, allowing submission:', dbErr);
+      return NextResponse.json({ error: 'Please enter a valid room number (e.g. A-515, B-201).' }, { status: 400 });
     }
 
     const normalizedRoomNo = roomNo.trim().toUpperCase();
-    const finalStudentName = (studentName && studentName.trim()) || 'Anonymous';
-    const catCode = getCategoryCode(finalFacility);
-    const dateStr = formatTicketDate(new Date());
-    const ticketPrefix = `${normalizedRoomNo}${catCode}${dateStr}`;
+    const finalFacility = facilityType || 'REGULAR_MESS';
+    const finalStudentName = studentName && studentName.trim() ? studentName.trim() : 'Anonymous';
 
-    // Calculate count for today
+    const categoryCode = getCategoryCode(finalFacility);
+    const dateStr = formatTicketDate();
+    const ticketPrefix = buildTicketNumber(normalizedRoomNo, categoryCode, dateStr);
+
     let count = 1;
     try {
       const existingCount = await prisma.feedback.count({
         where: {
           roomNo: normalizedRoomNo,
           facilityType: finalFacility,
-          createdAt: { gte: todayStart },
+          createdAt: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0)),
+          },
         },
       });
       count = existingCount + 1;
@@ -252,14 +240,13 @@ export async function POST(request: Request) {
         (f) =>
           f.roomNo === normalizedRoomNo &&
           f.facilityType === finalFacility &&
-          formatTicketDate(f.createdAt) === dateStr
+          formatTicketDate(new Date(f.createdAt)) === dateStr
       );
       count = matchingInMemory.length + 1;
     }
 
     let generatedTicketNumber = `${ticketPrefix}${count}`;
 
-    // Ensure uniqueness against memory list
     while (inMemoryFeedbacks.some((f) => f.ticketNumber === generatedTicketNumber)) {
       count++;
       generatedTicketNumber = `${ticketPrefix}${count}`;
@@ -287,7 +274,7 @@ export async function POST(request: Request) {
         data: {
           ticketNumber: generatedTicketNumber,
           studentName: finalStudentName,
-          hallRoll: normalizedRoomNo, // Legacy field — store roomNo here for backward compat
+          hallRoll: normalizedRoomNo,
           roomNo: normalizedRoomNo,
           email: trimmedEmail,
           comment,
@@ -307,16 +294,64 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  if (!verifyAdminPassword(request)) {
-    return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
-  }
-
   try {
     const body = await request.json();
-    const { id, status, remark, resolvedBy, resolvedByEmail, resolvedByRole } = body;
+    const {
+      id,
+      status,
+      remark,
+      resolvedBy,
+      resolvedByEmail,
+      resolvedByRole,
+      isEscalated,
+      escalatedBy,
+      escalatedRemark,
+      isStudentAuthor,
+      authorEmail,
+      adminResolved,
+      userResolved,
+      overriddenBy,
+      overriddenReason,
+    } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'Feedback ID is required.' }, { status: 400 });
+    }
+
+    // Student author self-resolution flow
+    if (isStudentAuthor) {
+      if (!authorEmail) {
+        return NextResponse.json({ error: 'Verified author email is required.' }, { status: 400 });
+      }
+
+      const existing = await prisma.feedback.findUnique({ where: { id } });
+      if (existing && existing.email && existing.email.toLowerCase() !== authorEmail.toLowerCase()) {
+        return NextResponse.json({ error: 'Unauthorized: Email does not match grievance author.' }, { status: 403 });
+      }
+
+      const updateData: any = {
+        userResolved: true,
+        status: 'RESOLVED',
+        resolvedAt: existing?.resolvedAt || new Date(),
+      };
+
+      if (!existing?.resolvedBy) {
+        updateData.resolvedBy = 'Boarder (Author)';
+        updateData.resolvedByEmail = authorEmail;
+        updateData.resolvedByRole = 'Boarder';
+      }
+
+      await prisma.feedback.update({
+        where: { id },
+        data: updateData,
+      });
+
+      return NextResponse.json({ message: 'Grievance marked as resolved by author!' });
+    }
+
+    // Admin updates require admin authorization
+    if (!verifyAdminPassword(request)) {
+      return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
     }
 
     const isResolving = status === 'RESOLVED';
@@ -329,6 +364,23 @@ export async function PATCH(request: Request) {
     if (resolvedByEmail !== undefined) updateData.resolvedByEmail = resolvedByEmail;
     if (resolvedByRole !== undefined) updateData.resolvedByRole = resolvedByRole;
     if (resolutionTimestamp !== undefined) updateData.resolvedAt = resolutionTimestamp;
+
+    // Escalation fields
+    if (isEscalated !== undefined) {
+      updateData.isEscalated = Boolean(isEscalated);
+      updateData.escalatedAt = isEscalated ? new Date() : null;
+      if (escalatedBy) updateData.escalatedBy = escalatedBy;
+      if (escalatedRemark !== undefined) updateData.escalatedRemark = escalatedRemark;
+    }
+
+    // Two-way verification & override fields
+    if (adminResolved !== undefined) updateData.adminResolved = Boolean(adminResolved);
+    if (userResolved !== undefined) updateData.userResolved = Boolean(userResolved);
+    if (overriddenBy) {
+      updateData.overriddenBy = overriddenBy;
+      updateData.overriddenAt = new Date();
+      if (overriddenReason !== undefined) updateData.overriddenReason = overriddenReason;
+    }
 
     const index = inMemoryFeedbacks.findIndex((f) => f.id === id);
     if (index !== -1) {

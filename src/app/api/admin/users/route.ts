@@ -15,6 +15,7 @@ export async function GET(request: Request) {
         id: true,
         email: true,
         designation: true,
+        canOverride: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { email, designation } = body;
+    const { email, designation, canOverride } = body;
 
     if (!email || typeof email !== 'string') {
       return NextResponse.json({ error: 'Valid admin email is required.' }, { status: 400 });
@@ -55,6 +56,7 @@ export async function POST(request: Request) {
       data: {
         email: normalizedEmail,
         designation: designation ? designation.trim() : '',
+        canOverride: Boolean(canOverride),
       },
     });
 
@@ -64,7 +66,7 @@ export async function POST(request: Request) {
   }
 }
 
-// PATCH: Update admin designation
+// PATCH: Update admin designation or permissions
 export async function PATCH(request: Request) {
   if (!verifyAdminPassword(request)) {
     return NextResponse.json({ error: 'Unauthorized: Master admin access required.' }, { status: 401 });
@@ -72,28 +74,32 @@ export async function PATCH(request: Request) {
 
   try {
     const body = await request.json();
-    const { id, email, designation } = body;
+    const { id, email, designation, canOverride } = body;
 
     if (!id && !email) {
       return NextResponse.json({ error: 'Admin ID or email is required.' }, { status: 400 });
     }
 
+    const updateData: any = {};
+    if (designation !== undefined) updateData.designation = designation.trim();
+    if (canOverride !== undefined) updateData.canOverride = Boolean(canOverride);
+
     let updated;
     if (id) {
       updated = await prisma.adminUser.update({
         where: { id },
-        data: { designation: designation !== undefined ? designation.trim() : undefined },
+        data: updateData,
       });
     } else {
       updated = await prisma.adminUser.update({
         where: { email: email.trim().toLowerCase() },
-        data: { designation: designation !== undefined ? designation.trim() : undefined },
+        data: updateData,
       });
     }
 
     return NextResponse.json(updated);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed to update admin designation' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Failed to update admin' }, { status: 500 });
   }
 }
 

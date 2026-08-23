@@ -13,7 +13,7 @@ export function Footer() {
       </p>
       <p className="text-xs text-slate-700 dark:text-slate-300 font-medium">TeNSoRE Lab, IIT Kharagpur</p>
       <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 tracking-wider uppercase font-bold pt-1">
-        version 0.9.5
+        version 0.9.9
       </p>
     </div>
   );

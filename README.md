@@ -1,6 +1,6 @@
 # BROS – BR Ambedkar Hall Operations & Services
 
-[![Version](https://img.shields.io/badge/version-v0.9.5-blue.svg)](https://github.com/ravenmojo/BRH_Mess_management_system)
+[![Version](https://img.shields.io/badge/version-v0.9.9-blue.svg)](https://github.com/ravenmojo/BRH_Mess_management_system)
 
 A comprehensive, mobile-first Next.js web application built as a centralized digital platform for the students of **B.R. Ambedkar Hall (BRH) at IIT Kharagpur**. BROS covers mess management, maintenance grievances, night canteen, student polls, a media gallery, and a community information hub — all protected by inline OTP verification, server-side rate limits, and multi-tier stakeholder access controls.
 
@@ -8,30 +8,32 @@ A comprehensive, mobile-first Next.js web application built as a centralized dig
 
 ---
 
-## 🚀 Release Notes — Version 0.9.5
+## 🚀 Release Notes — Version 0.9.9
 
-### 📌 What's New in v0.9.5
+### 📌 What's New in v0.9.9
 
-- **🎫 Automated Grievance Ticket Number System:** Every grievance across Mess, Maintenance, and Night Canteen is automatically assigned a structured, unique ticket identifier in the format: **`<room no><two letter category code><date><count>`** (e.g. `D-515MS1908261`, `D-515DW1908261`).
-  - Standardized 2-letter subcategory codes: **`MS`** (Mess), **`NC`** (Night Canteen), **`WR`** (Washrooms), **`DW`** (Drinking Water), **`EL`** (Electrical), **`CV`** (Civil), **`CL`** (Cleaning), and **`OD`** (Outdoors).
-  - Built an interactive monospace `TicketBadge` component with 1-click clipboard copy and animated confirmation.
-- **🔍 Universal Real-Time Grievance Search:** Search bars across Mess Admin (`/admin`), Maintenance Admin (`/maintenance/admin`), and Night Canteen Admin (`/night-canteen/admin`) allow instant filtering by Ticket ID, Room Number, student name, or complaint keyword.
-- **🏆 Hall Info Hub Reordering & Full Admin Management:**
-  - Reordered tabs: **Movies** ➔ **Activities** ➔ 🏆 **Awards** ➔ 💡 **Ideas** ➔ 📞 **Contacts**.
-  - Added dedicated CRUD admin panels in `/hub/admin` for movie screenings, hall achievements, student activities, ideas, and emergency contacts.
-  - Movie screening admin portal supports poster file uploads and direct clipboard image pasting with live progress indicators.
-- **👥 Multilevel Stakeholder Resolution Attribution:**
-  - Resolving a grievance records the administrator's email, designation, and timestamp.
-  - Student and admin cards render a verification stamp: `✓ Resolved by: <Email / Designation> • <Date & Time in IST>`.
-- **🔒 Stealth Master Password & OTP-Based Admin Access Control:**
-  - Single, clean gateway prompt: *"Enter Admin Email"*.
-  - Typing the server-configured Master Password unlocks full **Master Admin** access with zero UI hints.
-  - Entering a registered admin email dispatches a 6-digit OTP via Supabase Auth. Unauthorized emails are rejected server-side without leaking the list of active admins.
-  - Master Admins can open the **"Manage Admins"** panel to dynamically register admin accounts, update designations, or revoke access.
-- **🖼️ Media Gallery Resilience & Layout Enhancements:**
-  - Robust multi-format media parser ensuring image/video thumbnails render cleanly across all device widths.
-  - Standardized hero banner heights with catchy hall taglines across Homepage, Maintenance, and Hub pages.
-  - Restored high-contrast 3-column subcategory grid on the student Maintenance portal.
+- **📲 Seamless Homepage Swipe Navigation:**
+  - Hardware-accelerated horizontal swipe gestures between the 3 core homepages: **`/` (Mess)** ⇄ **`/maintenance` (Maintenance)** ⇄ **`/hub` (Hall Info Hub)**.
+  - Smooth directional slide animations with intelligent touch filtering (ignoring inputs, textareas, sliders, and open dialogs).
+- **💎 Executive Glassmorphism & Jewel-Tone Color System:**
+  - Refined Bottom Navigation Bar with dedicated jewel-tone active pills: **Royal Blue** (Mess), **Sky Blue** (Maintenance), and **Slate Indigo** (Info Hub).
+  - Replaced loud neon fills with elegant, frosted glass cards, subtle luminous borders, and tailored hover states across all pages.
+- **🍲 Professional Meal Badges & Harmonized Quick Access:**
+  - Frosted glass icon badges for Breakfast (☕ Amber), Lunch (☀️ Orange), Dinner (🌙 Indigo), and Serving Now (🟢 Emerald).
+  - Differentiated quick access tiles on Homepage: Full Menu (Blue), Canteen (Purple/Charcoal), Grievances (Rose), Mess Poll (Amber/Gold), and Duty Gallery (Green).
+- **🛠️ Maintenance Subcategories & Common Area Cleaning Governance:**
+  - Unique glassy color themes for all 6 maintenance categories (Washroom, Drinking Water, Electrical, Civil [Warm Ochre], Cleaning [Purple], Gym & Outdoors [Emerald Green]).
+  - Dynamic **"Common Areas Only"** policy notification when selecting the Cleaning category.
+- **🗳️ Unified Mess Poll Experience:**
+  - Dedicated warm amber/sunburst styling throughout `/poll` with real-time percentage indicators and vote action buttons.
+- **🏛️ Hall Info Hub Redesign & Colorful Contacts Directory:**
+  - Unified all movie screenings, student activities, idea submissions, and hall achievements into the core glassmorphism design language.
+  - Vibrantly colored contact initial badges with standardized quick-dial call buttons.
+- **👥 Two-Way Verifiable Resolution & Stealth Admin Override:**
+  - Differentiates between admin-only resolved vs two-way verified (admin + student) grievances.
+  - Master Admin configurable override permissions with admin-only audit trails.
+- **📊 45-Day Archive & Permanent Statistical Aggregates:**
+  - Resolved maintenance grievances are archived after 45 days while statistical metrics (turnaround times, category frequencies, resolution rates) are permanently retained for administrative analytics.
 
 ---
 
@@ -99,6 +101,6 @@ A comprehensive, mobile-first Next.js web application built as a centralized dig
 ---
 
 ## 📄 License & Footnote
-- **Version:** `BROS v0.9.5`
+- **Version:** `BROS v0.9.9`
 - **Developed by:** Souradeep Satpathy (TeNSoRE Lab, IIT Kharagpur)
 - Open Source — Give credits to this repository for usage or forks.

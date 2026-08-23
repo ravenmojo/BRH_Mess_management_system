@@ -28,10 +28,14 @@ export function ThemeToggle() {
           });
         }
       }}
-      className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 border border-slate-200/60 dark:border-slate-700/60 hover:scale-105 active:scale-95"
+      className="p-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 border border-slate-200/80 dark:border-slate-700/80 hover:scale-105 active:scale-95 shadow-sm"
       aria-label="Toggle theme"
     >
-      {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
+      {theme === 'dark' ? (
+        <Sun className="w-4 h-4 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
+      ) : (
+        <Moon className="w-4 h-4 text-indigo-600 drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
+      )}
     </button>
   );
 }
