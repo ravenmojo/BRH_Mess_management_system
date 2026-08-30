@@ -59,6 +59,11 @@ This document tracks all feature implementations, bug fixes, UI/UX enhancements,
 - **45-Day Grievance Archive:** Detailed complaint records purged after 45 days.
 - **Permanent Statistical Memory:** Grievance counts, average resolution turnaround times per category, and resolution trends are permanently aggregated in `GrievanceStatSummary` for executive analytics.
 
+### 9. ⏱️ Intelligent Inactivity Tracking & Auto-Lock with State Preservation
+- **10-Minute Idle Detection:** Background listeners detect mouse, keyboard, touch, and scroll interactions. If no activity is detected for 10 minutes, a high-priority warning modal pops up.
+- **1-Minute Countdown Auto-Logout:** An animated 60-second timer gives administrators time to click **"Continue Session"** (which refreshes the session) or **"Log Out Now"**. If unattended for 60 seconds, the session auto-locks.
+- **Complete In-Memory State Preservation:** When locked, the underlying form inputs, typed remarks, filter selections, and dashboard states are preserved behind the blur backdrop so no in-progress work is lost upon re-authenticating.
+
 ---
 
 ## 📌 Version 0.9.5 (v0.9.5) — Automated Grievance Ticketing & Hall Hub Overhaul

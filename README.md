@@ -34,6 +34,8 @@ A comprehensive, mobile-first Next.js web application built as a centralized dig
   - Configurable resolution override permissions with internal audit trails.
 - **📊 45-Day Archive & Permanent Statistical Aggregates:**
   - Resolved maintenance grievances are archived after 45 days while statistical metrics (turnaround times, category frequencies, resolution rates) are permanently retained for administrative analytics.
+- **⏱️ Inactivity Detection & 60s Auto-Lock Prompt:**
+  - Automatically triggers a countdown prompt if no admin interaction is detected for 10 minutes, with auto-lock after 1 minute of unattended prompt and complete in-memory draft state preservation.
 
 ---
 

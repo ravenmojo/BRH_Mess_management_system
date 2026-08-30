@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
 import { createPortal } from 'react-dom';
-import { Lock, Mail, ShieldAlert, ArrowLeft, LogOut, Loader2, Clock, Users, ShieldCheck, RefreshCw, MailCheck, KeyRound, BarChart3 } from 'lucide-react';
+import { Lock, Mail, ShieldAlert, ArrowLeft, LogOut, Loader2, Clock, Users, ShieldCheck, RefreshCw, MailCheck, KeyRound, BarChart3, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
 import { AdminUsersModal } from './admin-users-modal';
@@ -10,6 +10,8 @@ import { AdminStatsModal } from './admin-stats-modal';
 
 const SESSION_KEY = 'bros_admin_auth';
 const SESSION_DURATION_MS = 30 * 60 * 1000; // 30 minutes
+const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes of idle time
+const INACTIVITY_POPUP_COUNTDOWN_SEC = 60; // 1 minute (60 seconds) warning before auto-logout
 
 interface AdminSession {
   authenticated: boolean;
@@ -81,7 +83,39 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
   const [manageModalOpen, setManageModalOpen] = useState(false);
   const [statsModalOpen, setStatsModalOpen] = useState(false);
 
+  // Inactivity tracking state
+  const [showInactivityWarning, setShowInactivityWarning] = useState(false);
+  const [inactivitySecondsLeft, setInactivitySecondsLeft] = useState(INACTIVITY_POPUP_COUNTDOWN_SEC);
+  const lastActivityTimeRef = useRef<number>(Date.now());
+
   const supabase = createClient();
+
+  const handleContinueSession = () => {
+    setShowInactivityWarning(false);
+    lastActivityTimeRef.current = Date.now();
+
+    // Extend session in sessionStorage by another 30 mins
+    const session = getStoredSession();
+    if (session && session.authenticated) {
+      const newExpiresAt = Date.now() + SESSION_DURATION_MS;
+      session.expiresAt = newExpiresAt;
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      setTimeLeftMs(SESSION_DURATION_MS);
+    }
+  };
+
+  const handleAutoLogout = (reasonMessage?: string) => {
+    sessionStorage.removeItem(SESSION_KEY);
+    setIsAuthenticated(false);
+    setIsMasterAdmin(false);
+    setAdminEmail(undefined);
+    setAdminDesignation(undefined);
+    setAdminPassword(undefined);
+    setCanOverride(false);
+    setShowInactivityWarning(false);
+    setError(reasonMessage || 'Admin session locked due to inactivity (10 min idle). Please authenticate again.');
+    setTimeLeftMs(0);
+  };
 
   const checkSession = () => {
     const session = getStoredSession();
@@ -104,6 +138,7 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
         setAdminDesignation(undefined);
         setAdminPassword(undefined);
         setCanOverride(false);
+        setShowInactivityWarning(false);
         setError('Admin session expired (30 min limit). Please authenticate again.');
         setTimeLeftMs(0);
         return false;
@@ -115,6 +150,7 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
       setAdminDesignation(undefined);
       setAdminPassword(undefined);
       setCanOverride(false);
+      setShowInactivityWarning(false);
       setTimeLeftMs(0);
       return false;
     }
@@ -129,9 +165,9 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
     }
   }, []);
 
-  // Lock body scrolling when unauthenticated
+  // Lock body scrolling when unauthenticated or showing inactivity popup
   useEffect(() => {
-    if (isAuthenticated === false) {
+    if (isAuthenticated === false || showInactivityWarning) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
@@ -139,9 +175,9 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
     return () => {
       document.body.style.overflow = '';
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, showInactivityWarning]);
 
-  // Countdown timer for 30 min session
+  // Countdown timer for 30 min total session
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -154,6 +190,59 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
 
     return () => clearInterval(interval);
   }, [isAuthenticated]);
+
+  // Inactivity tracking & warning popup trigger (10 min idle limit)
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setShowInactivityWarning(false);
+      return;
+    }
+
+    lastActivityTimeRef.current = Date.now();
+
+    const handleUserActivity = () => {
+      // Only track idle time when warning popup is NOT currently visible
+      if (!showInactivityWarning) {
+        lastActivityTimeRef.current = Date.now();
+      }
+    };
+
+    const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+    events.forEach((ev) => window.addEventListener(ev, handleUserActivity, { passive: true }));
+
+    const idleCheckInterval = setInterval(() => {
+      if (showInactivityWarning) return;
+
+      const idleTime = Date.now() - lastActivityTimeRef.current;
+      if (idleTime >= INACTIVITY_TIMEOUT_MS) {
+        setShowInactivityWarning(true);
+        setInactivitySecondsLeft(INACTIVITY_POPUP_COUNTDOWN_SEC);
+      }
+    }, 1000);
+
+    return () => {
+      events.forEach((ev) => window.removeEventListener(ev, handleUserActivity));
+      clearInterval(idleCheckInterval);
+    };
+  }, [isAuthenticated, showInactivityWarning]);
+
+  // Inactivity warning popup countdown (60s countdown to auto-logout)
+  useEffect(() => {
+    if (!showInactivityWarning) return;
+
+    const timer = setInterval(() => {
+      setInactivitySecondsLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          handleAutoLogout('Admin session locked due to inactivity (10 min idle). Please authenticate again.');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [showInactivityWarning]);
 
   // Cooldown timer for OTP resend
   useEffect(() => {
@@ -311,6 +400,7 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
   };
 
   const handleLogout = () => {
+    setShowInactivityWarning(false);
     sessionStorage.removeItem(SESSION_KEY);
     setIsAuthenticated(false);
     setIsMasterAdmin(false);
@@ -437,6 +527,55 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
         >
           {children}
         </div>
+
+        {/* Inactivity Warning Modal Portal (10 min idle warning popup with 1 min auto-logout countdown) */}
+        {isAuth &&
+          showInactivityWarning &&
+          mounted &&
+          createPortal(
+            <div className="fixed inset-0 z-[100000] overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 min-h-[100dvh]">
+              <div className="relative z-20 w-full max-w-md p-6 sm:p-7 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-amber-300/90 dark:border-amber-500/50 space-y-5 text-center animate-in fade-in zoom-in-95 duration-200 my-auto">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-amber-500/15 border border-amber-500/30 rounded-2xl flex items-center justify-center mx-auto text-amber-600 dark:text-amber-400 shadow-inner">
+                  <AlertTriangle className="w-7 h-7 sm:w-8 sm:h-8 animate-pulse text-amber-600 dark:text-amber-400" />
+                </div>
+
+                <div className="space-y-1.5">
+                  <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
+                    Are You Still Working?
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+                    No activity has been detected for 10 minutes. For security, your session will automatically lock in:
+                  </p>
+                </div>
+
+                <div className="py-2.5 px-5 rounded-2xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800/60 inline-flex items-center space-x-2 text-amber-700 dark:text-amber-300 shadow-xs">
+                  <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <span className="font-mono text-xl font-black tracking-wider">
+                    {inactivitySecondsLeft}s
+                  </span>
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  <button
+                    onClick={handleContinueSession}
+                    className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-md shadow-blue-500/25 transition-all flex items-center justify-center space-x-2 touch-spring"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Continue Session</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleAutoLogout('Admin session ended manually.')}
+                    className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-2 touch-spring"
+                  >
+                    <LogOut className="w-4 h-4 text-slate-400" />
+                    <span>Log Out Now</span>
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )}
 
         {/* Auth Modal Popup Portal (overlaid on top when unauthenticated) */}
         {!isAuth &&
