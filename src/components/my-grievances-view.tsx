@@ -95,8 +95,25 @@ export function MyGrievancesView({ onBackToSubmit }: MyGrievancesViewProps) {
 
   const handleMarkResolved = async (feedbackId: string) => {
     if (!verifiedEmail) return;
-    setActionLoadingId(feedbackId);
     setSuccessToast(null);
+
+    // ⚡ Instant Optimistic Update
+    setFeedbacks((prev) =>
+      prev.map((fb) =>
+        fb.id === feedbackId
+          ? {
+              ...fb,
+              userResolved: true,
+              status: fb.facilityType?.startsWith('MAINTENANCE_')
+                ? (fb.adminResolved ? 'RESOLVED' : fb.status)
+                : 'RESOLVED',
+              resolvedAt: fb.resolvedAt || new Date().toISOString(),
+            }
+          : fb
+      )
+    );
+    setSuccessToast('Grievance marked as resolved! Thank you for confirming.');
+    setTimeout(() => setSuccessToast(null), 3500);
 
     try {
       const res = await fetch('/api/feedback', {
@@ -109,18 +126,14 @@ export function MyGrievancesView({ onBackToSubmit }: MyGrievancesViewProps) {
         }),
       });
 
-      if (res.ok) {
-        setSuccessToast('Grievance marked as resolved! Thank you for confirming.');
+      if (!res.ok) {
         fetchMyFeedbacks(verifiedEmail);
-        setTimeout(() => setSuccessToast(null), 4000);
-      } else {
         const err = await res.json();
         alert(err.error || 'Failed to update grievance.');
       }
     } catch (e) {
+      fetchMyFeedbacks(verifiedEmail);
       alert('Network error occurred.');
-    } finally {
-      setActionLoadingId(null);
     }
   };
 

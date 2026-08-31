@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Camera, UploadCloud, Loader2, Trash2, Video, ImageIcon, Download, Clock, AlertTriangle, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinary-upload';
-import { AdminAuthGate, useAdminAuth } from '@/components/admin-auth-gate';
+import { AdminAuthGate, useAdminAuth, getAdminHeaders } from '@/components/admin-auth-gate';
 
 const CATEGORIES = [
   { id: 'GENERAL', label: 'General' },
@@ -15,14 +15,14 @@ const CATEGORIES = [
 
 export default function AdminGalleryPage() {
   return (
-    <AdminAuthGate title="Gallery Admin Portal">
+    <AdminAuthGate title="Gallery Administration">
       <AdminGalleryContent />
     </AdminAuthGate>
   );
 }
 
 function AdminGalleryContent() {
-  const { isAuthenticated, adminPassword } = useAdminAuth();
+  const { isAuthenticated, adminEmail, adminToken } = useAdminAuth();
   const [images, setImages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -62,20 +62,32 @@ function AdminGalleryContent() {
     }
   };
 
-  const handleUpload = async () => {
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!file) return;
+
     setUploading(true);
     setProgress(0);
-    setNoticeMessage(null);
 
     try {
-      const url = await uploadToCloudinary(file, (pct) => setProgress(pct));
-
-      await fetch('/api/gallery', {
+      const url = await uploadToCloudinary(file, (p) => setProgress(p));
+      
+      const res = await fetch('/api/gallery', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, caption, category, uploaderName: 'Mess Secretary', uploaderRollNo: 'ADMIN' })
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAdminHeaders(adminEmail, adminToken),
+        },
+        body: JSON.stringify({
+          url,
+          caption,
+          category,
+          uploaderName: 'Administration',
+          uploaderRollNo: 'ADMIN',
+        }),
       });
+
+      if (!res.ok) throw new Error('Failed to save to database');
 
       setFile(null);
       setCaption('');
@@ -96,7 +108,7 @@ function AdminGalleryContent() {
       const res = await fetch(`/api/gallery?id=${id}`, {
         method: 'DELETE',
         headers: {
-          ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+          ...getAdminHeaders(adminEmail, adminToken),
         },
       });
       const data = await res.json();

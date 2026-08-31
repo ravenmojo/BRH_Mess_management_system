@@ -649,7 +649,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!verifyAdminPassword(request)) {
+  if (!(await verifyAdminPassword(request))) {
     return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
   }
 

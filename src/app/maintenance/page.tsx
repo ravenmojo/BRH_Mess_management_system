@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Send, CheckCircle2, Clock, ShieldCheck, ShowerHead, Droplet, Zap, Hammer, Sparkles, Wrench, AlertTriangle, Paperclip, Loader2, Dumbbell, ArrowRight, ArrowLeft, Check } from 'lucide-react';
+import { Send, CheckCircle2, Clock, ShieldCheck, ShowerHead, Droplet, Zap, Hammer, Sparkles, Wrench, AlertTriangle, Paperclip, Loader2, Dumbbell, ArrowRight, ArrowLeft, Check, ChevronDown } from 'lucide-react';
 import { Footer } from '@/components/footer';
 import { uploadToCloudinary } from '@/lib/cloudinary-upload';
 import { useRouter } from 'next/navigation';
@@ -96,6 +96,7 @@ export default function MaintenancePage() {
   const [email, setEmail] = useState('');
   const [comment, setComment] = useState('');
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
+  const [visibleCount, setVisibleCount] = useState(5);
   const [submitting, setSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const [submittedTicket, setSubmittedTicket] = useState<string | null>(null);
@@ -455,7 +456,7 @@ export default function MaintenancePage() {
           <div className="space-y-2.5">
             <div className="flex items-center justify-between px-1">
               <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                Recent Maintenance Grievances {feedbacks.length > 0 && `(Showing ${Math.min(feedbacks.length, 5)} of ${feedbacks.length})`}
+                Recent Maintenance Grievances {feedbacks.length > 0 && `(Showing ${Math.min(feedbacks.length, visibleCount)} of ${feedbacks.length})`}
               </h3>
               <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/60 px-2.5 py-0.5 rounded-full border border-sky-200/80 dark:border-sky-800/80">
                 {feedbacks.filter(f => f.status === 'RESOLVED').length} Resolved
@@ -468,14 +469,29 @@ export default function MaintenancePage() {
               </div>
             ) : (
               <div className="space-y-2">
-                {feedbacks.slice(0, 5).map((item) => (
-                  <CompactGrievanceCard
-                    key={item.id}
-                    item={item}
-                    showFacilityBadge={true}
-                    accentColor="sky"
-                  />
-                ))}
+                <div className="max-h-[480px] sm:max-h-[520px] grievance-scroll-box pr-1 sm:pr-1.5 space-y-2">
+                  {feedbacks.slice(0, visibleCount).map((item) => (
+                    <CompactGrievanceCard
+                      key={item.id}
+                      item={item}
+                      showFacilityBadge={true}
+                      accentColor="sky"
+                    />
+                  ))}
+                </div>
+
+                {feedbacks.length > visibleCount && (
+                  <button
+                    type="button"
+                    onClick={() => setVisibleCount((prev) => Math.min(feedbacks.length, prev + 10))}
+                    className="w-full py-2.5 rounded-xl border border-sky-200/80 dark:border-sky-800/80 bg-sky-50/70 hover:bg-sky-100/80 dark:bg-sky-950/40 dark:hover:bg-sky-900/50 text-sky-700 dark:text-sky-300 text-xs font-bold transition-all flex items-center justify-center space-x-1.5 shadow-xs touch-spring"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                    <span>
+                      Show More Grievances (+{Math.min(10, feedbacks.length - visibleCount)} more)
+                    </span>
+                  </button>
+                )}
               </div>
             )}
           </div>

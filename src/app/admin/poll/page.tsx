@@ -23,7 +23,7 @@ const SEASONAL_CURRIES = [
   "Chickpeas Curry", "Alu Cabbage", "Cauliflower Cur"
 ];
 
-import { AdminAuthGate, useAdminAuth } from '@/components/admin-auth-gate';
+import { AdminAuthGate, useAdminAuth, getAdminHeaders } from '@/components/admin-auth-gate';
 
 export default function AdminPollPage() {
   return (
@@ -34,7 +34,7 @@ export default function AdminPollPage() {
 }
 
 function AdminPollContent() {
-  const { isAuthenticated } = useAdminAuth();
+  const { isAuthenticated, adminEmail, adminToken } = useAdminAuth();
   const [polls, setPolls] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -43,6 +43,8 @@ function AdminPollContent() {
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [selectedCurries, setSelectedCurries] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
+
+  const authHeaders = getAdminHeaders(adminEmail, adminToken);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -61,7 +63,10 @@ function AdminPollContent() {
   const handleTogglePoll = async (id: string, currentStatus: boolean) => {
     await fetch('/api/poll', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders,
+      },
       body: JSON.stringify({ id, isActive: !currentStatus })
     });
     loadPolls();
@@ -72,7 +77,10 @@ function AdminPollContent() {
     setCreating(true);
     await fetch('/api/poll', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders,
+      },
       body: JSON.stringify({
         month,
         year,

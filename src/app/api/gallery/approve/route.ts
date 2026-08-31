@@ -2,11 +2,16 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { createClient } from '@/utils/supabase/server';
 import { deleteFromCloudinary } from '@/lib/cloudinary-delete';
-import { verifyAdminPassword } from '@/lib/admin-auth';
+import { verifyAdminPassword, verifyCsrfOrigin } from '@/lib/admin-auth';
+
+import { logAdminAction } from '@/lib/audit-logger';
 
 export async function PATCH(request: Request) {
+  if (!verifyCsrfOrigin(request)) {
+    return NextResponse.json({ error: 'Invalid origin (CSRF check failed).' }, { status: 403 });
+  }
   try {
-    let isAuthorized = verifyAdminPassword(request);
+    let isAuthorized = await verifyAdminPassword(request);
     if (!isAuthorized) {
       const supabase = createClient();
       const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -17,6 +22,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
     }
 
+    const adminEmail = request.headers.get('x-admin-email') || 'System Administrator';
     const body = await request.json();
     const { id, status } = body;
 
@@ -46,6 +52,13 @@ export async function PATCH(request: Request) {
       data: { status }
     });
 
+    await logAdminAction(
+      adminEmail,
+      status === 'APPROVED' ? 'APPROVE_GALLERY' : 'REJECT_GALLERY',
+      `${status} gallery submission (Category: ${image.category}, Uploader: ${image.uploaderName || 'Anonymous'}).`,
+      id
+    );
+
     return NextResponse.json({ ...image, cloudinaryNotice });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -54,7 +67,7 @@ export async function PATCH(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    let isAuthorized = verifyAdminPassword(request);
+    let isAuthorized = await verifyAdminPassword(request);
     if (!isAuthorized) {
       const supabase = createClient();
       const { data: { user }, error: authError } = await supabase.auth.getUser();

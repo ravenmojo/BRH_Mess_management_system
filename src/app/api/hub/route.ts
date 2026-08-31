@@ -101,7 +101,7 @@ export async function POST(request: Request) {
     const { type, payload } = body;
 
     if (type !== 'SUGGESTION') {
-      if (!verifyAdminPassword(request)) {
+      if (!(await verifyAdminPassword(request))) {
         return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
       }
     }
@@ -291,7 +291,7 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  if (!verifyAdminPassword(request)) {
+  if (!(await verifyAdminPassword(request))) {
     return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
   }
 
@@ -363,7 +363,7 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  if (!verifyAdminPassword(request)) {
+  if (!(await verifyAdminPassword(request))) {
     return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
   }
 

@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { createClient } from '@/utils/supabase/server';
 import { deleteFromCloudinary } from '@/lib/cloudinary-delete';
-import { verifyAdminPassword, isAllowedEmail } from '@/lib/admin-auth';
+import { verifyAdminPassword, isAllowedEmail, verifyCsrfOrigin } from '@/lib/admin-auth';
+import { checkRateLimit } from '@/lib/rate-limiter';
 
 export async function GET(request: Request) {
   try {
@@ -44,6 +45,15 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (!verifyCsrfOrigin(request)) {
+    return NextResponse.json({ error: 'Invalid origin (CSRF check failed).' }, { status: 403 });
+  }
+  const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+  const rateLimit = checkRateLimit(`gallery_${ip}`, 10, 10 * 60 * 1000);
+  if (!rateLimit.success) {
+    return NextResponse.json({ error: 'Rate limit exceeded.' }, { status: 429 });
+  }
+
   try {
     const body = await request.json();
     const { url, caption, category, uploaderName, uploaderRollNo, uploaderEmail, capturedAt } = body;
@@ -84,7 +94,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    let isAuthorized = verifyAdminPassword(request);
+    let isAuthorized = await verifyAdminPassword(request);
     if (!isAuthorized) {
       const supabase = createClient();
       const { data: { user }, error: authError } = await supabase.auth.getUser();

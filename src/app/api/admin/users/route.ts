@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminPassword } from '@/lib/admin-auth';
+import { logAdminAction } from '@/lib/audit-logger';
 
 // GET: Retrieve list of registered admin users
 export async function GET(request: Request) {
-  if (!verifyAdminPassword(request)) {
+  if (!(await verifyAdminPassword(request))) {
     return NextResponse.json({ error: 'Unauthorized: Administrator access required.' }, { status: 401 });
   }
 
@@ -29,9 +30,11 @@ export async function GET(request: Request) {
 
 // POST: Add new admin user
 export async function POST(request: Request) {
-  if (!verifyAdminPassword(request)) {
+  if (!(await verifyAdminPassword(request))) {
     return NextResponse.json({ error: 'Unauthorized: Administrator access required.' }, { status: 401 });
   }
+
+  const requesterEmail = request.headers.get('x-admin-email') || 'System Administrator';
 
   try {
     const body = await request.json();
@@ -60,6 +63,13 @@ export async function POST(request: Request) {
       },
     });
 
+    await logAdminAction(
+      requesterEmail,
+      'REGISTER_ADMIN',
+      `Registered administrator account: ${normalizedEmail}${designation ? ` (${designation.trim()})` : ''} with ${canOverride ? 'status override' : 'standard'} permissions.`,
+      newAdmin.id
+    );
+
     return NextResponse.json(newAdmin, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to add admin' }, { status: 500 });
@@ -68,9 +78,11 @@ export async function POST(request: Request) {
 
 // PATCH: Update admin designation or permissions
 export async function PATCH(request: Request) {
-  if (!verifyAdminPassword(request)) {
+  if (!(await verifyAdminPassword(request))) {
     return NextResponse.json({ error: 'Unauthorized: Administrator access required.' }, { status: 401 });
   }
+
+  const requesterEmail = request.headers.get('x-admin-email') || 'System Administrator';
 
   try {
     const body = await request.json();
@@ -97,6 +109,17 @@ export async function PATCH(request: Request) {
       });
     }
 
+    const changes: string[] = [];
+    if (designation !== undefined) changes.push(`Designation: "${designation.trim()}"`);
+    if (canOverride !== undefined) changes.push(`Override Permission: ${canOverride ? 'Granted' : 'Revoked'}`);
+
+    await logAdminAction(
+      requesterEmail,
+      'UPDATE_ADMIN',
+      `Updated admin (${updated.email}): ${changes.join(', ')}`,
+      updated.id
+    );
+
     return NextResponse.json(updated);
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to update admin' }, { status: 500 });
@@ -105,9 +128,11 @@ export async function PATCH(request: Request) {
 
 // DELETE: Remove admin user
 export async function DELETE(request: Request) {
-  if (!verifyAdminPassword(request)) {
+  if (!(await verifyAdminPassword(request))) {
     return NextResponse.json({ error: 'Unauthorized: Administrator access required.' }, { status: 401 });
   }
+
+  const requesterEmail = request.headers.get('x-admin-email') || 'System Administrator';
 
   try {
     const { searchParams } = new URL(request.url);
@@ -117,9 +142,18 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Admin ID is required.' }, { status: 400 });
     }
 
+    const targetUser = await prisma.adminUser.findUnique({ where: { id } });
+
     await prisma.adminUser.delete({
       where: { id },
     });
+
+    await logAdminAction(
+      requesterEmail,
+      'REVOKE_ADMIN',
+      `Revoked administrator access for ${targetUser?.email || id}.`,
+      id
+    );
 
     return NextResponse.json({ success: true, message: 'Admin removed successfully.' });
   } catch (error: any) {

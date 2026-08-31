@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Moon, Utensils, MessageSquare, Send, CheckCircle, Clock, ShieldCheck, Video, ImageIcon, Download, Camera, Upload, CheckCircle2, Loader2, Paperclip } from 'lucide-react';
+import { Moon, Utensils, MessageSquare, Send, CheckCircle, Clock, ShieldCheck, Video, ImageIcon, Download, Camera, Upload, CheckCircle2, Loader2, Paperclip, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { uploadToCloudinary } from '@/lib/cloudinary-upload';
 import { OtpVerificationModal } from '@/components/otp-modal';
@@ -47,6 +47,7 @@ export default function NightCanteenPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
+  const [visibleCount, setVisibleCount] = useState(5);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [submittedTicket, setSubmittedTicket] = useState<string | null>(null);
@@ -358,9 +359,14 @@ export default function NightCanteenPage() {
 
           {/* Canteen Grievances Timeline */}
           <div className="space-y-2.5">
-            <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 px-1">
-              Recent Canteen Grievances {feedbacks.length > 0 && `(Showing ${Math.min(feedbacks.length, 5)} of ${feedbacks.length})`}
-            </h4>
+            <div className="flex items-center justify-between px-1">
+              <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                Recent Canteen Grievances {feedbacks.length > 0 && `(Showing ${Math.min(feedbacks.length, visibleCount)} of ${feedbacks.length})`}
+              </h4>
+              <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-0.5 rounded-full border border-indigo-200/80 dark:border-indigo-800/80">
+                {feedbacks.filter(f => f.status === 'RESOLVED').length} Resolved
+              </span>
+            </div>
 
             {feedbacks.length === 0 ? (
               <div className="p-5 rounded-2xl glass-card text-center text-xs font-semibold text-slate-500">
@@ -368,14 +374,29 @@ export default function NightCanteenPage() {
               </div>
             ) : (
               <div className="space-y-2">
-                {feedbacks.slice(0, 5).map((fb) => (
-                  <CompactGrievanceCard
-                    key={fb.id}
-                    item={fb}
-                    showFacilityBadge={false}
-                    accentColor="indigo"
-                  />
-                ))}
+                <div className="max-h-[480px] sm:max-h-[520px] grievance-scroll-box pr-1 sm:pr-1.5 space-y-2">
+                  {feedbacks.slice(0, visibleCount).map((fb) => (
+                    <CompactGrievanceCard
+                      key={fb.id}
+                      item={fb}
+                      showFacilityBadge={false}
+                      accentColor="indigo"
+                    />
+                  ))}
+                </div>
+
+                {feedbacks.length > visibleCount && (
+                  <button
+                    type="button"
+                    onClick={() => setVisibleCount((prev) => Math.min(feedbacks.length, prev + 10))}
+                    className="w-full py-2.5 rounded-xl border border-indigo-200/80 dark:border-indigo-800/80 bg-indigo-50/70 hover:bg-indigo-100/80 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-bold transition-all flex items-center justify-center space-x-1.5 shadow-xs touch-spring"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                    <span>
+                      Show More Grievances (+{Math.min(10, feedbacks.length - visibleCount)} more)
+                    </span>
+                  </button>
+                )}
               </div>
             )}
           </div>

@@ -105,9 +105,9 @@ export function AdminStatsModal({ isOpen, onClose }: AdminStatsModalProps) {
                 <div className="text-[10px] font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider">Two-Way Verified</div>
                 <div className="text-lg font-black text-purple-800 dark:text-purple-200 font-mono">{stats.overall?.totalTwoWayVerified || 0}</div>
               </div>
-              <div className="p-3 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/40 space-y-1">
-                <div className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Escalated Items</div>
-                <div className="text-lg font-black text-amber-800 dark:text-amber-200 font-mono">{stats.overall?.totalEscalated || 0}</div>
+              <div className="p-3 rounded-2xl bg-red-50/80 dark:bg-red-950/40 border border-red-200/80 dark:border-red-800/60 space-y-1">
+                <div className="text-[10px] font-bold text-red-700 dark:text-red-400 uppercase tracking-wider">Escalated Items</div>
+                <div className="text-lg font-black text-red-800 dark:text-red-200 font-mono">{stats.overall?.totalEscalated || 0}</div>
               </div>
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-800 space-y-1">
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Resolved</div>
@@ -144,7 +144,7 @@ export function AdminStatsModal({ isOpen, onClose }: AdminStatsModalProps) {
                         </span>
                       )}
                       {c.totalEscalated > 0 && (
-                        <span className="text-amber-600 dark:text-amber-400 font-semibold font-mono">
+                        <span className="text-red-600 dark:text-red-400 font-bold font-mono">
                           {c.totalEscalated} Escalated
                         </span>
                       )}

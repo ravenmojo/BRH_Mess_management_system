@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { deleteFromCloudinary } from '@/lib/cloudinary-delete';
-import { isAllowedEmail, verifyAdminPassword } from '@/lib/admin-auth';
+import { isAllowedEmail, verifyAdminPassword, verifyCsrfOrigin } from '@/lib/admin-auth';
+import { logAdminAction } from '@/lib/audit-logger';
+import { checkRateLimit } from '@/lib/rate-limiter';
 import {
   getCategoryCode,
   formatTicketDate,
@@ -68,7 +70,7 @@ export async function GET(request: Request) {
   const search = searchParams.get('search')?.trim().toLowerCase();
   const authorEmail = searchParams.get('authorEmail')?.trim().toLowerCase();
   // Server-side admin verification instead of trusting a client query param
-  const isAdmin = verifyAdminPassword(request);
+  const isAdmin = await verifyAdminPassword(request);
 
   try {
     const whereClause: any = {};
@@ -193,6 +195,15 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (!verifyCsrfOrigin(request)) {
+    return NextResponse.json({ error: 'Invalid origin (CSRF check failed).' }, { status: 403 });
+  }
+  const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+  const rateLimit = checkRateLimit(`feedback_${ip}`, 5, 10 * 60 * 1000);
+  if (!rateLimit.success) {
+    return NextResponse.json({ error: 'Rate limit exceeded. Please wait before submitting again.' }, { status: 429 });
+  }
+
   try {
     const { studentName, comment, facilityType, mediaUrl, roomNo, email, capturedAt } = await request.json();
 
@@ -295,6 +306,9 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  if (!verifyCsrfOrigin(request)) {
+    return NextResponse.json({ error: 'Invalid origin (CSRF check failed).' }, { status: 403 });
+  }
   try {
     const body = await request.json();
     const {
@@ -351,31 +365,80 @@ export async function PATCH(request: Request) {
     }
 
     // Admin updates require admin authorization
-    if (!verifyAdminPassword(request)) {
+    if (!(await verifyAdminPassword(request))) {
       return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
     }
 
     const isResolving = status === 'RESOLVED';
-    const resolutionTimestamp = isResolving ? new Date() : (status === 'PENDING' ? null : undefined);
+    const isPending = status === 'PENDING';
+    const adminEmailHeader = request.headers.get('x-admin-email') || resolvedByEmail || overriddenBy || 'System Administrator';
 
     const updateData: any = {};
     if (status) updateData.status = status;
-    if (remark !== undefined) updateData.remark = remark;
-    if (resolvedBy !== undefined) updateData.resolvedBy = resolvedBy;
-    if (resolvedByEmail !== undefined) updateData.resolvedByEmail = resolvedByEmail;
-    if (resolvedByRole !== undefined) updateData.resolvedByRole = resolvedByRole;
-    if (resolutionTimestamp !== undefined) updateData.resolvedAt = resolutionTimestamp;
+
+    // Remark update & history recording
+    if (remark !== undefined && remark.trim() !== '') {
+      const trimmedRemark = remark.trim();
+      updateData.remark = trimmedRemark;
+
+      try {
+        const currentItem = inMemoryFeedbacks.find((f) => f.id === id) || (await prisma.feedback.findUnique({ where: { id } }));
+        let existingHistory: any[] = [];
+        if (currentItem?.remarkHistory) {
+          existingHistory = typeof currentItem.remarkHistory === 'string'
+            ? JSON.parse(currentItem.remarkHistory)
+            : currentItem.remarkHistory;
+        }
+
+        const authorName = resolvedBy || resolvedByRole || (adminEmailHeader === 'admin@kgp' ? 'System Administrator' : adminEmailHeader || 'Administrator');
+
+        const newEntry = {
+          remark: trimmedRemark,
+          author: authorName,
+          authorRole: resolvedByRole || authorName,
+          createdAt: new Date().toISOString(),
+        };
+
+        if (existingHistory.length === 0 || existingHistory[0]?.remark !== trimmedRemark) {
+          const updatedHistory = [newEntry, ...existingHistory];
+          updateData.remarkHistory = JSON.stringify(updatedHistory);
+        }
+      } catch (err) {
+        console.warn('Failed to update remark history:', err);
+      }
+    }
+
+    if (isPending) {
+      updateData.status = 'PENDING';
+      updateData.resolvedAt = null;
+      updateData.adminResolved = false;
+      updateData.userResolved = false;
+      updateData.resolvedBy = null;
+      updateData.resolvedByEmail = null;
+      updateData.resolvedByRole = null;
+    } else if (isResolving) {
+      updateData.status = 'RESOLVED';
+      updateData.resolvedAt = new Date();
+      updateData.adminResolved = true;
+      if (resolvedBy !== undefined) updateData.resolvedBy = resolvedBy;
+      if (resolvedByEmail !== undefined) updateData.resolvedByEmail = resolvedByEmail;
+      if (resolvedByRole !== undefined) updateData.resolvedByRole = resolvedByRole;
+    } else {
+      if (resolvedBy !== undefined) updateData.resolvedBy = resolvedBy;
+      if (resolvedByEmail !== undefined) updateData.resolvedByEmail = resolvedByEmail;
+      if (resolvedByRole !== undefined) updateData.resolvedByRole = resolvedByRole;
+      if (adminResolved !== undefined) updateData.adminResolved = Boolean(adminResolved);
+    }
 
     // Escalation fields
     if (isEscalated !== undefined) {
       updateData.isEscalated = Boolean(isEscalated);
       updateData.escalatedAt = isEscalated ? new Date() : null;
-      if (escalatedBy) updateData.escalatedBy = escalatedBy;
+      if (escalatedBy !== undefined) updateData.escalatedBy = escalatedBy;
       if (escalatedRemark !== undefined) updateData.escalatedRemark = escalatedRemark;
     }
 
     // Two-way verification & override fields
-    if (adminResolved !== undefined) updateData.adminResolved = Boolean(adminResolved);
     if (userResolved !== undefined) updateData.userResolved = Boolean(userResolved);
     if (overriddenBy) {
       updateData.overriddenBy = overriddenBy;
@@ -389,10 +452,47 @@ export async function PATCH(request: Request) {
     }
 
     try {
-      await prisma.feedback.update({
+      const updatedItem = await prisma.feedback.update({
         where: { id },
         data: updateData,
       });
+
+      if (overriddenBy) {
+        await logAdminAction(
+          adminEmailHeader,
+          'OVERRIDE_GRIEVANCE',
+          `Overrode grievance status for Ticket #${updatedItem.ticketNumber || id}. Status -> ${status || updatedItem.status}. Note: "${overriddenReason || 'No reason provided'}"`,
+          id
+        );
+      } else if (isEscalated) {
+        await logAdminAction(
+          adminEmailHeader,
+          'ESCALATE_GRIEVANCE',
+          `Escalated grievance Ticket #${updatedItem.ticketNumber || id} to high priority. Remark: "${escalatedRemark || 'Urgent resolution required'}"`,
+          id
+        );
+      } else if (isResolving) {
+        await logAdminAction(
+          adminEmailHeader,
+          'RESOLVE_GRIEVANCE',
+          `Marked grievance Ticket #${updatedItem.ticketNumber || id} as RESOLVED.${remark ? ` Remark: "${remark}"` : ''}`,
+          id
+        );
+      } else if (status === 'PENDING') {
+        await logAdminAction(
+          adminEmailHeader,
+          'PENDING_GRIEVANCE',
+          `Re-opened grievance Ticket #${updatedItem.ticketNumber || id} (status set to PENDING).`,
+          id
+        );
+      } else if (remark !== undefined && !isResolving && !isPending && !isEscalated && !overriddenBy) {
+        await logAdminAction(
+          adminEmailHeader,
+          'UPDATE_REMARK',
+          `Updated administrative remark for Ticket #${updatedItem.ticketNumber || id}: "${remark}"`,
+          id
+        );
+      }
     } catch (dbErr) {
       console.warn('DB bypass for feedback PATCH:', dbErr);
     }
@@ -404,9 +504,14 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  if (!verifyAdminPassword(request)) {
+  if (!verifyCsrfOrigin(request)) {
+    return NextResponse.json({ error: 'Invalid origin (CSRF check failed).' }, { status: 403 });
+  }
+  if (!(await verifyAdminPassword(request))) {
     return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
   }
+
+  const adminEmailHeader = request.headers.get('x-admin-email') || 'System Administrator';
 
   try {
     const { searchParams } = new URL(request.url);
@@ -417,13 +522,18 @@ export async function DELETE(request: Request) {
     }
 
     let mediaUrl: string | null = null;
+    let ticketNum: string | null = null;
     const targetInMemory = inMemoryFeedbacks.find((f) => f.id === id);
-    if (targetInMemory?.mediaUrl) {
-      mediaUrl = targetInMemory.mediaUrl;
+    if (targetInMemory) {
+      mediaUrl = targetInMemory.mediaUrl || null;
+      ticketNum = targetInMemory.ticketNumber || null;
     } else {
       try {
         const targetDb = await prisma.feedback.findUnique({ where: { id } });
-        if (targetDb?.mediaUrl) mediaUrl = targetDb.mediaUrl;
+        if (targetDb) {
+          mediaUrl = targetDb.mediaUrl || null;
+          ticketNum = targetDb.ticketNumber || null;
+        }
       } catch (e) {}
     }
 
@@ -433,6 +543,12 @@ export async function DELETE(request: Request) {
       await prisma.feedback.delete({
         where: { id },
       });
+      await logAdminAction(
+        adminEmailHeader,
+        'DELETE_GRIEVANCE',
+        `Deleted grievance record Ticket #${ticketNum || id}.`,
+        id
+      );
     } catch (dbErr) {
       console.warn('DB bypass for feedback DELETE');
     }

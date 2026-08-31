@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { createClient } from '@/utils/supabase/server';
-import { verifyAdminPassword } from '@/lib/admin-auth';
+import { verifyAdminPassword, verifyCsrfOrigin } from '@/lib/admin-auth';
 
 export async function GET(request: Request) {
   try {
@@ -29,7 +29,10 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!verifyAdminPassword(request)) {
+  if (!verifyCsrfOrigin(request)) {
+    return NextResponse.json({ error: 'Invalid origin (CSRF check failed).' }, { status: 403 });
+  }
+  if (!(await verifyAdminPassword(request))) {
     return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
   }
 
@@ -68,7 +71,10 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  if (!verifyAdminPassword(request)) {
+  if (!verifyCsrfOrigin(request)) {
+    return NextResponse.json({ error: 'Invalid origin (CSRF check failed).' }, { status: 403 });
+  }
+  if (!(await verifyAdminPassword(request))) {
     return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
   }
 

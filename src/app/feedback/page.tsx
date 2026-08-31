@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Send, CheckCircle2, AlertTriangle, Paperclip, Loader2, ArrowRight } from 'lucide-react';
+import { MessageSquare, Send, CheckCircle2, AlertTriangle, Paperclip, Loader2, ArrowRight, ChevronDown, ShieldCheck } from 'lucide-react';
+import Link from 'next/link';
 import { uploadToCloudinary } from '@/lib/cloudinary-upload';
 import { useRouter } from 'next/navigation';
 import { OtpVerificationModal } from '@/components/otp-modal';
@@ -29,6 +30,7 @@ export default function StudentFeedbackPage() {
   const [email, setEmail] = useState('');
   const [comment, setComment] = useState('');
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
+  const [visibleCount, setVisibleCount] = useState(5);
   const [submitting, setSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const [submittedTicket, setSubmittedTicket] = useState<string | null>(null);
@@ -337,7 +339,7 @@ export default function StudentFeedbackPage() {
           <div className="space-y-2.5">
             <div className="flex items-center justify-between px-1">
               <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                Recent Grievances {feedbacks.length > 0 && `(Showing ${Math.min(feedbacks.length, 5)} of ${feedbacks.length})`}
+                Recent Grievances {feedbacks.length > 0 && `(Showing ${Math.min(feedbacks.length, visibleCount)} of ${feedbacks.length})`}
               </h3>
               <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 rounded-full border border-blue-200/80 dark:border-blue-800/80">
                 {feedbacks.filter(f => f.status === 'RESOLVED').length} Resolved
@@ -350,19 +352,45 @@ export default function StudentFeedbackPage() {
               </div>
             ) : (
               <div className="space-y-2">
-                {feedbacks.slice(0, 5).map((item) => (
-                  <CompactGrievanceCard
-                    key={item.id}
-                    item={item}
-                    showFacilityBadge={false}
-                    accentColor="blue"
-                  />
-                ))}
+                <div className="max-h-[480px] sm:max-h-[520px] grievance-scroll-box pr-1 sm:pr-1.5 space-y-2">
+                  {feedbacks.slice(0, visibleCount).map((item) => (
+                    <CompactGrievanceCard
+                      key={item.id}
+                      item={item}
+                      showFacilityBadge={false}
+                      accentColor="blue"
+                    />
+                  ))}
+                </div>
+
+                {feedbacks.length > visibleCount && (
+                  <button
+                    type="button"
+                    onClick={() => setVisibleCount((prev) => Math.min(feedbacks.length, prev + 10))}
+                    className="w-full py-2.5 rounded-xl border border-blue-200/80 dark:border-blue-800/80 bg-blue-50/70 hover:bg-blue-100/80 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-bold transition-all flex items-center justify-center space-x-1.5 shadow-xs touch-spring"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                    <span>
+                      Show More Grievances (+{Math.min(10, feedbacks.length - visibleCount)} more)
+                    </span>
+                  </button>
+                )}
               </div>
             )}
           </div>
         </div>
       )}
+
+      {/* Admin Access Footer Link */}
+      <div className="pt-3 pb-2 flex justify-center">
+        <Link
+          href="/admin"
+          className="px-4 py-2 rounded-full border border-blue-200/80 dark:border-blue-800/80 bg-blue-50/80 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold flex items-center space-x-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shadow-sm touch-spring"
+        >
+          <ShieldCheck className="w-4 h-4" />
+          <span>Access Mess Admin Panel</span>
+        </Link>
+      </div>
 
       <OtpVerificationModal
         isOpen={isOtpModalOpen}

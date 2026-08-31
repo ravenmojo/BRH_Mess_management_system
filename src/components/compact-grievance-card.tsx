@@ -12,9 +12,11 @@ import {
   Loader2,
   Calendar,
   Layers,
+  Flame,
 } from 'lucide-react';
 import { TicketBadge } from '@/components/ticket-badge';
 import { GrievanceMediaGallery, parseMediaUrls } from '@/components/grievance-media-gallery';
+import { formatResolvedByAttribution } from '@/lib/admin-display';
 
 interface CompactGrievanceCardProps {
   item: {
@@ -30,10 +32,16 @@ interface CompactGrievanceCardProps {
     mediaUrl?: string | null;
     capturedAt?: string | null;
     resolvedBy?: string | null;
+    resolvedByEmail?: string | null;
     resolvedByRole?: string | null;
     resolvedAt?: string | Date | null;
     adminResolved?: boolean;
     userResolved?: boolean;
+    isEscalated?: boolean;
+    escalatedBy?: string | null;
+    escalatedRemark?: string | null;
+    escalatedAt?: string | Date | null;
+    remarkHistory?: string | any[] | null;
     createdAt?: string | Date;
   };
   defaultExpanded?: boolean;
@@ -96,11 +104,13 @@ export function CompactGrievanceCard({
   return (
     <div
       className={`rounded-2xl glass-card transition-all duration-200 border overflow-hidden ${
-        isTwoWay
-          ? 'border-emerald-400/60 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-emerald-500/5'
-          : isResolved
-            ? 'border-emerald-200/80 dark:border-emerald-800/60 shadow-xs'
-            : 'border-slate-200/80 dark:border-slate-800/80 shadow-xs'
+        item.isEscalated
+          ? 'border-red-400/80 bg-red-50/20 dark:bg-red-950/20 shadow-red-500/10'
+          : isTwoWay
+            ? 'border-emerald-400/60 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-emerald-500/5'
+            : isResolved
+              ? 'border-emerald-200/80 dark:border-emerald-800/60 shadow-xs'
+              : 'border-yellow-200/80 dark:border-yellow-900/60 shadow-xs'
       } hover:border-slate-300 dark:hover:border-slate-700`}
     >
       {/* Clickable Compact Header */}
@@ -135,6 +145,14 @@ export function CompactGrievanceCard({
           </div>
 
           <div className="flex items-center space-x-1.5 shrink-0">
+            {/* Escalated Priority Flag */}
+            {item.isEscalated && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-600 text-white border border-red-700 flex items-center space-x-1 shadow-sm shadow-red-500/30 animate-pulse">
+                <Flame className="w-2.5 h-2.5 text-white" />
+                <span>Escalated</span>
+              </span>
+            )}
+
             {/* Status Indicator Badge */}
             {isTwoWay ? (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700 flex items-center space-x-1 shadow-xs">
@@ -148,9 +166,9 @@ export function CompactGrievanceCard({
                 <span>Resolved</span>
               </span>
             ) : (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/80 flex items-center space-x-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-0.5" />
-                <span>In Progress</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-yellow-100 dark:bg-yellow-950/70 text-yellow-800 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-700/80 flex items-center space-x-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 mr-0.5" />
+                <span>Pending</span>
               </span>
             )}
 
@@ -220,7 +238,7 @@ export function CompactGrievanceCard({
             <div className="flex items-center space-x-2 text-[11px] font-medium text-emerald-800 dark:text-emerald-200 bg-emerald-50/90 dark:bg-emerald-950/50 px-3 py-2 rounded-xl border border-emerald-200/80 dark:border-emerald-800/60 shadow-2xs">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span className="leading-snug">
-                Resolved by <strong className="font-bold">{item.resolvedBy || item.resolvedByRole || 'Administration'}</strong>
+                Resolved by <strong className="font-bold">{formatResolvedByAttribution(item.resolvedByRole, item.resolvedBy, item.resolvedByEmail)}</strong>
                 {item.resolvedAt && (
                   <span className="text-[10px] text-emerald-700 dark:text-emerald-300 block sm:inline sm:ml-1">
                     • {new Date(item.resolvedAt).toLocaleDateString('en-IN', {

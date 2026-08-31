@@ -74,6 +74,7 @@ model Feedback {
   facilityType    FacilityType @default(REGULAR_MESS)
   status          String       @default("PENDING") // PENDING, RESOLVED
   remark          String?
+  remarkHistory   String?      // JSON stringified history of remark entries: [{ remark, author, authorRole, createdAt }]
   mediaUrl        String?      // Cloudinary URL for uploaded photos/videos
   capturedAt      String?      // Picture metadata capture timestamp
   resolvedBy      String?      // Resolver name or identifier
@@ -100,6 +101,15 @@ model AdminUser {
   canOverride Boolean  @default(false) // Permission to override user status
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model AdminAuditLog {
+  id          String   @id @default(uuid())
+  adminEmail  String   @default("System Administrator")
+  action      String   // e.g. REGISTER_ADMIN, REVOKE_ADMIN, UPDATE_ADMIN, OVERRIDE_GRIEVANCE, RESOLVE_GRIEVANCE, UPDATE_MENU, etc.
+  details     String   // Human-readable summary of the action
+  targetId    String?  // Target resource ID if applicable
+  createdAt   DateTime @default(now())
 }
 
 model GrievanceStatSummary {

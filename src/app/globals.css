@@ -3,6 +3,11 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+    overscroll-behavior-y: none; /* Prevents viewport rubber-band overstretching */
+  }
+
   :root {
     --background: 210 40% 98%;
     --foreground: 222.2 84% 4.9%;
@@ -25,6 +30,14 @@
 }
 
 @layer utilities {
+  /* Dedicated Grievance Scroll Box with natural parent scroll-chaining */
+  .grievance-scroll-box {
+    overflow-y: auto;
+    overscroll-behavior-y: auto; /* Chains scroll to parent page when boundary is reached */
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+
   .page-transition {
     animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }

@@ -1,8 +1,15 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { createAdminToken } from '@/lib/admin-auth';
+import { checkRateLimit } from '@/lib/rate-limiter';
 
 export async function POST(request: Request) {
   try {
+    const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+    const rateLimit = checkRateLimit(`auth_${ip}`, 10, 60000);
+    if (!rateLimit.success) {
+      return NextResponse.json({ error: 'Too many login attempts. Please try again later.' }, { status: 429 });
+    }
     const body = await request.json();
     const identifier = (body.identifier || body.password || body.email || '').trim();
 
@@ -16,9 +23,11 @@ export async function POST(request: Request) {
 
     // 1. Check if the entered string matches the primary administrator credential
     if (expectedMasterPassword && cleanIdentifier === expectedMasterPassword) {
+      const token = createAdminToken('admin@kgp', true);
       return NextResponse.json({
         authenticated: true,
         isMasterAdmin: true,
+        token,
         adminEmail: 'admin@kgp',
         adminDesignation: 'System Administrator',
       });
@@ -38,10 +47,13 @@ export async function POST(request: Request) {
     }
 
     if (admin) {
+      const token = createAdminToken(admin.email, false);
       return NextResponse.json({
         isRegisteredAdmin: true,
         email: admin.email,
         designation: admin.designation || '',
+        canOverride: admin.canOverride,
+        token,
       });
     }
 

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Film, Trophy, Users, Phone, ShieldCheck, Plus, Trash2, Sparkles, Loader2, ArrowLeft, CheckCircle2, UploadCloud, Upload, Image as ImageIcon, Video, Download, Pencil, Clipboard, X, Save } from 'lucide-react';
 import Link from 'next/link';
 import { uploadToCloudinary } from '@/lib/cloudinary-upload';
-import { AdminAuthGate, useAdminAuth } from '@/components/admin-auth-gate';
+import { AdminAuthGate, useAdminAuth, getAdminHeaders } from '@/components/admin-auth-gate';
 
 export default function HubAdminPage() {
   return (
@@ -204,12 +204,14 @@ function PosterUploadZone({
 }
 
 function HubAdminContent() {
-  const { isAuthenticated, adminPassword } = useAdminAuth();
+  const { isAuthenticated, adminEmail, adminDesignation, isMasterAdmin, adminToken } = useAdminAuth();
   const [activeTab, setActiveTab] = useState<'MOVIES' | 'ACTIVITIES' | 'ACHIEVEMENTS' | 'CONTACTS'>('MOVIES');
   const [data, setData] = useState<any>({ movies: [], activities: [], achievements: [], emergencyContacts: [] });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  const authHeaders = getAdminHeaders(adminEmail, adminToken);
 
   // Form States - Add New Movie
   const [movieTitle, setMovieTitle] = useState('');
@@ -281,7 +283,7 @@ function HubAdminContent() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+          ...authHeaders,
         },
         body: JSON.stringify({ type: 'SEED_ALL' }),
       });
@@ -305,7 +307,7 @@ function HubAdminContent() {
       const res = await fetch(`/api/hub?type=${type}&id=${id}`, {
         method: 'DELETE',
         headers: {
-          ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+          ...authHeaders,
         },
       });
       if (res.ok) {
@@ -397,7 +399,7 @@ function HubAdminContent() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+          ...authHeaders,
         },
         body: JSON.stringify({
           type: 'MOVIE',
@@ -429,7 +431,7 @@ function HubAdminContent() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+          ...authHeaders,
         },
         body: JSON.stringify({
           type: 'ACTIVITY',
@@ -458,7 +460,7 @@ function HubAdminContent() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+          ...authHeaders,
         },
         body: JSON.stringify({
           type: 'ACHIEVEMENT',
@@ -490,7 +492,7 @@ function HubAdminContent() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+          ...authHeaders,
         },
         body: JSON.stringify({
           type: 'EMERGENCY_CONTACT',
@@ -543,7 +545,7 @@ function HubAdminContent() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+          ...authHeaders,
         },
         body: JSON.stringify({
           type: editingItem.type,

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
+import Link from 'next/link';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -20,13 +21,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'BR Ambedkar Hall Operations and Services (BROS)',
-  description: 'BROS - BR Ambedkar Hall Operations and Services System',
+  title: 'BR Ambedkar Hall - Operations and Services',
+  description: 'BR Ambedkar Hall Operations and Services System',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'BROS',
+    title: 'BR Ambedkar Hall Operations and Services',
   },
 };
 
@@ -56,15 +57,23 @@ export default function RootLayout({
             <div className="max-w-md mx-auto px-4 h-14 flex items-center justify-between">
               <div className="flex items-center space-x-2.5">
                 <BackButton />
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-sm shadow-blue-500/20 overflow-hidden ring-1 ring-white/20">
-                  <img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f1ee-1f1f3.svg" alt="India" className="w-5 h-5 object-contain" />
-                </div>
-                <div className="flex flex-col justify-center">
-                  <h1 className="text-lg font-black tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent leading-none">BROS</h1>
-                  <span className="text-[9px] sm:text-[10px] tracking-wider sm:tracking-widest text-indigo-600 dark:text-indigo-400 font-bold mt-0.5">
-                    BR Ambedkar Hall <span className="text-fuchsia-600 dark:text-fuchsia-400">Online Services portal</span>
-                  </span>
-                </div>
+                <Link
+                  href="/"
+                  className="flex items-center space-x-2.5 group touch-spring select-none"
+                  title="Go to Homepage"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-sm shadow-blue-500/20 overflow-hidden ring-1 ring-white/20 shrink-0 group-hover:scale-105 transition-transform">
+                    <img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f1ee-1f1f3.svg" alt="India" className="w-5 h-5 object-contain" />
+                  </div>
+                  <div className="flex flex-col justify-center leading-none">
+                    <span className="text-xs sm:text-[13px] font-black tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 dark:from-white dark:via-slate-100 dark:to-indigo-200 bg-clip-text text-transparent leading-tight group-hover:opacity-90 transition-opacity">
+                      BR Ambedkar Hall
+                    </span>
+                    <span className="text-[9.5px] sm:text-[10px] tracking-wider font-extrabold text-indigo-600 dark:text-indigo-400 uppercase">
+                      Operations and Services
+                    </span>
+                  </div>
+                </Link>
               </div>
               <div className="flex items-center shrink-0">
                 <PwaInstallButton />
