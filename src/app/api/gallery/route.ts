@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { createClient } from '@/utils/supabase/server';
 import { deleteFromCloudinary } from '@/lib/cloudinary-delete';
-import { verifyAdminPassword } from '@/lib/admin-auth';
+import { verifyAdminPassword, isAllowedEmail } from '@/lib/admin-auth';
 
 export async function GET(request: Request) {
   try {
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { url, caption, category, uploaderName, uploaderRollNo, capturedAt } = body;
+    const { url, caption, category, uploaderName, uploaderRollNo, uploaderEmail, capturedAt } = body;
 
     if (!url) {
       return NextResponse.json({ error: 'Media URL is required' }, { status: 400 });
@@ -54,6 +54,14 @@ export async function POST(request: Request) {
 
     if (!uploaderName || !uploaderRollNo) {
       return NextResponse.json({ error: 'Name and Roll No are required' }, { status: 400 });
+    }
+
+    // Require a valid institutional email to prevent spam uploads
+    if (!uploaderEmail || !isAllowedEmail(uploaderEmail.trim().toLowerCase())) {
+      return NextResponse.json(
+        { error: 'A valid IIT KGP email is required to upload.' },
+        { status: 403 }
+      );
     }
 
     const image = await prisma.galleryImage.create({

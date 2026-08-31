@@ -46,7 +46,7 @@ export function parseMediaUrls(mediaUrl: string | null | undefined | any): strin
 interface GrievanceMediaGalleryProps {
   mediaUrl: string | null | undefined;
   capturedAt?: string | null;
-  createdAt?: string;
+  createdAt?: string | Date | null;
 }
 
 export function GrievanceMediaGallery({ mediaUrl, capturedAt, createdAt }: GrievanceMediaGalleryProps) {

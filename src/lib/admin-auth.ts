@@ -7,6 +7,8 @@
  *   for protecting admin-only API routes.
  */
 
+import crypto from 'crypto';
+
 /**
  * Returns the list of super-admin emails allowed to bypass the
  * `.iitkgp.ac.in` domain restriction. Read from `SUPER_ADMIN_EMAILS`
@@ -33,9 +35,34 @@ export function isAllowedEmail(email: string): boolean {
 }
 
 /**
+ * Timing-safe comparison of two strings to prevent timing attacks.
+ * Pads both strings to equal length before comparing.
+ */
+function timingSafeCompare(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+
+  // Pad the shorter buffer to prevent length-based timing leaks
+  if (bufA.length !== bufB.length) {
+    const maxLen = Math.max(bufA.length, bufB.length);
+    const paddedA = Buffer.alloc(maxLen);
+    const paddedB = Buffer.alloc(maxLen);
+    bufA.copy(paddedA);
+    bufB.copy(paddedB);
+    // Always run the comparison to avoid short-circuiting on length mismatch
+    crypto.timingSafeEqual(paddedA, paddedB);
+    return false;
+  }
+
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
+/**
  * Verifies that a request carries a valid admin password.
  * The password is sent via the `x-admin-password` header and compared
  * against `process.env.ADMIN_PASSWORD`.
+ *
+ * Uses timing-safe comparison to prevent timing-based side-channel attacks.
  *
  * @returns `true` if the password matches, `false` otherwise.
  */
@@ -46,5 +73,8 @@ export function verifyAdminPassword(request: Request): boolean {
 
   const rawHeader = request.headers.get('x-admin-password') || '';
   const headerPassword = rawHeader.replace(/^["']|["']$/g, '').trim();
-  return headerPassword === expectedPassword;
+  if (!headerPassword) return false;
+
+  return timingSafeCompare(headerPassword, expectedPassword);
 }
+

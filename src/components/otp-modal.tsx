@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Mail, KeyRound, Loader2, X, ShieldCheck, RefreshCw, MailCheck, AlertTriangle, Inbox, CheckCircle2 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 
@@ -39,6 +40,7 @@ export function OtpVerificationModal({
   initialEmail,
   onVerified,
 }: OtpVerificationModalProps) {
+  const [mounted, setMounted] = useState(false);
   const [email, setEmail] = useState(initialEmail);
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'email' | 'otp'>('email');
@@ -51,6 +53,22 @@ export function OtpVerificationModal({
   const [cooldown, setCooldown] = useState(60);
 
   const supabase = createClient();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Lock body scroll when OTP modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -177,9 +195,11 @@ export function OtpVerificationModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md transition-opacity">
-      <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+  if (!isOpen || !mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 min-h-[100dvh]">
+      <div className="relative z-20 w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-7 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4 animate-in fade-in zoom-in-95 duration-200 my-auto">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -356,6 +376,7 @@ export function OtpVerificationModal({
           </form>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

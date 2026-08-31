@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { createClient } from '@/utils/supabase/server';
+import { verifyAdminPassword } from '@/lib/admin-auth';
 
 export async function GET(request: Request) {
   try {
@@ -28,6 +29,10 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (!verifyAdminPassword(request)) {
+    return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { month, year, options } = body;
@@ -63,6 +68,10 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  if (!verifyAdminPassword(request)) {
+    return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { id, isActive } = body;

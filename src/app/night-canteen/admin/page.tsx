@@ -23,7 +23,11 @@ function CanteenAdminContent() {
   const [activeEscalateId, setActiveEscalateId] = useState<string | null>(null);
 
   const fetchFeedbacks = () => {
-    fetch('/api/feedback?facility=NIGHT_CANTEEN&isAdmin=true')
+    fetch('/api/feedback?facility=NIGHT_CANTEEN', {
+      headers: {
+        ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+      },
+    })
       .then((res) => res.json())
       .then((data) => {
         setFeedbacks(Array.isArray(data) ? data : []);

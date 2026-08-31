@@ -23,7 +23,11 @@ function MaintenanceAdminContent() {
   const [activeEscalateId, setActiveEscalateId] = useState<string | null>(null);
 
   const fetchFeedbacks = () => {
-    fetch('/api/feedback?facility=MAINTENANCE&isAdmin=true')
+    fetch('/api/feedback?facility=MAINTENANCE', {
+      headers: {
+        ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+      },
+    })
       .then((res) => res.json())
       .then((data) => {
         setFeedbacks(Array.isArray(data) ? data : []);

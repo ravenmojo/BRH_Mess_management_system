@@ -62,7 +62,11 @@ function AdminDashboardContent() {
   };
 
   const fetchFeedbacks = () => {
-    fetch('/api/feedback?facility=REGULAR_MESS&isAdmin=true')
+    fetch('/api/feedback?facility=REGULAR_MESS', {
+      headers: {
+        ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+      },
+    })
       .then((res) => res.json())
       .then((data) => {
         setFeedbacks(Array.isArray(data) ? data : []);

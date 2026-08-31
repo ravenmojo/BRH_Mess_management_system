@@ -8,6 +8,7 @@ import { OtpVerificationModal } from '@/components/otp-modal';
 import { GrievanceMediaGallery } from '@/components/grievance-media-gallery';
 import { TicketBadge } from '@/components/ticket-badge';
 import { MyGrievancesView } from '@/components/my-grievances-view';
+import { CompactGrievanceCard } from '@/components/compact-grievance-card';
 
 // Smart room number formatter: auto-capitalize wing, auto-insert dash
 function formatRoomNo(value: string): string {
@@ -336,80 +337,29 @@ export default function StudentFeedbackPage() {
           <div className="space-y-2.5">
             <div className="flex items-center justify-between px-1">
               <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                Recent Grievances ({feedbacks.length})
+                Recent Grievances {feedbacks.length > 0 && `(Showing ${Math.min(feedbacks.length, 5)} of ${feedbacks.length})`}
               </h3>
               <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 rounded-full border border-blue-200/80 dark:border-blue-800/80">
                 {feedbacks.filter(f => f.status === 'RESOLVED').length} Resolved
               </span>
             </div>
 
-            <div className="space-y-2.5">
-              {feedbacks.map((item) => (
-                <div
-                  key={item.id}
-                  className={`p-3.5 sm:p-4 rounded-2xl glass-card space-y-2.5 text-xs shadow-sm border transition-all ${
-                    item.status === 'RESOLVED'
-                      ? 'border-emerald-200/80 dark:border-emerald-800/60'
-                      : 'border-slate-200/80 dark:border-slate-800/80'
-                  }`}
-                >
-                  <div className="flex items-center justify-between flex-wrap gap-1.5">
-                    <div className="flex items-center space-x-1.5 flex-wrap gap-1 min-w-0">
-                      {item.ticketNumber && (
-                        <TicketBadge ticketNumber={item.ticketNumber} size="sm" />
-                      )}
-                      <span className="font-bold text-slate-900 dark:text-white truncate">{item.studentName || 'Anonymous'}</span>
-                      {item.roomNo && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono font-semibold shrink-0">{item.roomNo}</span>
-                      )}
-                    </div>
-
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold flex items-center space-x-1 shrink-0 ${item.status === 'RESOLVED'
-                        ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/80'
-                        : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/80'
-                      }`}
-                    >
-                      {item.status === 'RESOLVED' ? (
-                        <>
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse-halo-emerald mr-0.5" />
-                          <span>{item.status}</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 pulse-halo-blue mr-0.5" />
-                          <span>{item.status}</span>
-                        </>
-                      )}
-                    </span>
-                  </div>
-
-                  <p className="text-slate-700 dark:text-slate-300 leading-relaxed font-medium bg-slate-50/60 dark:bg-slate-900/40 p-2 rounded-xl border border-slate-200/40 dark:border-slate-800/40">{item.comment}</p>
-                  
-                  <GrievanceMediaGallery mediaUrl={item.mediaUrl} capturedAt={item.capturedAt} createdAt={item.createdAt} />
-
-                  {/* Resolution Attribution */}
-                  {item.status === 'RESOLVED' && (
-                    <div className="flex items-center space-x-1.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50/80 dark:bg-emerald-950/40 px-3 py-1.5 rounded-xl border border-emerald-200/80 dark:border-emerald-800/60 shadow-xs">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                      <span>
-                        Resolved by <strong className="font-semibold">{item.resolvedBy || item.resolvedByRole || 'Mess Council'}</strong>
-                        {item.resolvedAt && ` • ${new Date(item.resolvedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })} IST`}
-                      </span>
-                    </div>
-                  )}
-
-                  {item.remark && (
-                    <div className="p-2.5 rounded-xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/50 text-[11px] text-blue-900 dark:text-blue-200 flex items-start space-x-2">
-                      <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <strong className="font-semibold">Admin Remark:</strong> {item.remark}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+            {feedbacks.length === 0 ? (
+              <div className="p-5 rounded-2xl glass-card text-center text-xs font-semibold text-slate-500">
+                No mess grievances submitted yet.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {feedbacks.slice(0, 5).map((item) => (
+                  <CompactGrievanceCard
+                    key={item.id}
+                    item={item}
+                    showFacilityBadge={false}
+                    accentColor="blue"
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

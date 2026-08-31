@@ -12,10 +12,10 @@ import {
 let inMemoryFeedbacks: any[] = [
   {
     id: 'fb-1',
-    ticketNumber: 'A-515MS1908261',
-    studentName: 'Sourav Roy',
-    roomNo: 'A-515',
-    email: 'sourav@iitkgp.ac.in',
+    ticketNumber: 'A-000MS1908261',
+    studentName: 'Demo Student A',
+    roomNo: 'A-100',
+    email: 'demo.student.a@example.iitkgp.ac.in',
     comment: 'The Dal served in Tuesday lunch was slightly undercooked.',
     facilityType: 'REGULAR_MESS',
     status: 'RESOLVED',
@@ -24,10 +24,10 @@ let inMemoryFeedbacks: any[] = [
   },
   {
     id: 'fb-2',
-    ticketNumber: 'B-312NC1908261',
-    studentName: 'Rahul Verma',
-    roomNo: 'B-312',
-    email: 'rahul@iitkgp.ac.in',
+    ticketNumber: 'B-000NC1908261',
+    studentName: 'Demo Student B',
+    roomNo: 'B-100',
+    email: 'demo.student.b@example.iitkgp.ac.in',
     comment: 'Night Canteen Paneer Roll was great! Could you add extra cheese options?',
     facilityType: 'NIGHT_CANTEEN',
     status: 'PENDING',
@@ -36,10 +36,10 @@ let inMemoryFeedbacks: any[] = [
   },
   {
     id: 'fb-3',
-    ticketNumber: 'C-201WR1908261',
-    studentName: 'Amit Kumar',
-    roomNo: 'C-201',
-    email: 'amit@iitkgp.ac.in',
+    ticketNumber: 'C-000WR1908261',
+    studentName: 'Demo Student C',
+    roomNo: 'C-100',
+    email: 'demo.student.c@example.iitkgp.ac.in',
     comment: 'The flush in C-Block 2nd floor left washroom is leaking.',
     facilityType: 'MAINTENANCE_WASHROOM',
     status: 'PENDING',
@@ -67,7 +67,8 @@ export async function GET(request: Request) {
   const facility = searchParams.get('facility');
   const search = searchParams.get('search')?.trim().toLowerCase();
   const authorEmail = searchParams.get('authorEmail')?.trim().toLowerCase();
-  const isAdmin = searchParams.get('isAdmin') === 'true';
+  // Server-side admin verification instead of trusting a client query param
+  const isAdmin = verifyAdminPassword(request);
 
   try {
     const whereClause: any = {};
