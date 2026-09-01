@@ -281,7 +281,7 @@ export default function MaintenancePage() {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              Submit Issue
+              Submit Grievance
             </button>
             <button
               onClick={() => setActiveTab('MY_GRIEVANCES')}
@@ -307,7 +307,7 @@ export default function MaintenancePage() {
           <div className="bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 p-3.5 rounded-2xl flex items-start space-x-2.5 shadow-sm">
             <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
             <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed font-medium">
-              <strong>Use this system responsibly.</strong> Please ensure your grievances are rational, constructive, and factual. Frivolous or abusive submissions delay resolutions for genuine issues.
+              <strong>Use this system responsibly.</strong> Please ensure your grievances are rational, constructive, and factual. Frivolous or abusive submissions delay resolutions for genuine grievances.
             </p>
           </div>
 
@@ -410,7 +410,7 @@ export default function MaintenancePage() {
             />
 
             <textarea
-              placeholder="Describe the exact location and issue (e.g., C-Block ground floor right side washroom sink is broken)..."
+              placeholder="Describe the exact location and grievance (e.g., C-Block ground floor right side washroom sink is broken)..."
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               rows={3}

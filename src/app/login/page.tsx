@@ -20,7 +20,7 @@ export default function LoginPage() {
         <div className="space-y-2">
           <h1 className="text-2xl font-black text-slate-900 dark:text-white">No Login Required</h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-            You can browse all BROS features freely! Email OTP verification takes place inline whenever you submit a complaint or suggestion.
+            You can browse all BROS features freely! Email OTP verification takes place inline whenever you submit a grievance or suggestion.
           </p>
         </div>
 
@@ -30,9 +30,9 @@ export default function LoginPage() {
             <span>How Verification Works:</span>
           </div>
           <ul className="space-y-1.5 text-slate-600 dark:text-slate-300 pl-6 list-disc text-[11px] font-medium">
-            <li>Fill out any complaint or feedback form across the app.</li>
+            <li>Fill out any grievance or feedback form across the app.</li>
             <li>An inline modal will send an 8-digit OTP to your institute email.</li>
-            <li>Enter the OTP to verify and submit your complaint immediately.</li>
+            <li>Enter the OTP to verify and submit your grievance immediately.</li>
             <li>Your last used email address is saved locally for auto-filling next time.</li>
           </ul>
         </div>

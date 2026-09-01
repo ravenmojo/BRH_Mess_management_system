@@ -225,7 +225,7 @@ export function CompactGrievanceCard({
           {/* Full Verbatim Comment Box */}
           <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-900/60 border border-slate-200/50 dark:border-slate-800/60 space-y-1">
             <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              <span>Issue Description</span>
+              <span>Grievance Description</span>
               {formattedDate && <span>{formattedDate}</span>}
             </div>
             <p className="text-xs text-slate-800 dark:text-slate-200 font-medium leading-relaxed whitespace-pre-wrap">
@@ -287,7 +287,7 @@ export function CompactGrievanceCard({
           {item.status === 'PURGED' ? (
             <div className="pt-1">
               <p className="text-xs text-rose-500 dark:text-rose-400 font-semibold italic text-center p-2 bg-rose-50 dark:bg-rose-950/20 rounded-xl">
-                Complaint with ticket number {item.ticketNumber} has been removed due to non-approval by mess manager.
+                Grievance with ticket number {item.ticketNumber} has been removed due to non-approval by mess manager.
               </p>
             </div>
           ) : item.status === 'UNREGISTERED' && onApproveManager ? (
@@ -319,7 +319,7 @@ export function CompactGrievanceCard({
                 ) : (
                   <CheckCircle2 className="w-3.5 h-3.5" />
                 )}
-                <span>Confirm Issue Resolved</span>
+                <span>Confirm Grievance Resolved</span>
               </button>
             </div>
           )}

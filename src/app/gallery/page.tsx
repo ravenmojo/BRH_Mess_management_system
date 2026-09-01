@@ -400,7 +400,7 @@ export default function PublicGalleryPage() {
                   <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800/50 rounded-xl flex items-start space-x-2">
                     <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-500 mt-0.5 shrink-0" />
                     <div className="text-xs text-yellow-800 dark:text-yellow-400 font-medium">
-                      <strong>Notice:</strong> This gallery is for Mess Duty records. If you want to submit a complaint regarding the mess, please use the Feedback portal instead.
+                      <strong>Notice:</strong> This gallery is for Mess Duty records. If you want to submit a grievance regarding the mess, please use the Grievance portal instead.
                     </div>
                   </div>
 

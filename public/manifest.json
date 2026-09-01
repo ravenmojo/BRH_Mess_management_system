@@ -1,10 +1,10 @@
 {
-  "name": "BR Ambedkar Hall Operations and Services",
-  "short_name": "BR Ambedkar Hall",
-  "description": "BR Ambedkar Hall Operations and Services System",
+  "name": "BROS — BR Ambedkar hall Operations & Services",
+  "short_name": "BROS",
+  "description": "BROS: Digital Mess Management, Maintenance Grievances & Student Hub for BR Ambedkar hall, IIT Kharagpur.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
+  "background_color": "#030712",
   "theme_color": "#2563eb",
   "orientation": "portrait",
   "icons": [

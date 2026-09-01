@@ -53,7 +53,7 @@ export function PublicDashboardPreview() {
             <MessageSquare className="w-4 h-4" />
           </div>
           <div className="font-bold text-xs text-slate-900 dark:text-white">Grievances</div>
-          <div className="text-[10px] text-slate-500">Register Issues & Complaints</div>
+          <div className="text-[10px] text-slate-500">Register Grievances & Feedback</div>
         </div>
 
         <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1.5 shadow-sm">

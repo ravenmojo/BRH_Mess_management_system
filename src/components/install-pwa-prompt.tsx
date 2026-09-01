@@ -99,7 +99,7 @@ export function InstallPwaPrompt() {
               <span>Add BROS to Home Screen</span>
             </h3>
             <p className="text-[11px] text-slate-300 leading-tight font-medium">
-              Access mess menus, complaint forms & hub updates instantly with 1 tap on your phone!
+              Access mess menus, grievance forms & hub updates instantly with 1 tap on your phone!
             </p>
           </div>
         </div>

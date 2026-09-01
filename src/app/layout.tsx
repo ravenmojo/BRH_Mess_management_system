@@ -9,6 +9,7 @@ import { BottomNav } from '@/components/bottom-nav';
 import { BackButton } from '@/components/back-button';
 import { InstallPwaPrompt } from '@/components/install-pwa-prompt';
 import { SwipeNavigationProvider } from '@/components/swipe-navigation-provider';
+import { SplashScreen } from '@/components/splash-screen';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -21,13 +22,14 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'BR Ambedkar Hall - Operations and Services',
-  description: 'BR Ambedkar Hall Operations and Services System',
+  title: 'BROS — BR Ambedkar hall Operations & Services',
+  applicationName: 'BROS',
+  description: 'BR Ambedkar hall Operations and Services System (BROS) • IIT Kharagpur',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'BR Ambedkar Hall Operations and Services',
+    title: 'BROS',
   },
 };
 
@@ -44,6 +46,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
       </head>
       <body className={`${plusJakartaSans.className} pb-24 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen antialiased relative selection:bg-blue-500 selection:text-white`}>
+        <SplashScreen />
         {/* Ambient Luminous Mesh Gradient Orbs - Prismatic Jewel Tones */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" aria-hidden="true">
           <div className="absolute -top-[20%] left-1/2 -translate-x-1/2 w-[600px] h-[500px] rounded-full bg-gradient-to-br from-blue-500/20 via-indigo-500/15 to-purple-500/10 blur-[130px] dark:from-indigo-600/30 dark:via-violet-600/25 dark:to-cyan-600/20" />
@@ -56,7 +59,6 @@ export default function RootLayout({
           <header className="sticky top-0 z-40 glass-header">
             <div className="max-w-md mx-auto px-4 h-14 flex items-center justify-between">
               <div className="flex items-center space-x-2.5">
-                <BackButton />
                 <Link
                   href="/"
                   className="flex items-center space-x-2.5 group touch-spring select-none"
@@ -67,7 +69,7 @@ export default function RootLayout({
                   </div>
                   <div className="flex flex-col justify-center leading-none">
                     <span className="text-xs sm:text-[13px] font-black tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 dark:from-white dark:via-slate-100 dark:to-indigo-200 bg-clip-text text-transparent leading-tight group-hover:opacity-90 transition-opacity">
-                      BR Ambedkar Hall
+                      BR Ambedkar hall
                     </span>
                     <span className="text-[9.5px] sm:text-[10px] tracking-wider font-extrabold text-indigo-600 dark:text-indigo-400 uppercase">
                       Operations and Services
@@ -81,7 +83,8 @@ export default function RootLayout({
               </div>
             </div>
           </header>
-          <main className="max-w-md mx-auto px-4 pt-4 pb-8 relative z-10">
+          <main className="max-w-md mx-auto px-4 pt-3.5 pb-8 relative z-10">
+            <BackButton />
             <SwipeNavigationProvider>
               {children}
             </SwipeNavigationProvider>

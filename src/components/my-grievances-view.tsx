@@ -219,7 +219,7 @@ export function MyGrievancesView({ onBackToSubmit }: MyGrievancesViewProps) {
               <span>Verify Your Institute Email</span>
             </h4>
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              Enter your email to view all grievances submitted by you across Mess, Maintenance, and Night Canteen, and confirm issue resolutions.
+              Enter your email to view all grievances submitted by you across Mess, Maintenance, and Night Canteen, and confirm grievance resolutions.
             </p>
           </div>
 

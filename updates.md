@@ -70,6 +70,26 @@ The registration form and tier tab section were vertically compressed to give mo
 
 - Fixed a line-concatenation bug in `.env.local` where `MESS_MANAGER_PASSWORD` was appended to the same line as `SUPER_ADMIN_EMAILS`, causing the password env var to be silently ignored.
 
+### 8. 📝 Mess Duty Gallery Manager Countersignature Flow
+
+- **Dual-Verification for Duty Gallery:** Mess duty records now require on-site countersignature by the Mess Manager (same as regular mess grievances).
+- **Database Schema Sync:** Added `managerApproved Boolean @default(false)` to `model GalleryImage` in [prisma/schema.prisma](prisma/schema.prisma) and synced Supabase PostgreSQL via `push.js`.
+- **Approval API Endpoint:** Created [src/app/api/gallery/approve-manager/route.ts](src/app/api/gallery/approve-manager/route.ts) to verify `MESS_MANAGER_PASSWORD` and mark `managerApproved: true`.
+- **Two-Step Modal Flow:** Updated [src/app/gallery/page.tsx](src/app/gallery/page.tsx) with a step-by-step submission experience allowing the student to hand the phone to the manager for instant countersignature (or skip for later review).
+
+### 9. 📱 PWA Homescreen Shortcut & Brand Name Standardization
+
+- **Short Name Update:** Updated `short_name: "BROS"` and `name: "BROS — BR Ambedkar hall Operations & Services"` in [public/manifest.json](public/manifest.json).
+- **App Metadata:** Updated `applicationName: 'BROS'` and `appleWebApp.title: 'BROS'` in [src/app/layout.tsx](src/app/layout.tsx).
+- **Footer Version Bump:** Updated [src/components/footer.tsx](src/components/footer.tsx) and [package.json](package.json) to **`BROS 1.0.0`**.
+
+### 10. ✨ Full-Bleed Immersive Splash Screen Redesign
+
+- **React Body Portal:** Rebuilt [src/components/splash-screen.tsx](src/components/splash-screen.tsx) using `createPortal(..., document.body)` so it renders at 100vw × 100dvh across the entire viewport, resolving container transform bounding box constraints.
+- **Deep Obsidian Atmosphere:** Cosmic dark background (`#030712`) with smooth ambient radial glow orbs.
+- **Luminous Crest & Staggered Reveal:** Glowing glassy shield insignia and ultra-smooth staggered cinematic reveals for `B R O S` typography with zero layout shifts.
+- **Smooth Apple-Grade Exit:** Dissipates seamlessly via `cubic-bezier(0.16, 1, 0.3, 1)` with soft blur fade-out before unmounting.
+
 ---
 
 ## 📌 Version 0.9.9 (v0.9.9) — Swipe Gestures, Design System Polish & Advanced Maintenance Governance

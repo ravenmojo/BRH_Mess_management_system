@@ -356,7 +356,7 @@ function AdminDashboardContent() {
   };
 
   const handleDeleteFeedback = async (id: string) => {
-    if (!confirm('Are you sure you want to permanently remove this complaint?')) return;
+    if (!confirm('Are you sure you want to permanently remove this grievance?')) return;
     
     // ⚡ Instant Optimistic Update
     setFeedbacks((prev) => prev.filter((item) => item.id !== id));
@@ -640,7 +640,7 @@ function AdminDashboardContent() {
       </div>
       </details>
 
-      {/* GRIEVANCES & COMPLAINTS MANAGEMENT */}
+      {/* GRIEVANCES MANAGEMENT */}
       <details className="group space-y-2">
         <summary className="flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
           <h3 className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider flex items-center space-x-1.5">
@@ -751,7 +751,7 @@ function AdminDashboardContent() {
             <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search by Ticket #, Room No., name, or issue..."
+              placeholder="Search by Ticket #, Room No., name, or grievance..."
               value={feedbackSearch}
               onChange={(e) => setFeedbackSearch(e.target.value)}
               className="w-full pl-8 pr-3 py-1.5 rounded-lg text-xs bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -977,7 +977,7 @@ function AdminDashboardContent() {
                               <button
                                 onClick={() => handleDeleteFeedback(fb.id)}
                                 className="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 transition-colors border border-rose-200 dark:border-rose-800 touch-spring"
-                                title="Remove Complaint"
+                                title="Remove Grievance"
                               >
                                 <Trash2 className="w-3.5 h-3.5 text-rose-500" />
                               </button>

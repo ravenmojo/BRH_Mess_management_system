@@ -197,7 +197,7 @@ export default function StudentFeedbackPage() {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              Submit Issue
+              Submit Grievance
             </button>
             <button
               onClick={() => setActiveTab('MY_GRIEVANCES')}
@@ -286,7 +286,7 @@ export default function StudentFeedbackPage() {
             />
 
             <textarea
-              placeholder="Describe the issue (e.g. food quality, hygiene concern)..."
+              placeholder="Describe your grievance (e.g. food quality, hygiene concern)..."
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               rows={3}

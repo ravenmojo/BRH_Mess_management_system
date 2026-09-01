@@ -209,7 +209,7 @@ export default function NightCanteenPage() {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              My Issues
+              My Grievances
             </button>
           </div>
         </div>
@@ -297,7 +297,7 @@ export default function NightCanteenPage() {
             </div>
 
             <textarea
-              placeholder="Describe your grievance, food quality issue, or suggestion..."
+              placeholder="Describe your grievance, food quality concern, or suggestion..."
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               rows={3}

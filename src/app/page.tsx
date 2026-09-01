@@ -24,8 +24,6 @@ import {
   Vote,
 } from 'lucide-react';
 
-import { SplashScreen } from '@/components/splash-screen';
-
 export default function StudentDashboard() {
   const [weeklyData, setWeeklyData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -52,7 +50,6 @@ export default function StudentDashboard() {
 
   return (
     <div className="space-y-6 pb-8">
-      <SplashScreen />
       {/* Top Banner Card */}
       <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-sky-700 p-4 sm:p-5 text-white shadow-xl shadow-blue-500/20 group ring-1 ring-white/20">
         <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/15 blur-2xl group-hover:scale-125 transition-transform duration-700 ease-out pointer-events-none" />

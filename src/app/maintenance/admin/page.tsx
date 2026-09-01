@@ -338,7 +338,7 @@ function MaintenanceAdminContent() {
             <ShieldCheck className="w-5 h-5 text-sky-600 dark:text-sky-400" />
             <span>Maintenance Admin Portal</span>
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">Manage Hall Infrastructure Issues & Escalations</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Manage Hall Infrastructure Grievances & Escalations</p>
         </div>
       </div>
 
@@ -452,7 +452,7 @@ function MaintenanceAdminContent() {
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search by Ticket #, Room No., category, or issue..."
+              placeholder="Search by Ticket #, Room No., category, or grievance..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-8 pr-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
@@ -711,7 +711,7 @@ function MaintenanceAdminContent() {
                               <button
                                 onClick={() => handleDeleteFeedback(fb.id)}
                                 className="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 transition-colors border border-rose-200 dark:border-rose-800 touch-spring"
-                                title="Remove Complaint"
+                                title="Remove Grievance"
                               >
                                 <Trash2 className="w-3.5 h-3.5 text-rose-500" />
                               </button>

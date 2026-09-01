@@ -13,13 +13,15 @@ export function ThemeToggle() {
   }, []);
 
   if (!mounted) {
-    return <div className="w-9 h-9" />;
+    return <div className="w-8 h-8 rounded-xl bg-slate-200 dark:bg-slate-800 animate-pulse" />;
   }
+
+  const isDark = theme === 'dark';
 
   return (
     <button
       onClick={() => {
-        const nextTheme = theme === 'dark' ? 'light' : 'dark';
+        const nextTheme = isDark ? 'light' : 'dark';
         if (!document.startViewTransition) {
           setTheme(nextTheme);
         } else {
@@ -28,15 +30,19 @@ export function ThemeToggle() {
           });
         }
       }}
-      className="p-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 border border-slate-200/80 dark:border-slate-700/80 hover:scale-105 active:scale-95 shadow-sm"
+      className={`p-2 rounded-xl transition-all duration-200 border shadow-sm hover:scale-105 active:scale-95 touch-spring flex items-center justify-center shrink-0 ${
+        isDark
+          ? 'bg-slate-900/95 text-amber-300 border-amber-500/40 hover:bg-slate-800 hover:border-amber-400 shadow-amber-950/30'
+          : 'bg-white/95 text-indigo-600 border-indigo-200/90 hover:bg-indigo-50/80 hover:border-indigo-400 shadow-indigo-500/10'
+      }`}
+      title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
       aria-label="Toggle theme"
     >
-      {theme === 'dark' ? (
-        <Sun className="w-4 h-4 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
+      {isDark ? (
+        <Sun className="w-4 h-4 text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.95)] transition-transform duration-300 hover:rotate-45" />
       ) : (
-        <Moon className="w-4 h-4 text-indigo-600 drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
+        <Moon className="w-4 h-4 text-indigo-600 drop-shadow-[0_0_8px_rgba(99,102,241,0.65)] transition-transform duration-300 hover:-rotate-12" />
       )}
     </button>
   );
 }
-
