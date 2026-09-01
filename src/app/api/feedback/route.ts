@@ -11,44 +11,7 @@ import {
   ensureTicketNumber,
 } from '@/lib/ticket';
 
-let inMemoryFeedbacks: any[] = [
-  {
-    id: 'fb-1',
-    ticketNumber: 'A-000MS1908261',
-    studentName: 'Demo Student A',
-    roomNo: 'A-100',
-    email: 'demo.student.a@example.iitkgp.ac.in',
-    comment: 'The Dal served in Tuesday lunch was slightly undercooked.',
-    facilityType: 'REGULAR_MESS',
-    status: 'RESOLVED',
-    remark: 'Issue conveyed to chef. Fresh batch prepared for dinner.',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'fb-2',
-    ticketNumber: 'B-000NC1908261',
-    studentName: 'Demo Student B',
-    roomNo: 'B-100',
-    email: 'demo.student.b@example.iitkgp.ac.in',
-    comment: 'Night Canteen Paneer Roll was great! Could you add extra cheese options?',
-    facilityType: 'NIGHT_CANTEEN',
-    status: 'PENDING',
-    remark: null,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'fb-3',
-    ticketNumber: 'C-000WR1908261',
-    studentName: 'Demo Student C',
-    roomNo: 'C-100',
-    email: 'demo.student.c@example.iitkgp.ac.in',
-    comment: 'The flush in C-Block 2nd floor left washroom is leaking.',
-    facilityType: 'MAINTENANCE_WASHROOM',
-    status: 'PENDING',
-    remark: null,
-    createdAt: new Date().toISOString(),
-  },
-];
+// Removed inMemoryFeedbacks dummy data array
 
 // Room number validation: A-515 format (Wing A-D, 3-digit room)
 function isValidRoomNo(roomNo: string): boolean {
@@ -166,31 +129,12 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json(sanitizedFeedbacks);
-  } catch (error) {
-    let filtered = authorEmail
-      ? inMemoryFeedbacks.filter((f) => f.email === authorEmail)
-      : facility
-        ? facility === 'MAINTENANCE'
-          ? inMemoryFeedbacks.filter((f) => f.facilityType.startsWith('MAINTENANCE_'))
-          : inMemoryFeedbacks.filter((f) => f.facilityType === facility)
-        : inMemoryFeedbacks;
-
-    if (search) {
-      filtered = filtered.filter(
-        (f) =>
-          (f.ticketNumber && f.ticketNumber.toLowerCase().includes(search)) ||
-          (f.roomNo && f.roomNo.toLowerCase().includes(search)) ||
-          (f.studentName && f.studentName.toLowerCase().includes(search)) ||
-          (f.comment && f.comment.toLowerCase().includes(search))
-      );
-    }
-
-    const sanitized = filtered.map((f, idx) => ({
-      ...f,
-      ticketNumber: f.ticketNumber || ensureTicketNumber(f, idx + 1),
-    }));
-
-    return NextResponse.json(sanitized);
+  } catch (error: any) {
+    console.error('Database query failed:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch grievances from the database. Please check database permissions (e.g., RLS settings).' },
+      { status: 500 }
+    );
   }
 }
 
