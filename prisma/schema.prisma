@@ -92,9 +92,11 @@ model Feedback {
   overriddenReason String?     // Private admin override note
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
+  managerApproved Boolean      @default(true) // For REGULAR_MESS grievances requiring signature
 
   @@index([facilityType])
   @@index([status])
+  @@index([managerApproved])
   @@index([createdAt])
   @@index([email])
   @@index([isEscalated])

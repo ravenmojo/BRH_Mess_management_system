@@ -47,7 +47,7 @@ A comprehensive, mobile-first Next.js web application built as a centralized dig
 - **Live Compliance & Menu Builder:** Integrated cost tracking, salad requirements, and mandatory meal checks directly inside the Mess Admin dashboard.
 
 ### 🔧 Maintenance Portal
-- **Category-Based Grievances:** Seven subcategories — Washrooms (`WR`), Drinking Water (`DW`), Electrical (`EL`), Civil (`CV`), Cleaning (`CL`), Outdoors (`OD`), and Other.
+- **Category-Based Grievances:** Seven subcategories — Washrooms (`WR`), Drinking Water (`DW`), Electrical (`EL`), Civil (`CV`), Cleaning (`CL`), Gym & Outdoors (`GO`), and Other.
 - **Interactive 3-Column Grid:** Touch-friendly category selector with intuitive location placeholders.
 - **Resolution Tracking:** View resolver credentials and official remarks timestamped in Indian Standard Time (IST).
 

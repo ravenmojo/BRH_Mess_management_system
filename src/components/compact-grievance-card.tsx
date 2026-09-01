@@ -48,6 +48,7 @@ interface CompactGrievanceCardProps {
   showFacilityBadge?: boolean;
   accentColor?: 'blue' | 'sky' | 'indigo' | 'emerald';
   onMarkResolved?: (id: string) => void;
+  onApproveManager?: (id: string) => void;
   isActionLoading?: boolean;
 }
 
@@ -80,6 +81,7 @@ export function CompactGrievanceCard({
   showFacilityBadge = false,
   accentColor = 'blue',
   onMarkResolved,
+  onApproveManager,
   isActionLoading = false,
 }: CompactGrievanceCardProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
@@ -104,13 +106,17 @@ export function CompactGrievanceCard({
   return (
     <div
       className={`rounded-2xl glass-card transition-all duration-200 border overflow-hidden ${
-        item.isEscalated
-          ? 'border-red-400/80 bg-red-50/20 dark:bg-red-950/20 shadow-red-500/10'
-          : isTwoWay
-            ? 'border-emerald-400/60 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-emerald-500/5'
-            : isResolved
-              ? 'border-emerald-200/80 dark:border-emerald-800/60 shadow-xs'
-              : 'border-yellow-200/80 dark:border-yellow-900/60 shadow-xs'
+        item.status === 'PURGED'
+          ? 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 shadow-none opacity-80'
+          : item.status === 'UNREGISTERED'
+            ? 'border-indigo-400/60 bg-indigo-50/20 dark:bg-indigo-950/20 shadow-indigo-500/5'
+            : item.isEscalated
+              ? 'border-red-400/80 bg-red-50/20 dark:bg-red-950/20 shadow-red-500/10'
+              : isTwoWay
+                ? 'border-emerald-400/60 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-emerald-500/5'
+                : isResolved
+                  ? 'border-emerald-200/80 dark:border-emerald-800/60 shadow-xs'
+                  : 'border-yellow-200/80 dark:border-yellow-900/60 shadow-xs'
       } hover:border-slate-300 dark:hover:border-slate-700`}
     >
       {/* Clickable Compact Header */}
@@ -154,7 +160,15 @@ export function CompactGrievanceCard({
             )}
 
             {/* Status Indicator Badge */}
-            {isTwoWay ? (
+            {item.status === 'PURGED' ? (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 flex items-center space-x-1">
+                <span>Purged</span>
+              </span>
+            ) : item.status === 'UNREGISTERED' ? (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-100 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700/80 flex items-center space-x-1">
+                <span>Needs Manager Sig</span>
+              </span>
+            ) : isTwoWay ? (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700 flex items-center space-x-1 shadow-xs">
                 <Check className="w-2.5 h-2.5 text-emerald-600" />
                 <Check className="w-2.5 h-2.5 text-emerald-600 -ml-1.5" />
@@ -270,7 +284,29 @@ export function CompactGrievanceCard({
           )}
 
           {/* Action button for student author to confirm resolution (if provided in My Grievances view) */}
-          {!isResolved && onMarkResolved && (
+          {item.status === 'PURGED' ? (
+            <div className="pt-1">
+              <p className="text-xs text-rose-500 dark:text-rose-400 font-semibold italic text-center p-2 bg-rose-50 dark:bg-rose-950/20 rounded-xl">
+                Complaint with ticket number {item.ticketNumber} has been removed due to non-approval by mess manager.
+              </p>
+            </div>
+          ) : item.status === 'UNREGISTERED' && onApproveManager ? (
+            <div className="pt-1 flex justify-end">
+              <button
+                type="button"
+                onClick={() => onApproveManager(item.id)}
+                disabled={isActionLoading}
+                className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-xs flex items-center space-x-1.5 touch-spring disabled:opacity-50"
+              >
+                {isActionLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                )}
+                <span>Sign & Register (Manager Only)</span>
+              </button>
+            </div>
+          ) : !isResolved && onMarkResolved && (
             <div className="pt-1 flex justify-end">
               <button
                 type="button"

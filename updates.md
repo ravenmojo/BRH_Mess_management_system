@@ -82,7 +82,7 @@ This document tracks all feature implementations, bug fixes, UI/UX enhancements,
   - `MAINTENANCE_ELECTRICAL` ➔ **`EL`** (Electrical & Lighting)
   - `MAINTENANCE_CIVIL` ➔ **`CV`** (Civil, Carpentry & Masonry)
   - `MAINTENANCE_CLEANING` ➔ **`CL`** (Sanitation & Housekeeping)
-  - `MAINTENANCE_OUTDOOR` ➔ **`OD`** (Lawns, Courtyards & Grounds)
+  - `MAINTENANCE_OUTDOOR` ➔ **`GO`** (Gym, Lawns, Courtyards & Grounds)
 - **Database Schema Sync:** Added `ticketNumber String? @unique` to `model Feedback` in [prisma/schema.prisma](prisma/schema.prisma) and synchronised the database via `prisma db push`.
 - **Ticket Utility Library:** Created [src/lib/ticket.ts](src/lib/ticket.ts) with category code lookup, IST `DDMMYY` date formatting, sequential daily count resolution, and fallback generation for legacy/in-memory records.
 - **Interactive Monospace Ticket Badge:** Built [src/components/ticket-badge.tsx](src/components/ticket-badge.tsx) featuring a monospace pill badge with instant 1-click clipboard copy and animated checkmark confirmation.

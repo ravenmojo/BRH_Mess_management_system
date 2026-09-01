@@ -49,14 +49,44 @@ export async function GET(request: Request) {
       }
     }
 
-    // Public feed filter: Omit grievances resolved more than 30 days ago
+    // Public feed filter: Omit grievances resolved more than 30 days ago, and omit UNREGISTERED/PURGED
     if (!isAdmin && !authorEmail) {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      whereClause.OR = [
-        { status: { not: 'RESOLVED' } },
-        { resolvedAt: { gte: thirtyDaysAgo } },
-        { resolvedAt: null },
+      whereClause.AND = [
+        { status: { notIn: ['UNREGISTERED', 'PURGED'] } },
+        {
+          OR: [
+            { status: { not: 'RESOLVED' } },
+            { resolvedAt: { gte: thirtyDaysAgo } },
+            { resolvedAt: null },
+          ]
+        }
       ];
+    }
+
+    // Lazy purge unapproved REGULAR_MESS grievances > 12 hours old
+    try {
+      const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+      const toPurge = await prisma.feedback.findMany({
+        where: {
+          status: 'UNREGISTERED',
+          createdAt: { lt: twelveHoursAgo },
+        },
+      });
+
+      if (toPurge.length > 0) {
+        for (const item of toPurge) {
+          if (item.mediaUrl) {
+            await deleteFromCloudinary(item.mediaUrl).catch(() => {});
+          }
+          await prisma.feedback.update({
+            where: { id: item.id },
+            data: { status: 'PURGED', mediaUrl: null },
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Lazy purge failed', e);
     }
 
     const orderByClause: any[] = isAdmin
@@ -201,6 +231,8 @@ export async function POST(request: Request) {
         email: trimmedEmail,
         comment,
         facilityType: finalFacility,
+        status: finalFacility === 'REGULAR_MESS' ? 'UNREGISTERED' : 'PENDING',
+        managerApproved: finalFacility === 'REGULAR_MESS' ? false : true,
         mediaUrl: mediaUrl || null,
         capturedAt: capturedAt || null,
       },

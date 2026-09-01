@@ -148,7 +148,10 @@ export default function StudentFeedbackPage() {
       if (res.ok) {
         const createdData = await res.json();
         setSubmittedTicket(createdData.ticketNumber || null);
-        setStatusMessage('Feedback logged successfully!');
+        setStatusMessage('Grievance saved temporarily! Please visit "My Grievances" and ask the Mess Manager to sign off on your grievance within 12 hours to formally register it.');
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('just_submitted_email', verifiedEmail);
+        }
         setStudentName('');
         setRoomNo('');
         setComment('');

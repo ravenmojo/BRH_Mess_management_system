@@ -12,7 +12,7 @@ export const CATEGORY_CODES: Record<string, string> = {
   MAINTENANCE_ELECTRICAL: 'EL',
   MAINTENANCE_CIVIL: 'CV',
   MAINTENANCE_CLEANING: 'CL',
-  MAINTENANCE_OUTDOOR: 'OD',
+  MAINTENANCE_OUTDOOR: 'GO',
 };
 
 export const CODE_LABELS: Record<string, string> = {
@@ -23,7 +23,8 @@ export const CODE_LABELS: Record<string, string> = {
   EL: 'Electrical',
   CV: 'Civil',
   CL: 'Cleaning',
-  OD: 'Outdoor',
+  GO: 'Gym & Outdoors',
+  OD: 'Gym & Outdoors',
   OT: 'Other',
 };
 

@@ -833,12 +833,14 @@ function AdminDashboardContent() {
                       </div>
                       <span
                         className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
-                          fb.status === 'RESOLVED'
+                          fb.status === 'UNREGISTERED'
+                            ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/80'
+                            : fb.status === 'RESOLVED'
                             ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/80'
                             : 'bg-yellow-100 dark:bg-yellow-950 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800/80'
                         }`}
                       >
-                        {fb.status}
+                        {fb.status === 'UNREGISTERED' ? 'PENDING MANAGER SIGNATURE' : fb.status}
                       </span>
                     </div>
 
