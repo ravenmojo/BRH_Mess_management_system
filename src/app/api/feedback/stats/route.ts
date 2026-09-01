@@ -3,20 +3,21 @@ import prisma from '@/lib/prisma';
 
 export async function GET(request: Request) {
   try {
-    const allFeedbacks = await prisma.feedback.findMany({
-      select: {
-        id: true,
-        facilityType: true,
-        status: true,
-        adminResolved: true,
-        userResolved: true,
-        isEscalated: true,
-        createdAt: true,
-        resolvedAt: true,
-      },
-    });
-
-    const historicalSummaries = await prisma.grievanceStatSummary.findMany();
+    const [allFeedbacks, historicalSummaries] = await Promise.all([
+      prisma.feedback.findMany({
+        select: {
+          id: true,
+          facilityType: true,
+          status: true,
+          adminResolved: true,
+          userResolved: true,
+          isEscalated: true,
+          createdAt: true,
+          resolvedAt: true,
+        },
+      }),
+      prisma.grievanceStatSummary.findMany()
+    ]);
 
     // Grouping by category
     const statsByCategory: Record<string, {

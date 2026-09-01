@@ -633,10 +633,17 @@ export async function GET() {
     formattedMenu.sort((a, b) => DAY_ORDER.indexOf(a.dayOfWeek) - DAY_ORDER.indexOf(b.dayOfWeek));
 
     const validation = validateWeeklyMenu(formattedMenu);
-    return NextResponse.json({
-      menu: formattedMenu,
-      validation,
-    });
+    return NextResponse.json(
+      {
+        menu: formattedMenu,
+        validation,
+      },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+        },
+      }
+    );
   } catch (error) {
     // Fallback to in-memory store if DB is disconnected
     const sortedInMemory = [...inMemoryWeeklyMenu].sort((a, b) => DAY_ORDER.indexOf(a.dayOfWeek) - DAY_ORDER.indexOf(b.dayOfWeek));

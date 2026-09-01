@@ -92,6 +92,12 @@ model Feedback {
   overriddenReason String?     // Private admin override note
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
+
+  @@index([facilityType])
+  @@index([status])
+  @@index([createdAt])
+  @@index([email])
+  @@index([isEscalated])
 }
 
 model AdminUser {
@@ -110,6 +116,9 @@ model AdminAuditLog {
   details     String   // Human-readable summary of the action
   targetId    String?  // Target resource ID if applicable
   createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([action])
 }
 
 model GrievanceStatSummary {
@@ -178,6 +187,9 @@ model GalleryImage {
   capturedAt     String?  // Picture metadata capture timestamp
   status         String   @default("PENDING") // PENDING, APPROVED, REJECTED
   createdAt      DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([status])
 }
 
 model MovieScreening {
@@ -196,7 +208,11 @@ model Suggestion {
   hallRoll    String
   category    String   // MESS, MAINTENANCE, ACTIVITIES, OTHER
   content     String
+  targetId    String?
   createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([category])
 }
 
 model ActivityParticipant {
