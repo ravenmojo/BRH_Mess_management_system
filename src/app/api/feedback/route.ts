@@ -175,73 +175,36 @@ export async function POST(request: Request) {
     const finalFacility = facilityType || 'REGULAR_MESS';
     const finalStudentName = studentName && studentName.trim() ? studentName.trim() : 'Anonymous';
 
-    const categoryCode = getCategoryCode(finalFacility);
     const dateStr = formatTicketDate();
-    const ticketPrefix = buildTicketNumber(normalizedRoomNo, categoryCode, dateStr);
-
+    
     let count = 1;
-    try {
-      const existingCount = await prisma.feedback.count({
-        where: {
-          roomNo: normalizedRoomNo,
-          facilityType: finalFacility,
-          createdAt: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0)),
-          },
+    const existingCount = await prisma.feedback.count({
+      where: {
+        roomNo: normalizedRoomNo,
+        facilityType: finalFacility,
+        createdAt: {
+          gte: new Date(new Date().setHours(0, 0, 0, 0)),
         },
-      });
-      count = existingCount + 1;
-    } catch (e) {
-      const matchingInMemory = inMemoryFeedbacks.filter(
-        (f) =>
-          f.roomNo === normalizedRoomNo &&
-          f.facilityType === finalFacility &&
-          formatTicketDate(new Date(f.createdAt)) === dateStr
-      );
-      count = matchingInMemory.length + 1;
-    }
+      },
+    });
+    count = existingCount + 1;
 
-    let generatedTicketNumber = `${ticketPrefix}${count}`;
+    // buildTicketNumber expects facilityType (e.g. 'MAINTENANCE_WASHROOM'), NOT the 2-letter code.
+    const generatedTicketNumber = buildTicketNumber(normalizedRoomNo, finalFacility, dateStr, count);
 
-    while (inMemoryFeedbacks.some((f) => f.ticketNumber === generatedTicketNumber)) {
-      count++;
-      generatedTicketNumber = `${ticketPrefix}${count}`;
-    }
-
-    const newFeedback = {
-      id: `fb-${Date.now()}`,
-      ticketNumber: generatedTicketNumber,
-      studentName: finalStudentName,
-      roomNo: normalizedRoomNo,
-      email: trimmedEmail,
-      comment,
-      facilityType: finalFacility,
-      status: 'PENDING',
-      remark: null,
-      mediaUrl: mediaUrl || null,
-      capturedAt: capturedAt || null,
-      createdAt: new Date().toISOString(),
-    };
-
-    inMemoryFeedbacks.unshift(newFeedback);
-
-    try {
-      await prisma.feedback.create({
-        data: {
-          ticketNumber: generatedTicketNumber,
-          studentName: finalStudentName,
-          hallRoll: normalizedRoomNo,
-          roomNo: normalizedRoomNo,
-          email: trimmedEmail,
-          comment,
-          facilityType: finalFacility,
-          mediaUrl: mediaUrl || null,
-          capturedAt: capturedAt || null,
-        },
-      });
-    } catch (dbErr) {
-      console.warn('DB bypass for feedback POST');
-    }
+    const newFeedback = await prisma.feedback.create({
+      data: {
+        ticketNumber: generatedTicketNumber,
+        studentName: finalStudentName,
+        hallRoll: normalizedRoomNo,
+        roomNo: normalizedRoomNo,
+        email: trimmedEmail,
+        comment,
+        facilityType: finalFacility,
+        mediaUrl: mediaUrl || null,
+        capturedAt: capturedAt || null,
+      },
+    });
 
     return NextResponse.json(newFeedback, { status: 201 });
   } catch (error: any) {
@@ -326,7 +289,7 @@ export async function PATCH(request: Request) {
       updateData.remark = trimmedRemark;
 
       try {
-        const currentItem = inMemoryFeedbacks.find((f) => f.id === id) || (await prisma.feedback.findUnique({ where: { id } }));
+        const currentItem = await prisma.feedback.findUnique({ where: { id } });
         let existingHistory: any[] = [];
         if (currentItem?.remarkHistory) {
           existingHistory = typeof currentItem.remarkHistory === 'string'
@@ -390,11 +353,6 @@ export async function PATCH(request: Request) {
       if (overriddenReason !== undefined) updateData.overriddenReason = overriddenReason;
     }
 
-    const index = inMemoryFeedbacks.findIndex((f) => f.id === id);
-    if (index !== -1) {
-      Object.assign(inMemoryFeedbacks[index], updateData);
-    }
-
     try {
       const updatedItem = await prisma.feedback.update({
         where: { id },
@@ -437,8 +395,9 @@ export async function PATCH(request: Request) {
           id
         );
       }
-    } catch (dbErr) {
+    } catch (dbErr: any) {
       console.warn('DB bypass for feedback PATCH:', dbErr);
+      return NextResponse.json({ error: 'Database update failed.' }, { status: 500 });
     }
 
     return NextResponse.json({ message: 'Feedback updated successfully!' });
@@ -467,21 +426,14 @@ export async function DELETE(request: Request) {
 
     let mediaUrl: string | null = null;
     let ticketNum: string | null = null;
-    const targetInMemory = inMemoryFeedbacks.find((f) => f.id === id);
-    if (targetInMemory) {
-      mediaUrl = targetInMemory.mediaUrl || null;
-      ticketNum = targetInMemory.ticketNumber || null;
-    } else {
-      try {
-        const targetDb = await prisma.feedback.findUnique({ where: { id } });
-        if (targetDb) {
-          mediaUrl = targetDb.mediaUrl || null;
-          ticketNum = targetDb.ticketNumber || null;
-        }
-      } catch (e) {}
-    }
 
-    inMemoryFeedbacks = inMemoryFeedbacks.filter((f) => f.id !== id);
+    try {
+      const targetDb = await prisma.feedback.findUnique({ where: { id } });
+      if (targetDb) {
+        mediaUrl = targetDb.mediaUrl || null;
+        ticketNum = targetDb.ticketNumber || null;
+      }
+    } catch (e) {}
 
     try {
       await prisma.feedback.delete({
@@ -493,8 +445,8 @@ export async function DELETE(request: Request) {
         `Deleted grievance record Ticket #${ticketNum || id}.`,
         id
       );
-    } catch (dbErr) {
-      console.warn('DB bypass for feedback DELETE');
+    } catch (dbErr: any) {
+      return NextResponse.json({ error: 'Failed to delete grievance from database.' }, { status: 500 });
     }
 
     let cloudinaryNotice: string | null = null;
