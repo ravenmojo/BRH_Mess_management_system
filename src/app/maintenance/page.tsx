@@ -29,6 +29,7 @@ const CATEGORIES = [
     hoverStyle: 'hover:border-cyan-400/60 hover:bg-cyan-50/30 dark:hover:bg-cyan-950/20',
     activeCard: 'border-cyan-500/80 bg-cyan-50/70 dark:bg-cyan-950/50 text-cyan-950 dark:text-cyan-100 ring-1 ring-cyan-500/30',
     activeIcon: 'bg-cyan-600 text-white shadow-xs',
+    badgeStyle: 'bg-cyan-100 dark:bg-cyan-900/50 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800',
   },
   {
     id: 'MAINTENANCE_WATER',
@@ -38,6 +39,7 @@ const CATEGORIES = [
     hoverStyle: 'hover:border-blue-400/60 hover:bg-blue-50/30 dark:hover:bg-blue-950/20',
     activeCard: 'border-blue-500/80 bg-blue-50/70 dark:bg-blue-950/50 text-blue-950 dark:text-blue-100 ring-1 ring-blue-500/30',
     activeIcon: 'bg-blue-600 text-white shadow-xs',
+    badgeStyle: 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
   },
   {
     id: 'MAINTENANCE_ELECTRICAL',
@@ -47,6 +49,7 @@ const CATEGORIES = [
     hoverStyle: 'hover:border-amber-400/60 hover:bg-amber-50/30 dark:hover:bg-amber-950/20',
     activeCard: 'border-amber-500/80 bg-amber-50/70 dark:bg-amber-950/50 text-amber-950 dark:text-amber-100 ring-1 ring-amber-500/30',
     activeIcon: 'bg-amber-500 text-white shadow-xs',
+    badgeStyle: 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800',
   },
   {
     id: 'MAINTENANCE_CIVIL',
@@ -56,6 +59,7 @@ const CATEGORIES = [
     hoverStyle: 'hover:border-orange-400/60 hover:bg-orange-50/30 dark:hover:bg-orange-950/20',
     activeCard: 'border-orange-500/80 bg-orange-50/70 dark:bg-orange-950/50 text-orange-950 dark:text-orange-100 ring-1 ring-orange-500/30',
     activeIcon: 'bg-orange-600 text-white shadow-xs',
+    badgeStyle: 'bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800',
   },
   {
     id: 'MAINTENANCE_CLEANING',
@@ -65,6 +69,7 @@ const CATEGORIES = [
     hoverStyle: 'hover:border-purple-400/60 hover:bg-purple-50/30 dark:hover:bg-purple-950/20',
     activeCard: 'border-purple-500/80 bg-purple-50/70 dark:bg-purple-950/50 text-purple-950 dark:text-purple-100 ring-1 ring-purple-500/30',
     activeIcon: 'bg-purple-600 text-white shadow-xs',
+    badgeStyle: 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800',
   },
   {
     id: 'MAINTENANCE_OUTDOOR',
@@ -74,6 +79,7 @@ const CATEGORIES = [
     hoverStyle: 'hover:border-emerald-400/60 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/20',
     activeCard: 'border-emerald-500/80 bg-emerald-50/70 dark:bg-emerald-950/50 text-emerald-950 dark:text-emerald-100 ring-1 ring-emerald-500/30',
     activeIcon: 'bg-emerald-600 text-white shadow-xs',
+    badgeStyle: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
   },
 ] as const;
 
@@ -243,6 +249,10 @@ export default function MaintenancePage() {
     return CATEGORIES.find(c => c.id === type)?.label || 'Maintenance';
   };
 
+  const getCategoryBadgeStyle = (type: string) => {
+    return CATEGORIES.find(c => c.id === type)?.badgeStyle || 'bg-slate-100 dark:bg-slate-900/50 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800';
+  };
+
   return (
     <div className="space-y-5 pb-8">
       {/* Header */}
@@ -347,13 +357,18 @@ export default function MaintenancePage() {
             onSubmit={handleFormSubmit}
             className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl glass-card space-y-3.5 relative overflow-hidden shadow-sm"
           >
-            <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center space-x-2">
-              <Wrench className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-              <span>New Grievance Details</span>
-              <span className="px-2 py-0.5 rounded-md bg-sky-100 dark:bg-sky-900/50 text-[10px] font-bold text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
-                {getCategoryLabel(facilityType)}
-              </span>
-            </h3>
+            <div>
+              <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+                <Wrench className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                <span>New Grievance Details</span>
+                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${getCategoryBadgeStyle(facilityType)}`}>
+                  {getCategoryLabel(facilityType)}
+                </span>
+              </h3>
+              <p className="text-[10px] text-rose-500/80 dark:text-rose-400/80 mt-1.5 font-medium leading-tight">
+                * Note: Submissions sent to the wrong category will not be processed.
+              </p>
+            </div>
 
             {statusMessage && (
               <div className={`p-3 rounded-2xl text-xs font-medium border space-y-1.5 animate-in fade-in duration-200 ${statusMessage.includes('success') ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/80' : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/80'}`}>
