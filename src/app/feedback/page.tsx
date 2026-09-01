@@ -231,6 +231,9 @@ export default function StudentFeedbackPage() {
             <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center space-x-2">
               <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <span>Grievance Submission Form</span>
+              <span className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/50 text-[10px] font-bold text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                Regular Mess
+              </span>
             </h3>
 
             {statusMessage && (

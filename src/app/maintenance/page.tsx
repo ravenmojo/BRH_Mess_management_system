@@ -350,6 +350,9 @@ export default function MaintenancePage() {
             <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center space-x-2">
               <Wrench className="w-4 h-4 text-sky-600 dark:text-sky-400" />
               <span>New Grievance Details</span>
+              <span className="px-2 py-0.5 rounded-md bg-sky-100 dark:bg-sky-900/50 text-[10px] font-bold text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+                {getCategoryLabel(facilityType)}
+              </span>
             </h3>
 
             {statusMessage && (

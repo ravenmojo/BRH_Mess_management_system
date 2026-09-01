@@ -176,14 +176,14 @@ export async function POST(request: Request) {
     const finalStudentName = studentName && studentName.trim() ? studentName.trim() : 'Anonymous';
 
     const dateStr = formatTicketDate();
+    const catCode = getCategoryCode(finalFacility);
+    const ticketPrefix = `${normalizedRoomNo}${catCode}${dateStr}`;
     
     let count = 1;
     const existingCount = await prisma.feedback.count({
       where: {
-        roomNo: normalizedRoomNo,
-        facilityType: finalFacility,
-        createdAt: {
-          gte: new Date(new Date().setHours(0, 0, 0, 0)),
+        ticketNumber: {
+          startsWith: ticketPrefix,
         },
       },
     });
