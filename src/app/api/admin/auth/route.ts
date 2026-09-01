@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { createAdminToken } from '@/lib/admin-auth';
+import { createAdminToken, getSuperAdminEmails } from '@/lib/admin-auth';
 import { checkRateLimit } from '@/lib/rate-limiter';
 
 export async function POST(request: Request) {
@@ -21,11 +21,12 @@ export async function POST(request: Request) {
     const expectedMasterPassword = rawExpected.replace(/^["']|["']$/g, '').trim();
     const cleanIdentifier = identifier.replace(/^["']|["']$/g, '').trim();
 
-    // 1. Check if the entered string matches the primary administrator credential
+    // 1. Check if the entered string matches the primary administrator master password
     if (expectedMasterPassword && cleanIdentifier === expectedMasterPassword) {
       const token = createAdminToken('admin@kgp', true);
       return NextResponse.json({
         authenticated: true,
+        isPasswordLogin: true,
         isMasterAdmin: true,
         token,
         adminEmail: 'admin@kgp',
@@ -33,10 +34,10 @@ export async function POST(request: Request) {
       });
     }
 
-    // 2. Otherwise, treat the input as an admin email to verify
+    // 2. Otherwise, treat the input strictly as an admin email requiring OTP verification
     const normalizedEmail = identifier.toLowerCase();
 
-    // Query database for admin registration
+    // Query database for admin registration or check super admin allowlist
     let admin = null;
     try {
       admin = await prisma.adminUser.findUnique({
@@ -46,19 +47,21 @@ export async function POST(request: Request) {
       console.error('Error checking AdminUser in DB:', dbErr);
     }
 
-    if (admin) {
-      const isMaster = Boolean(admin.isMaster);
-      const token = createAdminToken(admin.email, isMaster);
+    const isSuper = getSuperAdminEmails().includes(normalizedEmail);
+
+    if (admin || isSuper) {
+      const isMaster = Boolean(admin?.isMaster || isSuper);
+      const token = createAdminToken(normalizedEmail, isMaster);
       return NextResponse.json({
         isRegisteredAdmin: true,
-        isMasterAdmin: isMaster,
+        isPasswordLogin: false,
         isMaster,
-        email: admin.email,
-        designation: admin.designation || '',
-        canOverride: admin.canOverride,
-        tier: admin.tier,
-        canManageMess: admin.canManageMess,
-        canManageMaintenance: admin.canManageMaintenance,
+        email: normalizedEmail,
+        designation: admin?.designation || (isSuper ? 'System Administrator' : ''),
+        canOverride: isSuper ? true : Boolean(admin?.canOverride),
+        tier: isSuper ? 'HIGH' : (admin?.tier || 'LOW'),
+        canManageMess: isSuper ? true : Boolean(admin?.canManageMess),
+        canManageMaintenance: isSuper ? true : Boolean(admin?.canManageMaintenance),
         token,
       });
     }

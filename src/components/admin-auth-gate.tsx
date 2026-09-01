@@ -373,8 +373,8 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
 
       const data = await res.json();
 
-      // Case 1: Primary admin credential matched
-      if (res.ok && data.isMasterAdmin) {
+      // Case 1: Primary admin master password matched
+      if (res.ok && data.isPasswordLogin) {
         const session: AdminSession = {
           authenticated: true,
           expiresAt: Date.now() + SESSION_DURATION_MS,
@@ -398,7 +398,6 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
         setCanManageMess(true);
         setCanManageMaintenance(true);
         setTimeLeftMs(SESSION_DURATION_MS);
-        // Retain previous non-master email in state / storage
         setLoading(false);
         return;
       }
@@ -412,7 +411,7 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
           canOverride: data.canOverride,
           token: data.token,
           tier: data.tier,
-          isMaster: Boolean(data.isMaster || data.isMasterAdmin),
+          isMaster: Boolean(data.isMaster),
           canManageMess: data.canManageMess,
           canManageMaintenance: data.canManageMaintenance,
         });
