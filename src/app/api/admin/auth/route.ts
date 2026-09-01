@@ -47,12 +47,18 @@ export async function POST(request: Request) {
     }
 
     if (admin) {
-      const token = createAdminToken(admin.email, false);
+      const isMaster = Boolean(admin.isMaster);
+      const token = createAdminToken(admin.email, isMaster);
       return NextResponse.json({
         isRegisteredAdmin: true,
+        isMasterAdmin: isMaster,
+        isMaster,
         email: admin.email,
         designation: admin.designation || '',
         canOverride: admin.canOverride,
+        tier: admin.tier,
+        canManageMess: admin.canManageMess,
+        canManageMaintenance: admin.canManageMaintenance,
         token,
       });
     }

@@ -103,12 +103,16 @@ model Feedback {
 }
 
 model AdminUser {
-  id          String   @id @default(uuid())
-  email       String   @unique
-  designation String?  @default("")
-  canOverride Boolean  @default(false) // Permission to override user status
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                   String   @id @default(uuid())
+  email                String   @unique
+  designation          String?  @default("")
+  canOverride          Boolean  @default(false) // Permission to override user status
+  tier                 String   @default("HIGH") // "HIGH" or "LOW"
+  isMaster             Boolean  @default(false) // Authority to manage other administrators
+  canManageMess        Boolean  @default(true)
+  canManageMaintenance Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 model AdminAuditLog {
@@ -180,15 +184,16 @@ model PollVote {
 }
 
 model GalleryImage {
-  id             String   @id @default(uuid())
-  url            String
-  caption        String?
-  category       String   @default("GENERAL") // e.g. "CLEANING", "RAW_MATERIALS", "WEIGHT_CHECK", "PACKAGING"
-  uploaderName   String?
-  uploaderRollNo String?
-  capturedAt     String?  // Picture metadata capture timestamp
-  status         String   @default("PENDING") // PENDING, APPROVED, REJECTED
-  createdAt      DateTime @default(now())
+  id               String   @id @default(uuid())
+  url              String
+  caption          String?
+  category         String   @default("GENERAL") // e.g. "CLEANING", "RAW_MATERIALS", "WEIGHT_CHECK", "PACKAGING"
+  uploaderName     String?
+  uploaderRollNo   String?
+  capturedAt       String?  // Picture metadata capture timestamp
+  status           String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  managerApproved  Boolean  @default(false)     // Countersigned by the Mess Manager on-site
+  createdAt        DateTime @default(now())
 
   @@index([createdAt])
   @@index([status])

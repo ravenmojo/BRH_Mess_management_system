@@ -221,9 +221,14 @@ export default function StudentFeedbackPage() {
           {/* Responsibility Notice */}
           <div className="bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 p-3.5 rounded-2xl flex items-start space-x-2.5 shadow-sm">
             <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed font-medium">
-              <strong>Keep feedback factual & constructive.</strong> Please ensure your submissions are rational to help the mess committee take prompt corrective actions.
-            </p>
+            <div className="space-y-1">
+              <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed font-medium">
+                <strong>Keep feedback factual & constructive.</strong> Please ensure your submissions are rational to help the mess committee take prompt corrective actions.
+              </p>
+              <p className="text-[11px] text-amber-700/90 dark:text-amber-300/90 font-semibold italic">
+                * Note: Submissions sent to the wrong category will not be processed.
+              </p>
+            </div>
           </div>
 
           {/* Submission Form */}

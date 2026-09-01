@@ -23,6 +23,9 @@ interface AdminSession {
   adminDesignation?: string;
   adminToken?: string;
   canOverride?: boolean;
+  tier?: string;
+  canManageMess?: boolean;
+  canManageMaintenance?: boolean;
 }
 
 interface AdminAuthContextType {
@@ -32,6 +35,9 @@ interface AdminAuthContextType {
   adminDesignation?: string;
   adminToken?: string;
   canOverride?: boolean;
+  tier?: string;
+  canManageMess?: boolean;
+  canManageMaintenance?: boolean;
 }
 
 export const AdminAuthContext = createContext<AdminAuthContextType>({
@@ -91,12 +97,25 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
   const [adminDesignation, setAdminDesignation] = useState<string | undefined>(undefined);
   const [adminToken, setAdminToken] = useState<string | undefined>(undefined);
   const [canOverride, setCanOverride] = useState(false);
+  const [tier, setTier] = useState<string | undefined>(undefined);
+  const [canManageMess, setCanManageMess] = useState<boolean>(false);
+  const [canManageMaintenance, setCanManageMaintenance] = useState<boolean>(false);
 
   // Login flow state
   const [identifier, setIdentifier] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'identifier' | 'otp'>('identifier');
-  const [pendingAdminInfo, setPendingAdminInfo] = useState<{ email: string; designation?: string; canOverride?: boolean; token?: string } | null>(null);
+  const [pendingAdminInfo, setPendingAdminInfo] = useState<{ 
+    email: string; 
+    designation?: string; 
+    canOverride?: boolean; 
+    token?: string;
+    tier?: string;
+    isMaster?: boolean;
+    isMasterAdmin?: boolean;
+    canManageMess?: boolean;
+    canManageMaintenance?: boolean;
+  } | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
@@ -150,6 +169,9 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
     setAdminDesignation(undefined);
     setAdminToken(undefined);
     setCanOverride(false);
+    setTier(undefined);
+    setCanManageMess(false);
+    setCanManageMaintenance(false);
     setShowInactivityWarning(false);
     setShowExtensionModal(false);
     setExtensionCount(0);
@@ -171,6 +193,9 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
         setAdminDesignation(session.adminDesignation);
         setAdminToken(session.adminToken);
         setCanOverride(Boolean(session.canOverride || session.isMasterAdmin));
+        setTier(session.isMasterAdmin ? 'HIGH' : session.tier);
+        setCanManageMess(session.isMasterAdmin ? true : Boolean(session.canManageMess));
+        setCanManageMaintenance(session.isMasterAdmin ? true : Boolean(session.canManageMaintenance));
         setTimeLeftMs(remaining);
         return true;
       } else {
@@ -205,6 +230,9 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
       setAdminDesignation(undefined);
       setAdminToken(undefined);
       setCanOverride(false);
+      setTier(undefined);
+      setCanManageMess(false);
+      setCanManageMaintenance(false);
       setShowInactivityWarning(false);
       setShowExtensionModal(false);
       setTimeLeftMs(0);
@@ -355,6 +383,9 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
           adminDesignation: data.adminDesignation,
           adminToken: data.token,
           canOverride: true,
+          tier: 'HIGH',
+          canManageMess: true,
+          canManageMaintenance: true,
         };
         sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
         setIsAuthenticated(true);
@@ -363,6 +394,9 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
         setAdminDesignation(data.adminDesignation);
         setAdminToken(data.token);
         setCanOverride(true);
+        setTier('HIGH');
+        setCanManageMess(true);
+        setCanManageMaintenance(true);
         setTimeLeftMs(SESSION_DURATION_MS);
         // Retain previous non-master email in state / storage
         setLoading(false);
@@ -377,6 +411,10 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
           designation: data.designation,
           canOverride: data.canOverride,
           token: data.token,
+          tier: data.tier,
+          isMaster: Boolean(data.isMaster || data.isMasterAdmin),
+          canManageMess: data.canManageMess,
+          canManageMaintenance: data.canManageMaintenance,
         });
 
         // Send OTP via Supabase (allows sign up OTPs for newly added admins)
@@ -442,22 +480,29 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
       localStorage.setItem('bros_last_admin_email', pendingAdminInfo.email);
 
       // Successful OTP verification for registered admin
+      const isMaster = Boolean(pendingAdminInfo.isMaster);
       const session: AdminSession = {
         authenticated: true,
         expiresAt: Date.now() + SESSION_DURATION_MS,
-        isMasterAdmin: false,
+        isMasterAdmin: isMaster,
         adminEmail: pendingAdminInfo.email,
         adminDesignation: pendingAdminInfo.designation || '',
         adminToken: pendingAdminInfo.token,
-        canOverride: Boolean(pendingAdminInfo.canOverride),
+        canOverride: Boolean(pendingAdminInfo.canOverride || isMaster),
+        tier: isMaster ? 'HIGH' : pendingAdminInfo.tier,
+        canManageMess: isMaster ? true : Boolean(pendingAdminInfo.canManageMess),
+        canManageMaintenance: isMaster ? true : Boolean(pendingAdminInfo.canManageMaintenance),
       };
       sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
       setIsAuthenticated(true);
-      setIsMasterAdmin(false);
+      setIsMasterAdmin(isMaster);
       setAdminEmail(pendingAdminInfo.email);
       setAdminDesignation(pendingAdminInfo.designation);
       setAdminToken(pendingAdminInfo.token);
-      setCanOverride(Boolean(pendingAdminInfo.canOverride));
+      setCanOverride(Boolean(pendingAdminInfo.canOverride || isMaster));
+      setTier(isMaster ? 'HIGH' : pendingAdminInfo.tier);
+      setCanManageMess(isMaster ? true : Boolean(pendingAdminInfo.canManageMess));
+      setCanManageMaintenance(isMaster ? true : Boolean(pendingAdminInfo.canManageMaintenance));
       setTimeLeftMs(SESSION_DURATION_MS);
       setOtp('');
       setStep('identifier');
@@ -500,6 +545,9 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
     setAdminEmail(undefined);
     setAdminDesignation(undefined);
     setAdminToken(undefined);
+    setTier(undefined);
+    setCanManageMess(false);
+    setCanManageMaintenance(false);
     setIdentifier('');
     setOtp('');
     setStep('identifier');
@@ -532,6 +580,9 @@ export function AdminAuthGate({ children, title = 'Admin Portal Access' }: Admin
         adminDesignation,
         adminToken,
         canOverride,
+        tier,
+        canManageMess,
+        canManageMaintenance,
       }}
     >
       <div className="relative space-y-4">

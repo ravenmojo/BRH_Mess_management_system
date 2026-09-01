@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, CheckCircle2, AlertCircle, Clock, ArrowLeft, Loader2, Mail, Check, RefreshCw, Sparkles, Filter } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, AlertCircle, Clock, ArrowLeft, Loader2, Mail, Check, RefreshCw, Sparkles, Filter, Eye, EyeOff } from 'lucide-react';
 import { TicketBadge } from '@/components/ticket-badge';
 import { GrievanceMediaGallery } from '@/components/grievance-media-gallery';
 import { OtpVerificationModal } from '@/components/otp-modal';
@@ -45,6 +45,7 @@ export function MyGrievancesView({ onBackToSubmit }: MyGrievancesViewProps) {
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
   const [managerPassword, setManagerPassword] = useState('');
+  const [showManagerPassword, setShowManagerPassword] = useState(false);
   const [approvingGrievanceId, setApprovingGrievanceId] = useState<string | null>(null);
   const [approveError, setApproveError] = useState<string | null>(null);
 
@@ -343,14 +344,28 @@ export function MyGrievancesView({ onBackToSubmit }: MyGrievancesViewProps) {
             </div>
 
             <form onSubmit={handleApproveManager} className="space-y-3 pt-2">
-              <input
-                type="password"
-                placeholder="Manager Password"
-                value={managerPassword}
-                onChange={(e) => setManagerPassword(e.target.value)}
-                required
-                className="w-full px-3.5 py-2.5 rounded-xl text-sm font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200/90 dark:border-slate-700/80 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all"
-              />
+              <div className="relative">
+                <input
+                  type={showManagerPassword ? "text" : "password"}
+                  placeholder="Manager Password"
+                  value={managerPassword}
+                  onChange={(e) => setManagerPassword(e.target.value)}
+                  required
+                  className="w-full pl-3.5 pr-10 py-2.5 rounded-xl text-sm font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200/90 dark:border-slate-700/80 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowManagerPassword(!showManagerPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                  aria-label={showManagerPassword ? "Hide password" : "Show password"}
+                >
+                  {showManagerPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
               {approveError && (
                 <p className="text-[11px] font-bold text-rose-500 text-center">{approveError}</p>
               )}

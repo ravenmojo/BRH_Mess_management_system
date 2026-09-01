@@ -1,11 +1,20 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyAdminPassword } from '@/lib/admin-auth';
+import { getAdminContext } from '@/lib/admin-auth';
 import { logAdminAction } from '@/lib/audit-logger';
+
+// Helper to check if requester is a HIGH tier admin
+async function requireHighTierAdmin(request: Request) {
+  const adminCtx = await getAdminContext(request);
+  if (!adminCtx) return null;
+  if (adminCtx.tier !== 'HIGH') return null;
+  return adminCtx;
+}
 
 // GET: Retrieve list of registered admin users
 export async function GET(request: Request) {
-  if (!(await verifyAdminPassword(request))) {
+  const adminCtx = await getAdminContext(request);
+  if (!adminCtx) {
     return NextResponse.json({ error: 'Unauthorized: Administrator access required.' }, { status: 401 });
   }
 
@@ -17,9 +26,13 @@ export async function GET(request: Request) {
         email: true,
         designation: true,
         canOverride: true,
+        tier: true,
+        isMaster: true,
+        canManageMess: true,
+        canManageMaintenance: true,
         createdAt: true,
         updatedAt: true,
-      },
+      }
     });
 
     return NextResponse.json(admins);
@@ -30,15 +43,16 @@ export async function GET(request: Request) {
 
 // POST: Add new admin user
 export async function POST(request: Request) {
-  if (!(await verifyAdminPassword(request))) {
-    return NextResponse.json({ error: 'Unauthorized: Administrator access required.' }, { status: 401 });
+  const adminCtx = await requireHighTierAdmin(request);
+  if (!adminCtx) {
+    return NextResponse.json({ error: 'Unauthorized: Only High-Level Administrators can manage admins.' }, { status: 403 });
   }
 
-  const requesterEmail = request.headers.get('x-admin-email') || 'System Administrator';
+  const requesterEmail = adminCtx.email;
 
   try {
     const body = await request.json();
-    const { email, designation, canOverride } = body;
+    const { email, designation, canOverride, tier, isMaster, canManageMess, canManageMaintenance } = body;
 
     if (!email || typeof email !== 'string') {
       return NextResponse.json({ error: 'Valid admin email is required.' }, { status: 400 });
@@ -55,18 +69,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'This email is already registered as an admin.' }, { status: 409 });
     }
 
+    const assignedTier = tier === 'LOW' ? 'LOW' : 'HIGH';
     const newAdmin = await prisma.adminUser.create({
       data: {
         email: normalizedEmail,
         designation: designation ? designation.trim() : '',
-        canOverride: Boolean(canOverride),
+        canOverride: assignedTier === 'LOW' ? false : Boolean(canOverride),
+        tier: assignedTier,
+        isMaster: assignedTier === 'HIGH' ? Boolean(isMaster) : false,
+        canManageMess: assignedTier === 'LOW' ? Boolean(canManageMess) : true,
+        canManageMaintenance: assignedTier === 'LOW' ? Boolean(canManageMaintenance) : true,
       },
     });
 
     await logAdminAction(
       requesterEmail,
       'REGISTER_ADMIN',
-      `Registered administrator account: ${normalizedEmail}${designation ? ` (${designation.trim()})` : ''} with ${canOverride ? 'status override' : 'standard'} permissions.`,
+      `Registered administrator account: ${normalizedEmail}${designation ? ` (${designation.trim()})` : ''} as ${assignedTier}${assignedTier === 'HIGH' && isMaster ? ' (Master Admin)' : ''} with ${canOverride ? 'status override' : 'standard'} permissions.`,
       newAdmin.id
     );
 
@@ -78,15 +97,16 @@ export async function POST(request: Request) {
 
 // PATCH: Update admin designation or permissions
 export async function PATCH(request: Request) {
-  if (!(await verifyAdminPassword(request))) {
-    return NextResponse.json({ error: 'Unauthorized: Administrator access required.' }, { status: 401 });
+  const adminCtx = await requireHighTierAdmin(request);
+  if (!adminCtx) {
+    return NextResponse.json({ error: 'Unauthorized: Only High-Level Administrators can manage admins.' }, { status: 403 });
   }
 
-  const requesterEmail = request.headers.get('x-admin-email') || 'System Administrator';
+  const requesterEmail = adminCtx.email;
 
   try {
     const body = await request.json();
-    const { id, email, designation, canOverride } = body;
+    const { id, email, designation, canOverride, tier, isMaster, canManageMess, canManageMaintenance } = body;
 
     if (!id && !email) {
       return NextResponse.json({ error: 'Admin ID or email is required.' }, { status: 400 });
@@ -94,7 +114,25 @@ export async function PATCH(request: Request) {
 
     const updateData: any = {};
     if (designation !== undefined) updateData.designation = designation.trim();
-    if (canOverride !== undefined) updateData.canOverride = Boolean(canOverride);
+    if (tier !== undefined) {
+      updateData.tier = tier === 'LOW' ? 'LOW' : 'HIGH';
+      if (updateData.tier === 'LOW') {
+        updateData.canOverride = false; // Low tier cannot override
+        updateData.isMaster = false; // Low tier cannot be master admin
+        if (canManageMess !== undefined) updateData.canManageMess = Boolean(canManageMess);
+        if (canManageMaintenance !== undefined) updateData.canManageMaintenance = Boolean(canManageMaintenance);
+      } else {
+        updateData.canManageMess = true;
+        updateData.canManageMaintenance = true;
+        if (canOverride !== undefined) updateData.canOverride = Boolean(canOverride);
+        if (isMaster !== undefined) updateData.isMaster = Boolean(isMaster);
+      }
+    } else {
+      if (canOverride !== undefined) updateData.canOverride = Boolean(canOverride);
+      if (isMaster !== undefined) updateData.isMaster = Boolean(isMaster);
+      if (canManageMess !== undefined) updateData.canManageMess = Boolean(canManageMess);
+      if (canManageMaintenance !== undefined) updateData.canManageMaintenance = Boolean(canManageMaintenance);
+    }
 
     let updated;
     if (id) {
@@ -111,7 +149,11 @@ export async function PATCH(request: Request) {
 
     const changes: string[] = [];
     if (designation !== undefined) changes.push(`Designation: "${designation.trim()}"`);
-    if (canOverride !== undefined) changes.push(`Override Permission: ${canOverride ? 'Granted' : 'Revoked'}`);
+    if (tier !== undefined) changes.push(`Tier: ${updateData.tier}`);
+    if (updateData.isMaster !== undefined) changes.push(`Master Admin Status: ${updateData.isMaster ? 'Granted' : 'Revoked'}`);
+    if (updateData.canOverride !== undefined) changes.push(`Override Permission: ${updateData.canOverride ? 'Granted' : 'Revoked'}`);
+    if (updateData.canManageMess !== undefined) changes.push(`Mess Access: ${updateData.canManageMess}`);
+    if (updateData.canManageMaintenance !== undefined) changes.push(`Maintenance Access: ${updateData.canManageMaintenance}`);
 
     await logAdminAction(
       requesterEmail,
@@ -128,11 +170,12 @@ export async function PATCH(request: Request) {
 
 // DELETE: Remove admin user
 export async function DELETE(request: Request) {
-  if (!(await verifyAdminPassword(request))) {
-    return NextResponse.json({ error: 'Unauthorized: Administrator access required.' }, { status: 401 });
+  const adminCtx = await requireHighTierAdmin(request);
+  if (!adminCtx) {
+    return NextResponse.json({ error: 'Unauthorized: Only High-Level Administrators can manage admins.' }, { status: 403 });
   }
 
-  const requesterEmail = request.headers.get('x-admin-email') || 'System Administrator';
+  const requesterEmail = adminCtx.email;
 
   try {
     const { searchParams } = new URL(request.url);

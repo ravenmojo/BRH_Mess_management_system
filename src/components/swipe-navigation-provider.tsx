@@ -63,14 +63,33 @@ export function SwipeNavigationProvider({ children }: { children: React.ReactNod
     valid: false,
   });
 
+  // Returns true if an interactive text element currently has focus (keyboard open)
+  const isInputFocused = (): boolean => {
+    const el = document.activeElement;
+    if (!el) return false;
+    const tag = el.tagName.toLowerCase();
+    return (
+      tag === 'input' ||
+      tag === 'textarea' ||
+      tag === 'select' ||
+      (el as HTMLElement).isContentEditable
+    );
+  };
+
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (currentIndex === -1) return; // Only active on the 3 primary home pages
     if (e.touches.length !== 1) return;
 
+    // Block swipe when any text input currently has keyboard focus
+    if (isInputFocused()) {
+      touchStartRef.current.valid = false;
+      return;
+    }
+
     const touch = e.touches[0];
     const target = e.target as HTMLElement | null;
 
-    // Ignore swipe on interactive or form elements
+    // Ignore swipe that starts directly on an interactive / form element
     if (target) {
       const isInteractive = target.closest(
         'input, textarea, select, button, [role="dialog"], [data-no-swipe="true"], .overflow-x-auto'
@@ -92,6 +111,12 @@ export function SwipeNavigationProvider({ children }: { children: React.ReactNod
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
     if (!touchStartRef.current.valid || currentIndex === -1) return;
     if (e.changedTouches.length !== 1) return;
+
+    // Also suppress at lift-time in case focus moved during the gesture
+    if (isInputFocused()) {
+      touchStartRef.current.valid = false;
+      return;
+    }
 
     const touch = e.changedTouches[0];
     const deltaX = touch.clientX - touchStartRef.current.x;

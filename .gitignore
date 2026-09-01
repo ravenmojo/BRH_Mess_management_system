@@ -12,6 +12,8 @@
 Readme_copy.md
 security_audit.md
 security_audit_report.md
+*.pdf
+push.js
 
 # Sensitive logs & diagnostics
 supabase_logs.json
@@ -53,3 +55,7 @@ ehthumbs.db
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+
+Souradeep_GSMESS_proposal.docx
+Souradeep_GSMESS_proposal.md

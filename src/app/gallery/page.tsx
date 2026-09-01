@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Camera, Loader2, Video, Upload, X, AlertTriangle, Clock, Download } from 'lucide-react';
+import { Camera, Loader2, Video, Upload, X, AlertTriangle, Clock, Download, ShieldCheck, KeyRound, CheckCircle2 } from 'lucide-react';
 import { Footer } from '@/components/footer';
 import { uploadToCloudinary } from '@/lib/cloudinary-upload';
 import { OtpVerificationModal } from '@/components/otp-modal';
@@ -26,7 +26,14 @@ export default function PublicGalleryPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
-  
+
+  // After-submission: manager approval step
+  const [submittedGalleryId, setSubmittedGalleryId] = useState<string | null>(null);
+  const [managerPassword, setManagerPassword] = useState('');
+  const [managerApproving, setManagerApproving] = useState(false);
+  const [managerApproved, setManagerApproved] = useState(false);
+  const [managerError, setManagerError] = useState<string | null>(null);
+
   // Form State
   const [file, setFile] = useState<File | null>(null);
   const [uploaderName, setUploaderName] = useState('');
@@ -61,6 +68,17 @@ export default function PublicGalleryPage() {
     }
   }, []);
 
+  const resetModal = () => {
+    setShowUpload(false);
+    setUploadSuccess(false);
+    setSubmittedGalleryId(null);
+    setManagerPassword('');
+    setManagerApproved(false);
+    setManagerError(null);
+    setFile(null);
+    setCaption('');
+  };
+
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) return;
@@ -80,9 +98,7 @@ export default function PublicGalleryPage() {
     setUploadError(null);
 
     try {
-      setUploading(true);
       setUploadProgress(0);
-      
       const secureUrl = await uploadToCloudinary(file, (pct) => setUploadProgress(pct));
 
       const lastMod = file.lastModified ? new Date(file.lastModified) : new Date();
@@ -112,23 +128,45 @@ export default function PublicGalleryPage() {
       });
 
       if (dbRes.ok) {
+        const saved = await dbRes.json();
         setUploadSuccess(true);
-        setFile(null);
-        setCaption('');
+        setSubmittedGalleryId(saved.id);  // Keep modal open for manager approval
         fetchImages();
       } else {
         const errData = await dbRes.json();
         setUploadError(errData.error || 'Failed to submit upload.');
       }
-      setTimeout(() => {
-        setShowUpload(false);
-        setUploadSuccess(false);
-      }, 3000);
-      
     } catch (err: any) {
       setUploadError(err.message || 'An error occurred during submission.');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleManagerApprove = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!submittedGalleryId || !managerPassword.trim()) return;
+    setManagerApproving(true);
+    setManagerError(null);
+    try {
+      const res = await fetch('/api/gallery/approve-manager', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ galleryId: submittedGalleryId, password: managerPassword }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setManagerApproved(true);
+        setManagerPassword('');
+        // Auto-close after 2.5 s
+        setTimeout(() => resetModal(), 2500);
+      } else {
+        setManagerError(data.error || 'Approval failed.');
+      }
+    } catch {
+      setManagerError('Network error. Please try again.');
+    } finally {
+      setManagerApproving(false);
     }
   };
 
@@ -254,94 +292,182 @@ export default function PublicGalleryPage() {
           <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
               <h3 className="font-bold text-gray-900 dark:text-white flex items-center space-x-2">
-                <Upload className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                <span>Upload Media</span>
+                {uploadSuccess
+                  ? <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  : <Upload className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />}
+                <span>{uploadSuccess ? 'Mess Manager Approval' : 'Upload Duty Media'}</span>
               </h3>
-              <button onClick={() => setShowUpload(false)} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+              <button onClick={resetModal} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
-            
-            <div className="p-4 overflow-y-auto scrollbar-none">
-              <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800/50 rounded-xl flex items-start space-x-2">
-                <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-500 mt-0.5 shrink-0" />
-                <div className="text-xs text-yellow-800 dark:text-yellow-400 font-medium">
-                  <strong>Notice:</strong> This gallery is for Mess Duty records. If you want to submit a complaint regarding the mess, please use the Feedback portal instead.
-                </div>
-              </div>
 
-              {uploadSuccess ? (
+            <div className="p-4 overflow-y-auto scrollbar-none">
+
+              {/* ── STEP 3: Fully countersigned ── */}
+              {managerApproved ? (
                 <div className="text-center py-10 space-y-3">
                   <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto">
-                    <Camera className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+                    <CheckCircle2 className="w-9 h-9 text-emerald-600 dark:text-emerald-400" />
                   </div>
-                  <h4 className="font-bold text-gray-900 dark:text-white">Upload Submitted!</h4>
-                  <p className="text-xs text-gray-500 max-w-[200px] mx-auto">Your media is pending approval from the Mess Admin and will appear here shortly.</p>
+                  <h4 className="font-bold text-gray-900 dark:text-white">Countersigned ✓</h4>
+                  <p className="text-xs text-gray-500 max-w-[220px] mx-auto">
+                    The Mess Manager has approved this duty record. It is now pending final admin review before appearing publicly.
+                  </p>
                 </div>
+
+              /* ── STEP 2: Manager password entry (after student submits) ── */
+              ) : uploadSuccess ? (
+                <div className="space-y-4">
+                  {/* Upload success badge */}
+                  <div className="flex items-center space-x-3 p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl">
+                    <div className="w-9 h-9 bg-emerald-100 dark:bg-emerald-900/40 rounded-full flex items-center justify-center shrink-0">
+                      <Camera className="w-4.5 h-4.5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">Upload Submitted!</p>
+                      <p className="text-[11px] text-emerald-700 dark:text-emerald-400">Your media is pending admin review.</p>
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="flex items-center space-x-2">
+                    <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Step 2 of 2</span>
+                    <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+                  </div>
+
+                  {/* Manager approval form */}
+                  <form onSubmit={handleManagerApprove} className="space-y-3">
+                    <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-xl space-y-1">
+                      <p className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center space-x-1.5">
+                        <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                        <span>Mess Manager Countersignature Required</span>
+                      </p>
+                      <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
+                        Please hand the phone to the Mess Manager. They must enter their password to confirm that this duty record is genuine.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 flex items-center space-x-1">
+                        <KeyRound className="w-3.5 h-3.5" />
+                        <span>Mess Manager Password</span>
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        value={managerPassword}
+                        onChange={e => setManagerPassword(e.target.value)}
+                        autoComplete="off"
+                        className="w-full px-3 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-amber-400 font-mono tracking-widest"
+                        placeholder="Enter manager password"
+                      />
+                    </div>
+
+                    {managerError && (
+                      <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2.5 rounded-lg border border-red-100 dark:border-red-800 flex items-center space-x-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{managerError}</span>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={resetModal}
+                        className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
+                      >
+                        Skip for now
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={managerApproving || !managerPassword.trim()}
+                        className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold transition-all disabled:opacity-50 flex justify-center items-center space-x-1.5"
+                      >
+                        {managerApproving
+                          ? <Loader2 className="w-4 h-4 animate-spin" />
+                          : <ShieldCheck className="w-4 h-4" />}
+                        <span>{managerApproving ? 'Verifying...' : 'Approve'}</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+              /* ── STEP 1: Upload form ── */
               ) : (
-                <form onSubmit={handleUploadSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Name</label>
-                    <input type="text" required value={uploaderName} onChange={e => setUploaderName(e.target.value)} className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Aarav Sharma" />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Roll No</label>
-                    <input type="text" required value={uploaderRollNo} onChange={e => setUploaderRollNo(e.target.value)} className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" placeholder="21XX12345" />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Institute Email</label>
-                    <input type="email" required value={uploaderEmail} onChange={e => setUploaderEmail(e.target.value)} className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" placeholder="yourname@iitkgp.ac.in" />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Category</label>
-                    <select value={category} onChange={e => setCategory(e.target.value)} className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500">
-                      {CATEGORIES.filter(c => c.id !== 'ALL').map(c => (
-                        <option key={c.id} value={c.id}>{c.label}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">File (Max 20MB)</label>
-                    <input type="file" required accept="image/*,video/*" onChange={e => setFile(e.target.files?.[0] || null)} className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 dark:file:bg-emerald-900/30 dark:file:text-emerald-400" />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Caption (Optional)</label>
-                    <input type="text" value={caption} onChange={e => setCaption(e.target.value)} className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Short description..." />
-                  </div>
-
-                  {uploading && (
-                    <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 space-y-1.5 shadow-sm">
-                      <div className="flex items-center justify-between text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                        <span className="flex items-center space-x-1.5">
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
-                          <span>Uploading Duty Record ({uploadProgress}%)...</span>
-                        </span>
-                        <span className="font-mono text-[11px]">{uploadProgress}%</span>
-                      </div>
-                      <div className="w-full h-1.5 bg-emerald-200 dark:bg-emerald-900 rounded-full overflow-hidden">
-                        <div className="h-full bg-emerald-600 transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
-                      </div>
+                <>
+                  <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800/50 rounded-xl flex items-start space-x-2">
+                    <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-500 mt-0.5 shrink-0" />
+                    <div className="text-xs text-yellow-800 dark:text-yellow-400 font-medium">
+                      <strong>Notice:</strong> This gallery is for Mess Duty records. If you want to submit a complaint regarding the mess, please use the Feedback portal instead.
                     </div>
-                  )}
-
-                  {uploadError && (
-                    <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded-lg border border-red-100 dark:border-red-800">
-                      {uploadError}
-                    </div>
-                  )}
-
-                  <div className="pt-2">
-                    <button type="submit" disabled={uploading || !file} className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition-all disabled:opacity-50 flex justify-center items-center space-x-2">
-                      {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                      <span>{uploading ? `Uploading Media (${uploadProgress}%)...` : 'Submit to Gallery'}</span>
-                    </button>
                   </div>
-                </form>
+
+                  <form onSubmit={handleUploadSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Name</label>
+                      <input type="text" required value={uploaderName} onChange={e => setUploaderName(e.target.value)} className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Aarav Sharma" />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Roll No</label>
+                      <input type="text" required value={uploaderRollNo} onChange={e => setUploaderRollNo(e.target.value)} className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" placeholder="21XX12345" />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Institute Email</label>
+                      <input type="email" required value={uploaderEmail} onChange={e => setUploaderEmail(e.target.value)} className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" placeholder="yourname@iitkgp.ac.in" />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Category</label>
+                      <select value={category} onChange={e => setCategory(e.target.value)} className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500">
+                        {CATEGORIES.filter(c => c.id !== 'ALL').map(c => (
+                          <option key={c.id} value={c.id}>{c.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">File (Max 20MB)</label>
+                      <input type="file" required accept="image/*,video/*" onChange={e => setFile(e.target.files?.[0] || null)} className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 dark:file:bg-emerald-900/30 dark:file:text-emerald-400" />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Caption (Optional)</label>
+                      <input type="text" value={caption} onChange={e => setCaption(e.target.value)} className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Short description..." />
+                    </div>
+
+                    {uploading && (
+                      <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 space-y-1.5 shadow-sm">
+                        <div className="flex items-center justify-between text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                          <span className="flex items-center space-x-1.5">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                            <span>Uploading Duty Record ({uploadProgress}%)...</span>
+                          </span>
+                          <span className="font-mono text-[11px]">{uploadProgress}%</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-emerald-200 dark:bg-emerald-900 rounded-full overflow-hidden">
+                          <div className="h-full bg-emerald-600 transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
+                        </div>
+                      </div>
+                    )}
+
+                    {uploadError && (
+                      <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded-lg border border-red-100 dark:border-red-800">
+                        {uploadError}
+                      </div>
+                    )}
+
+                    <div className="pt-2">
+                      <button type="submit" disabled={uploading || !file} className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition-all disabled:opacity-50 flex justify-center items-center space-x-2">
+                        {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                        <span>{uploading ? `Uploading Media (${uploadProgress}%)...` : 'Submit to Gallery'}</span>
+                      </button>
+                    </div>
+                  </form>
+                </>
               )}
             </div>
           </div>

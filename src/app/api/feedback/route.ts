@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { deleteFromCloudinary } from '@/lib/cloudinary-delete';
-import { isAllowedEmail, verifyAdminPassword, verifyCsrfOrigin } from '@/lib/admin-auth';
+import { isAllowedEmail, getAdminContext, verifyCsrfOrigin, getSuperAdminEmails } from '@/lib/admin-auth';
 import { logAdminAction } from '@/lib/audit-logger';
 import { checkRateLimit } from '@/lib/rate-limiter';
 import {
@@ -32,8 +32,9 @@ export async function GET(request: Request) {
   const facility = searchParams.get('facility');
   const search = searchParams.get('search')?.trim().toLowerCase();
   const authorEmail = searchParams.get('authorEmail')?.trim().toLowerCase();
-  // Server-side admin verification instead of trusting a client query param
-  const isAdmin = await verifyAdminPassword(request);
+  const wantsAdmin = searchParams.get('isAdmin') === 'true';
+  // Require both the client intent (wantsAdmin) and server-side verification
+  const isAdmin = wantsAdmin && (await getAdminContext(request)) !== null;
 
   try {
     const whereClause: any = {};
@@ -219,8 +220,8 @@ export async function POST(request: Request) {
     });
     count = existingCount + 1;
 
-    // buildTicketNumber expects facilityType (e.g. 'MAINTENANCE_WASHROOM'), NOT the 2-letter code.
-    const generatedTicketNumber = buildTicketNumber(normalizedRoomNo, finalFacility, dateStr, count);
+    // buildTicketNumber expects a Date object, NOT the already formatted string.
+    const generatedTicketNumber = buildTicketNumber(normalizedRoomNo, finalFacility, new Date(), count);
 
     const newFeedback = await prisma.feedback.create({
       data: {
@@ -304,13 +305,34 @@ export async function PATCH(request: Request) {
     }
 
     // Admin updates require admin authorization
-    if (!(await verifyAdminPassword(request))) {
+    const adminCtx = await getAdminContext(request);
+    if (!adminCtx) {
       return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
+    }
+
+    const currentItem = await prisma.feedback.findUnique({ where: { id } });
+    if (!currentItem) {
+      return NextResponse.json({ error: 'Grievance not found.' }, { status: 404 });
+    }
+
+    // Check scope for LOW tier admins
+    if (adminCtx.tier === 'LOW') {
+      if (currentItem.facilityType === 'REGULAR_MESS' && !adminCtx.canManageMess) {
+        return NextResponse.json({ error: 'Unauthorized: You do not have permission to manage mess grievances.' }, { status: 403 });
+      }
+      if (currentItem.facilityType.startsWith('MAINTENANCE') && !adminCtx.canManageMaintenance) {
+        return NextResponse.json({ error: 'Unauthorized: You do not have permission to manage maintenance grievances.' }, { status: 403 });
+      }
+      
+      // LOW tier admins cannot override
+      if (overriddenBy !== undefined || overriddenReason !== undefined) {
+        return NextResponse.json({ error: 'Unauthorized: Low-level admins cannot override responses.' }, { status: 403 });
+      }
     }
 
     const isResolving = status === 'RESOLVED';
     const isPending = status === 'PENDING';
-    const adminEmailHeader = request.headers.get('x-admin-email') || resolvedByEmail || overriddenBy || 'System Administrator';
+    const adminEmailHeader = adminCtx.email || resolvedByEmail || overriddenBy || 'System Administrator';
 
     const updateData: any = {};
     if (status) updateData.status = status;
@@ -321,9 +343,8 @@ export async function PATCH(request: Request) {
       updateData.remark = trimmedRemark;
 
       try {
-        const currentItem = await prisma.feedback.findUnique({ where: { id } });
         let existingHistory: any[] = [];
-        if (currentItem?.remarkHistory) {
+        if (currentItem.remarkHistory) {
           existingHistory = typeof currentItem.remarkHistory === 'string'
             ? JSON.parse(currentItem.remarkHistory)
             : currentItem.remarkHistory;
@@ -442,11 +463,17 @@ export async function DELETE(request: Request) {
   if (!verifyCsrfOrigin(request)) {
     return NextResponse.json({ error: 'Invalid origin (CSRF check failed).' }, { status: 403 });
   }
-  if (!(await verifyAdminPassword(request))) {
+
+  const adminCtx = await getAdminContext(request);
+  if (!adminCtx) {
     return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
   }
 
-  const adminEmailHeader = request.headers.get('x-admin-email') || 'System Administrator';
+  if (adminCtx.tier === 'LOW') {
+    return NextResponse.json({ error: 'Unauthorized: Low-level admins cannot delete grievances.' }, { status: 403 });
+  }
+
+  const adminEmailHeader = adminCtx.email || 'System Administrator';
 
   try {
     const { searchParams } = new URL(request.url);

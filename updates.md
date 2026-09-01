@@ -4,6 +4,74 @@ This document tracks all feature implementations, bug fixes, UI/UX enhancements,
 
 ---
 
+## 📌 Version 1.0.0 (v1.0.0) — Multi-Tier Admin Governance, Optimistic UI & Access Hardening
+
+**Release Date:** September 1, 2026
+**Package Version:** `1.0.0`
+**Status:** In Development (local server running — build pending)
+
+### 1. 🏛️ Three-Tier Admin Authority System
+
+A complete rework of the admin access model introducing three distinct authority levels:
+
+| Tier | Label | Capabilities |
+|---|---|---|
+| **Master Admin** | 👑 Master | Full system access · Manage all admins · Assign/revoke master authority |
+| **High-Level Admin** | 🛡️ High | Full grievance access · Menu editing · Polls · Gallery · Canteen · Optional override rights |
+| **Low-Level Admin** | 👤 Low | Read-only across all sections · Write access scoped to assigned grievance domains only |
+
+- **`isMaster` DB Field:** Added `isMaster Boolean @default(false)` to `AdminUser` model in [prisma/schema.prisma](prisma/schema.prisma). Pushed to Supabase PostgreSQL via `node push.js`.
+- **Token Propagation:** `isMaster` is encoded into the signed admin JWT via `createAdminToken()` and decoded back in `verifyAdminToken()` inside [src/lib/admin-auth.ts](src/lib/admin-auth.ts).
+- **Auth API:** [src/app/api/admin/auth/route.ts](src/app/api/admin/auth/route.ts) now returns `isMasterAdmin` and `isMaster` in the login response, using the value persisted in the DB.
+- **Session Gate:** [src/components/admin-auth-gate.tsx](src/components/admin-auth-gate.tsx) reads `isMaster` from the login response into `pendingAdminInfo`, and after OTP verification, sets `isMasterAdmin`, `tier: 'HIGH'`, `canOverride`, `canManageMess`, and `canManageMaintenance` to their full values automatically for master admins.
+- **Context Function:** `getAdminContext()` in [src/lib/admin-auth.ts](src/lib/admin-auth.ts) now spreads `isMaster: Boolean(admin.isMaster || isMasterFromToken)` from the DB record into the returned context object.
+
+### 2. 👑 Master Admin Self-Assignment (Manage Admins Page)
+
+Master admins can now promote any High-Level admin to Master Admin status (or revoke it) directly from the Manage Admins panel — without touching `.env` files.
+
+- **Toggle Badge:** Each High-Level admin card in the Manage Admins dialog displays a **👑 Master Admin** / **+ Make Master Admin** button that calls `PATCH /api/admin/users` with `{ id, isMaster }`.
+- **API Handling:** [src/app/api/admin/users/route.ts](src/app/api/admin/users/route.ts) `PATCH` handler accepts `isMaster`; demoting a user to LOW tier automatically forces `isMaster: false`.
+- **Registration Form:** When registering a new High-Level admin, a **"Grant Master Admin Authority"** checkbox (amber-styled with 👑 icon) is available inline in the registration form.
+- **Guard:** Only High-Level admins can be marked as master. Attempting to assign `isMaster: true` on a LOW-tier admin is rejected by the API.
+
+### 3. 🛡️ Role-Based Read/Write Enforcement (Low-Level Admins)
+
+Low-Level admins can view everything but modify only within their assigned scope:
+
+- **Mess Admin** (`/admin`): Action buttons (Resolve, Pending, Remark Save, Escalation, Weekly Menu editor) wrapped in `hasActionAccess` guard — hidden for `LOW` tier unless the scope matches.
+- **Maintenance Admin** (`/maintenance/admin`): Same `hasActionAccess` guard applied.
+- **Night Canteen Admin** (`/night-canteen/admin`): Same guard applied.
+- **Delete Always Hidden:** The Delete button is never shown to LOW-tier admins regardless of scope.
+
+### 4. ⚡ Optimistic UI — Instant Admin Panel Responses
+
+All toggle actions in the Manage Admins dialog now update the UI **immediately** without waiting for the server:
+
+- **`optimisticPatch()` helper:** A shared function that applies a `Partial<AdminUserRecord>` patch to local state instantly, fires the PATCH in the background, and reverts the state (with an error message) only if the server responds with an error or the network fails.
+- **Covered actions:** Tier toggle, Override toggle, Scope toggles (Mess / Maintenance), Master Admin toggle, Designation save, and Delete.
+- **Delete optimism:** Admin disappears from the list immediately; restored to its sorted position if the delete fails.
+
+### 5. 📐 Compact Manage Admins Form Layout
+
+The registration form and tier tab section were vertically compressed to give more space to the admin list:
+
+- **Single-Row Form:** Email input, Designation input, Tier selector, and Add button now sit on a single horizontal flex row (`flex flex-wrap gap-2 items-center`).
+- **Inline Permission Strip:** HIGH-tier checkboxes (Override + Master Admin) and LOW-tier scope checkboxes appear as a compact inline row below the main inputs — separated by a light border, no wasted vertical space.
+- **Removed Info Banner:** The verbose tier description banner was removed; tier context is now self-evident from the tab labels.
+- **Slimmer Tier Tabs:** Tab pills reduced from `py-2` to `py-1.5`.
+
+### 6. 🔑 Admin Login Domain Restriction Removal
+
+- Verified and confirmed that the `isAllowedEmail` domain-allowlist function (which previously restricted `.kgpian.iitkgp.ac.in` email domains) applies **only** to student grievance submissions and gallery/hub uploads.
+- Admin login via [src/components/admin-auth-gate.tsx](src/components/admin-auth-gate.tsx) accepts **any registered email domain** without restriction.
+
+### 7. 🛠️ `.env.local` Formatting Fix
+
+- Fixed a line-concatenation bug in `.env.local` where `MESS_MANAGER_PASSWORD` was appended to the same line as `SUPER_ADMIN_EMAILS`, causing the password env var to be silently ignored.
+
+---
+
 ## 📌 Version 0.9.9 (v0.9.9) — Swipe Gestures, Design System Polish & Advanced Maintenance Governance
 
 **Release Date:** August 23, 2026  

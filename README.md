@@ -1,19 +1,42 @@
 # BROS – BR Ambedkar Hall Operations & Services
 
-[![Version](https://img.shields.io/badge/version-v0.9.9-blue.svg)](https://github.com/ravenmojo/BRH_Mess_management_system)
+[![Version](https://img.shields.io/badge/version-v1.0.0-blue.svg)](https://github.com/ravenmojo/BRH_Mess_management_system)
 
-A comprehensive, mobile-first Next.js web application built as a centralized digital platform for the students of **B.R. Ambedkar Hall (BRH) at IIT Kharagpur**. BROS covers mess management, maintenance grievances, night canteen, student polls, a media gallery, and a community information hub — all protected by inline OTP verification, server-side rate limits, and multi-tier stakeholder access controls.
+A comprehensive, mobile-first Next.js web application built as a centralized digital platform for the students of **B.R. Ambedkar Hall (BRH) at IIT Kharagpur**. BROS covers mess management, maintenance grievances, night canteen, student polls, a media gallery, and a community information hub — all protected by inline OTP verification, server-side rate limits, and a multi-tier admin authority system.
 
 > **"For the Bros, By the Bros"** — Responsibility, Accountability, Transparency.
 
 ---
 
-## 🚀 Release Notes — Version 0.9.9
+## 🚀 Release Notes — Version 1.0.0
 
-### 📌 What's New in v0.9.9
+### 📌 What's New in v1.0.0
+
+- **🏛️ Three-Tier Admin Authority System:**
+  - Introduced **Master Admin**, **High-Level Admin**, and **Low-Level Admin** tiers with distinct capabilities.
+  - Master Admins have full system control including the ability to promote/demote other admins from the Manage Admins panel — no `.env` changes required.
+  - High-Level Admins retain full grievance, menu, poll, gallery, and canteen access (with optional override rights).
+  - Low-Level Admins get read-only access across all sections; write access is scoped only to their assigned domains (Mess / Maintenance).
+- **👑 In-App Master Admin Assignment:**
+  - Master Admins can promote any High-Level admin to Master status (or revoke it) via a one-click **👑 Master Admin** toggle badge on each High-Level admin card — no code or config edits needed.
+  - New admin registration form includes a **"Grant Master Admin Authority"** checkbox (amber, 👑 icon) visible only when adding a High-Level admin.
+- **🛡️ Role-Based Read/Write Enforcement:**
+  - Mess, Maintenance, and Night Canteen admin dashboards wrap all action buttons (Resolve, Remark, Escalate, Weekly Menu editor) in a `hasActionAccess` guard.
+  - The Delete button is permanently hidden from all Low-Level admins regardless of scope.
+- **⚡ Optimistic UI — Zero-Lag Admin Toggles:**
+  - All toggle actions in the Manage Admins dialog (tier, override, scope, master, delete, designation) update the UI **instantly** with automatic server-side revert on failure.
+- **📐 Compact Manage Admins Form:**
+  - Registration form collapsed to a single horizontal row (email + designation + tier + Add button).
+  - Permission options appear as a slim inline strip below, freeing significant vertical space for the admin list.
+- **🔑 No Domain Restrictions for Admin Login:**
+  - Admin login now accepts any registered email domain (not restricted to `.kgpian.iitkgp.ac.in`).
+
+---
+
+### 📌 What Was New in v0.9.9
 
 - **📲 Seamless Homepage Swipe Navigation:**
-  - Hardware-accelerated horizontal swipe gestures between the 3 core homepages: **`/` (Mess)** ⇄ **`/maintenance` (Maintenance)** ⇄ **`/hub` (Hall Info Hub)**.
+  - Hardware-accelerated horizontal swipe gestures between: **`/` (Mess)** ⇄ **`/maintenance` (Maintenance)** ⇄ **`/hub` (Hall Info Hub)**.
   - Smooth directional slide animations with intelligent touch filtering (ignoring inputs, textareas, sliders, and open dialogs).
 - **💎 Executive Glassmorphism & Jewel-Tone Color System:**
   - Refined Bottom Navigation Bar with dedicated jewel-tone active pills: **Royal Blue** (Mess), **Sky Blue** (Maintenance), and **Slate Indigo** (Info Hub).
@@ -22,20 +45,15 @@ A comprehensive, mobile-first Next.js web application built as a centralized dig
   - Frosted glass icon badges for Breakfast (☕ Amber), Lunch (☀️ Orange), Dinner (🌙 Indigo), and Serving Now (🟢 Emerald).
   - Differentiated quick access tiles on Homepage: Full Menu (Blue), Canteen (Purple/Charcoal), Grievances (Rose), Mess Poll (Amber/Gold), and Duty Gallery (Green).
 - **🛠️ Maintenance Subcategories & Common Area Cleaning Governance:**
-  - Unique glassy color themes for all 6 maintenance categories (Washroom, Drinking Water, Electrical, Civil [Warm Ochre], Cleaning [Purple], Gym & Outdoors [Emerald Green]).
+  - Unique glassy color themes for all 6 maintenance categories.
   - Dynamic **"Common Areas Only"** policy notification when selecting the Cleaning category.
-- **🗳️ Unified Mess Poll Experience:**
-  - Dedicated warm amber/sunburst styling throughout `/poll` with real-time percentage indicators and vote action buttons.
-- **🏛️ Hall Info Hub Redesign & Colorful Contacts Directory:**
-  - Unified all movie screenings, student activities, idea submissions, and hall achievements into the core glassmorphism design language.
-  - Vibrantly colored contact initial badges with standardized quick-dial call buttons.
 - **👥 Two-Way Verifiable Resolution & Administrative Override:**
   - Differentiates between admin-only resolved vs two-way verified (admin + student) grievances.
   - Configurable resolution override permissions with internal audit trails.
 - **📊 45-Day Archive & Permanent Statistical Aggregates:**
-  - Resolved maintenance grievances are archived after 45 days while statistical metrics (turnaround times, category frequencies, resolution rates) are permanently retained for administrative analytics.
+  - Resolved grievances archived after 45 days; statistical metrics permanently retained for analytics.
 - **⏱️ Inactivity Detection & 60s Auto-Lock Prompt:**
-  - Automatically triggers a countdown prompt if no admin interaction is detected for 10 minutes, with auto-lock after 1 minute of unattended prompt and complete in-memory draft state preservation.
+  - Automatically triggers a countdown prompt if no admin interaction is detected for 10 minutes.
 
 ---
 
@@ -72,6 +90,35 @@ A comprehensive, mobile-first Next.js web application built as a centralized dig
 
 ---
 
+## 🔐 Admin Authority Architecture
+
+BROS uses a **three-tier admin model** enforced end-to-end — from the database to the JWT token to the session context:
+
+| Tier | How to Identify | Capabilities |
+|---|---|---|
+| 👑 **Master Admin** | `isMaster: true` in DB + token | Manage all admins, assign/revoke master status, full system access |
+| 🛡️ **High-Level Admin** | `tier: 'HIGH'` | Full grievance, menu, poll, gallery, canteen access; optional override right |
+| 👤 **Low-Level Admin** | `tier: 'LOW'` | Read-only everywhere; write access only in assigned scope (Mess / Maintenance) |
+
+### Admin Login
+- Admin login accepts **any registered email domain** (no `.kgpian.iitkgp.ac.in` restriction).
+- After entering a registered email → OTP is dispatched via Supabase Auth → OTP verified → session created with the correct tier + permissions baked in.
+- Master Admins receive a session with `isMasterAdmin: true`, `canOverride: true`, `canManageMess: true`, `canManageMaintenance: true` automatically.
+
+### Manage Admins Panel
+- Accessible only to **Master Admins** via the "Manage Admins" button in the admin header.
+- **High-Level tab:** Tier toggle · Override toggle · 👑 Master Admin toggle (one-click promote/revoke)
+- **Low-Level tab:** Tier toggle · Scope toggles (Mess / Maintenance)
+- All toggles use **optimistic UI** — instant visual feedback with automatic rollback on server error.
+
+### Protected Admin Routes
+- `/admin` — Mess Menu Builder, Compliance Widgets, Grievance Moderation, Gallery Approvals, Poll Manager
+- `/maintenance/admin` — Maintenance Grievance Resolution & Remark Management
+- `/night-canteen/admin` — Canteen Grievance Management
+- `/hub/admin` — Hall Info Content Management, Movie Poster Uploads & Emergency Contacts
+
+---
+
 ## 🛠️ Tech Stack
 
 | Layer | Technology |
@@ -89,20 +136,7 @@ A comprehensive, mobile-first Next.js web application built as a centralized dig
 
 ---
 
-## 🔐 Security & Access Architecture
-
-- **Zero Client-Side Passwords / Lists:** Secrets and administrator rosters are verified strictly server-side and never exposed in client bundles or public git files.
-- **Server-Protected API Endpoints:** All administrative mutations (`/api/admin/users`, `PATCH /api/feedback`, `/api/menu`, `/api/hub`, `/api/gallery/approve`) enforce server-side authentication headers.
-- **Admin Portals:**
-  - `/admin` — Mess Menu Builder, Compliance Widgets, Grievance Moderation, Gallery Approvals, Poll Manager
-  - `/maintenance/admin` — Maintenance Grievance Resolution & Remark Management
-  - `/night-canteen/admin` — Canteen Grievance Management
-  - `/hub/admin` — Hall Info Content Management, Movie Poster Uploads & Emergency Contacts
-- **Secure Dynamic Admin Management:** Direct authentication grants administrative management capabilities and access to the dynamic **Manage Admins** console.
-
----
-
 ## 📄 License & Footnote
-- **Version:** `BROS v0.9.9`
+- **Version:** `BROS v1.0.0`
 - **Developed by:** Souradeep Satpathy (TeNSoRE Lab, IIT Kharagpur)
 - Open Source — Give credits to this repository for usage or forks.
