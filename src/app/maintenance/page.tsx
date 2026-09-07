@@ -120,10 +120,23 @@ export default function MaintenancePage() {
   const router = useRouter();
 
   const loadFeedbacks = () => {
+    try {
+      const cached = sessionStorage.getItem('bros_feedbacks_maint');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) setFeedbacks(parsed);
+      }
+    } catch {}
+
     fetch('/api/feedback?facility=MAINTENANCE')
       .then((res) => res.json())
       .then((data) => {
-        setFeedbacks(Array.isArray(data) ? data : []);
+        if (Array.isArray(data)) {
+          setFeedbacks(data);
+          try {
+            sessionStorage.setItem('bros_feedbacks_maint', JSON.stringify(data));
+          } catch {}
+        }
       })
       .catch(() => { });
   };

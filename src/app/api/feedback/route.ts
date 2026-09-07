@@ -65,31 +65,6 @@ export async function GET(request: Request) {
       ];
     }
 
-    // Lazy purge unapproved REGULAR_MESS grievances > 12 hours old
-    try {
-      const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
-      const toPurge = await prisma.feedback.findMany({
-        where: {
-          status: 'UNREGISTERED',
-          createdAt: { lt: twelveHoursAgo },
-        },
-      });
-
-      if (toPurge.length > 0) {
-        for (const item of toPurge) {
-          if (item.mediaUrl) {
-            await deleteFromCloudinary(item.mediaUrl).catch(() => {});
-          }
-          await prisma.feedback.update({
-            where: { id: item.id },
-            data: { status: 'PURGED', mediaUrl: null },
-          });
-        }
-      }
-    } catch (e) {
-      console.error('Lazy purge failed', e);
-    }
-
     const orderByClause: any[] = isAdmin
       ? [{ isEscalated: 'desc' }, { escalatedAt: 'desc' }, { createdAt: 'desc' }]
       : [{ createdAt: 'desc' }];
@@ -97,11 +72,33 @@ export async function GET(request: Request) {
     const feedbacks = await prisma.feedback.findMany({
       where: whereClause,
       orderBy: orderByClause,
+      take: isAdmin ? 250 : 100,
     });
 
-    // Background 45-day auto-purge & statistics accumulator (non-blocking)
+    // Background maintenance: lazy purge unapproved > 12h & 45-day auto-purge (non-blocking)
     (async () => {
       try {
+        // 1. Lazy purge unapproved REGULAR_MESS grievances > 12 hours old
+        const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+        const toPurge = await prisma.feedback.findMany({
+          where: {
+            status: 'UNREGISTERED',
+            createdAt: { lt: twelveHoursAgo },
+          },
+          take: 20,
+        });
+
+        for (const item of toPurge) {
+          if (item.mediaUrl) {
+            await deleteFromCloudinary(item.mediaUrl).catch(() => {});
+          }
+          await prisma.feedback.update({
+            where: { id: item.id },
+            data: { status: 'PURGED', mediaUrl: null },
+          }).catch(() => {});
+        }
+
+        // 2. 45-day auto-purge & statistics accumulator
         const fortyFiveDaysAgo = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000);
         const purgeCandidates = await prisma.feedback.findMany({
           where: {
@@ -159,7 +156,11 @@ export async function GET(request: Request) {
       );
     }
 
-    return NextResponse.json(sanitizedFeedbacks);
+    const cacheHeaders: Record<string, string> = (!isAdmin && !authorEmail)
+      ? { 'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=30' }
+      : { 'Cache-Control': 'no-store, must-revalidate' };
+
+    return NextResponse.json(sanitizedFeedbacks, { headers: cacheHeaders });
   } catch (error: any) {
     console.error('Database query failed:', error);
     return NextResponse.json(
@@ -284,10 +285,13 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: 'Unauthorized: Email does not match grievance author.' }, { status: 403 });
       }
 
+      const isMaint = existing?.facilityType?.startsWith('MAINTENANCE_');
+      const willBeResolved = isMaint ? Boolean(existing?.adminResolved || existing?.overriddenBy) : true;
+
       const updateData: any = {
         userResolved: true,
-        status: 'RESOLVED',
-        resolvedAt: existing?.resolvedAt || new Date(),
+        status: willBeResolved ? 'RESOLVED' : 'PENDING',
+        resolvedAt: willBeResolved ? (existing?.resolvedAt || new Date()) : null,
       };
 
       if (!existing?.resolvedBy) {
@@ -330,12 +334,12 @@ export async function PATCH(request: Request) {
       }
     }
 
+    const isMaintenance = currentItem.facilityType?.startsWith('MAINTENANCE_');
     const isResolving = status === 'RESOLVED';
     const isPending = status === 'PENDING';
     const adminEmailHeader = adminCtx.email || resolvedByEmail || overriddenBy || 'System Administrator';
 
     const updateData: any = {};
-    if (status) updateData.status = status;
 
     // Remark update & history recording
     if (remark !== undefined && remark.trim() !== '') {
@@ -376,18 +380,40 @@ export async function PATCH(request: Request) {
       updateData.resolvedBy = null;
       updateData.resolvedByEmail = null;
       updateData.resolvedByRole = null;
+      updateData.overriddenBy = null;
+      updateData.overriddenReason = null;
+      updateData.overriddenAt = null;
     } else if (isResolving) {
-      updateData.status = 'RESOLVED';
-      updateData.resolvedAt = new Date();
       updateData.adminResolved = true;
+      updateData.resolvedAt = new Date();
       if (resolvedBy !== undefined) updateData.resolvedBy = resolvedBy;
       if (resolvedByEmail !== undefined) updateData.resolvedByEmail = resolvedByEmail;
       if (resolvedByRole !== undefined) updateData.resolvedByRole = resolvedByRole;
+
+      if (isMaintenance) {
+        // For maintenance, 2-way verification requires both admin and user resolution (or override)
+        const isUserResolved = Boolean(currentItem.userResolved) || userResolved === true || Boolean(overriddenBy);
+        updateData.status = isUserResolved ? 'RESOLVED' : 'PENDING';
+      } else {
+        // For mess and night canteen, admin resolution is immediate single-step
+        updateData.status = 'RESOLVED';
+      }
+    } else if (overriddenBy) {
+      if (userResolved !== undefined) updateData.userResolved = Boolean(userResolved);
+      if (isMaintenance) {
+        const isUserResolved = userResolved !== undefined ? Boolean(userResolved) : Boolean(currentItem.userResolved);
+        const isAdminResolved = adminResolved !== undefined ? Boolean(adminResolved) : Boolean(currentItem.adminResolved);
+        updateData.status = (isUserResolved && isAdminResolved) ? 'RESOLVED' : 'PENDING';
+      } else {
+        if (status) updateData.status = status;
+      }
     } else {
+      if (status) updateData.status = status;
       if (resolvedBy !== undefined) updateData.resolvedBy = resolvedBy;
       if (resolvedByEmail !== undefined) updateData.resolvedByEmail = resolvedByEmail;
       if (resolvedByRole !== undefined) updateData.resolvedByRole = resolvedByRole;
       if (adminResolved !== undefined) updateData.adminResolved = Boolean(adminResolved);
+      if (userResolved !== undefined) updateData.userResolved = Boolean(userResolved);
     }
 
     // Escalation fields
@@ -399,7 +425,7 @@ export async function PATCH(request: Request) {
     }
 
     // Two-way verification & override fields
-    if (userResolved !== undefined) updateData.userResolved = Boolean(userResolved);
+    if (userResolved !== undefined && !overriddenBy) updateData.userResolved = Boolean(userResolved);
     if (overriddenBy) {
       updateData.overriddenBy = overriddenBy;
       updateData.overriddenAt = new Date();

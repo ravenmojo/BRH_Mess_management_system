@@ -36,10 +36,27 @@ export default function StudentDashboard() {
     const currentDay = days[new Date().getDay()];
     setSelectedDay(currentDay);
 
+    // ⚡ Instant Cache Hydration: Check cache for instant 0ms render
+    try {
+      const cached = localStorage.getItem('bros_menu_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed?.menu && Array.isArray(parsed.menu)) {
+          setWeeklyData(parsed);
+          setLoading(false);
+        }
+      }
+    } catch {}
+
     fetch('/api/menu')
       .then((res) => res.json())
       .then((data) => {
-        setWeeklyData(data);
+        if (data?.menu && Array.isArray(data.menu)) {
+          setWeeklyData(data);
+          try {
+            localStorage.setItem('bros_menu_cache', JSON.stringify(data));
+          } catch {}
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));

@@ -54,9 +54,24 @@ export default function NightCanteenPage() {
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
 
   const fetchCanteenFeedbacks = () => {
+    try {
+      const cached = sessionStorage.getItem('bros_feedbacks_nc');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) setFeedbacks(parsed);
+      }
+    } catch {}
+
     fetch('/api/feedback?facility=NIGHT_CANTEEN')
       .then((res) => res.json())
-      .then((data) => setFeedbacks(Array.isArray(data) ? data : []))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setFeedbacks(data);
+          try {
+            sessionStorage.setItem('bros_feedbacks_nc', JSON.stringify(data));
+          } catch {}
+        }
+      })
       .catch(() => {});
   };
 

@@ -65,7 +65,13 @@ export default function RootLayout({
                   title="Go to Homepage"
                 >
                   <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-sm shadow-blue-500/20 overflow-hidden ring-1 ring-white/20 shrink-0 group-hover:scale-105 transition-transform">
-                    <img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f1ee-1f1f3.svg" alt="India" className="w-5 h-5 object-contain" />
+                    <svg className="w-5 h-3.5 rounded-[2px] overflow-hidden shadow-2xs" viewBox="0 0 36 24" fill="none" aria-label="India">
+                      <rect width="36" height="8" fill="#FF9933" />
+                      <rect y="8" width="36" height="8" fill="#FFFFFF" />
+                      <rect y="16" width="36" height="8" fill="#138808" />
+                      <circle cx="18" cy="12" r="3.2" stroke="#000088" strokeWidth="0.8" fill="none" />
+                      <circle cx="18" cy="12" r="0.8" fill="#000088" />
+                    </svg>
                   </div>
                   <div className="flex flex-col justify-center leading-none">
                     <span className="text-xs sm:text-[13px] font-black tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 dark:from-white dark:via-slate-100 dark:to-indigo-200 bg-clip-text text-transparent leading-tight group-hover:opacity-90 transition-opacity">

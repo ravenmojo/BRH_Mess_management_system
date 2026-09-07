@@ -185,9 +185,17 @@ export function MyGrievancesView({ onBackToSubmit }: MyGrievancesViewProps) {
     setFeedbacks([]);
   };
 
+  const isItemResolved = (fb: any) => {
+    if (fb.facilityType?.startsWith('MAINTENANCE_')) {
+      return (fb.adminResolved && fb.userResolved) || fb.status === 'RESOLVED';
+    }
+    return fb.status === 'RESOLVED';
+  };
+
   const filteredFeedbacks = feedbacks.filter((fb) => {
-    if (filter === 'PENDING') return fb.status !== 'RESOLVED';
-    if (filter === 'RESOLVED') return fb.status === 'RESOLVED';
+    const resolved = isItemResolved(fb);
+    if (filter === 'PENDING') return !resolved;
+    if (filter === 'RESOLVED') return resolved;
     return true;
   });
 
@@ -198,16 +206,15 @@ export function MyGrievancesView({ onBackToSubmit }: MyGrievancesViewProps) {
         {onBackToSubmit && (
           <button
             onClick={onBackToSubmit}
-            className="flex items-center space-x-1 text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all touch-spring shadow-xs"
+            className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors touch-spring"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Submit Grievance</span>
+            <span>Back to Submit</span>
           </button>
         )}
-        <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 ml-auto flex items-center space-x-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
-          <span>My Grievances Portal</span>
-        </h3>
+        <div className="flex items-center space-x-2">
+          <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Status Tracker</span>
+        </div>
       </div>
 
       {/* Email Verification Card if Not Verified */}
@@ -233,26 +240,35 @@ export function MyGrievancesView({ onBackToSubmit }: MyGrievancesViewProps) {
             />
             <button
               onClick={handleStartVerification}
-              className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-500/25 transition-all flex items-center justify-center space-x-1.5 touch-spring"
+              disabled={loading || !email.trim()}
+              className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-500/20 disabled:opacity-50 transition-all touch-spring flex items-center justify-center space-x-1.5"
             >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Verify via 6-Digit OTP</span>
+              {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+              <span>Send 8-Digit OTP</span>
             </button>
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Active Profile Header */}
-          <div className="flex items-center justify-between p-3.5 glass-card rounded-2xl border border-slate-200/80 dark:border-slate-800/80">
-            <div className="min-w-0 flex-1 pr-2">
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Viewing Grievances For</div>
-              <div className="font-mono font-bold text-xs text-indigo-600 dark:text-indigo-400 truncate">{verifiedEmail}</div>
+          <div className="flex items-center justify-between p-3 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50">
+            <div className="flex items-center space-x-2 min-w-0">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 ring-4 ring-emerald-500/20" />
+              <div className="truncate">
+                <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider block">
+                  Verified as
+                </span>
+                <span className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100 truncate block">
+                  {verifiedEmail}
+                </span>
+              </div>
             </div>
             <div className="flex items-center space-x-1.5 shrink-0">
               <button
                 onClick={() => fetchMyFeedbacks(verifiedEmail)}
-                className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors touch-spring"
-                title="Refresh My Grievances"
+                disabled={loading}
+                className="p-1.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors touch-spring"
+                title="Refresh grievances"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
               </button>
@@ -278,7 +294,7 @@ export function MyGrievancesView({ onBackToSubmit }: MyGrievancesViewProps) {
                       : 'bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'
                   }`}
                 >
-                  {t === 'ALL' ? `All (${feedbacks.length})` : t === 'PENDING' ? `Pending (${feedbacks.filter(f => f.status !== 'RESOLVED').length})` : `Resolved (${feedbacks.filter(f => f.status === 'RESOLVED').length})`}
+                  {t === 'ALL' ? `All (${feedbacks.length})` : t === 'PENDING' ? `Pending (${feedbacks.filter(f => !isItemResolved(f)).length})` : `Resolved (${feedbacks.filter(f => isItemResolved(f)).length})`}
                 </button>
               ))}
             </div>

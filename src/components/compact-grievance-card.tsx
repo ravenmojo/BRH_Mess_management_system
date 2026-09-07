@@ -86,8 +86,9 @@ export function CompactGrievanceCard({
 }: CompactGrievanceCardProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
-  const isResolved = item.status === 'RESOLVED';
-  const isTwoWay = Boolean(item.adminResolved && item.userResolved);
+  const isMaintenance = item.facilityType?.startsWith('MAINTENANCE_');
+  const isTwoWay = isMaintenance && Boolean(item.adminResolved && item.userResolved);
+  const isResolved = isMaintenance ? (isTwoWay || item.status === 'RESOLVED') : item.status === 'RESOLVED';
   const mediaList = parseMediaUrls(item.mediaUrl);
   const hasMedia = mediaList.length > 0;
   const categoryInfo = getCategoryBadge(item.facilityType);
@@ -114,9 +115,11 @@ export function CompactGrievanceCard({
               ? 'border-red-400/80 bg-red-50/20 dark:bg-red-950/20 shadow-red-500/10'
               : isTwoWay
                 ? 'border-emerald-400/60 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-emerald-500/5'
-                : isResolved
-                  ? 'border-emerald-200/80 dark:border-emerald-800/60 shadow-xs'
-                  : 'border-yellow-200/80 dark:border-yellow-900/60 shadow-xs'
+                : isMaintenance && item.adminResolved && !item.userResolved
+                  ? 'border-blue-400/50 bg-blue-50/15 dark:bg-blue-950/15 shadow-blue-500/5'
+                  : isResolved
+                    ? 'border-emerald-200/80 dark:border-emerald-800/60 shadow-xs'
+                    : 'border-yellow-200/80 dark:border-yellow-900/60 shadow-xs'
       } hover:border-slate-300 dark:hover:border-slate-700`}
     >
       {/* Clickable Compact Header */}
@@ -168,12 +171,29 @@ export function CompactGrievanceCard({
               <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-100 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700/80 flex items-center space-x-1">
                 <span>Needs Manager Sig</span>
               </span>
-            ) : isTwoWay ? (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700 flex items-center space-x-1 shadow-xs">
-                <Check className="w-2.5 h-2.5 text-emerald-600" />
-                <Check className="w-2.5 h-2.5 text-emerald-600 -ml-1.5" />
-                <span>Verified</span>
-              </span>
+            ) : isMaintenance ? (
+              isTwoWay ? (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700 flex items-center space-x-1 shadow-xs">
+                  <Check className="w-2.5 h-2.5 text-emerald-600" />
+                  <Check className="w-2.5 h-2.5 text-emerald-600 -ml-1.5" />
+                  <span>Two-Way Verified</span>
+                </span>
+              ) : item.adminResolved && !item.userResolved ? (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 dark:bg-blue-950/70 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800/80 flex items-center space-x-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-0.5" />
+                  <span>Admin Resolved (Pending Boarder)</span>
+                </span>
+              ) : item.userResolved && !item.adminResolved ? (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-100 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/80 flex items-center space-x-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 mr-0.5" />
+                  <span>Boarder Confirmed (Pending Admin)</span>
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-yellow-100 dark:bg-yellow-950/70 text-yellow-800 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-700/80 flex items-center space-x-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 mr-0.5" />
+                  <span>Pending</span>
+                </span>
+              )
             ) : isResolved ? (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/80 flex items-center space-x-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-0.5" />
@@ -248,7 +268,7 @@ export function CompactGrievanceCard({
           )}
 
           {/* Official Resolution Attribution */}
-          {isResolved && (
+          {(isResolved || item.adminResolved) && (item.resolvedBy || item.resolvedByRole) && (
             <div className="flex items-center space-x-2 text-[11px] font-medium text-emerald-800 dark:text-emerald-200 bg-emerald-50/90 dark:bg-emerald-950/50 px-3 py-2 rounded-xl border border-emerald-200/80 dark:border-emerald-800/60 shadow-2xs">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span className="leading-snug">
@@ -306,7 +326,7 @@ export function CompactGrievanceCard({
                 <span>Sign & Register (Manager Only)</span>
               </button>
             </div>
-          ) : !isResolved && onMarkResolved && (
+          ) : isMaintenance && !item.userResolved && onMarkResolved ? (
             <div className="pt-1 flex justify-end">
               <button
                 type="button"
@@ -322,7 +342,7 @@ export function CompactGrievanceCard({
                 <span>Confirm Grievance Resolved</span>
               </button>
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </div>

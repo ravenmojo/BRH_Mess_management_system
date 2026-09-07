@@ -46,11 +46,25 @@ export default function PublicGalleryPage() {
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
 
   const fetchImages = () => {
+    try {
+      const cached = sessionStorage.getItem('bros_gallery_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setImages(parsed);
+          setLoading(false);
+        }
+      }
+    } catch {}
+
     fetch('/api/gallery')
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
           setImages(data);
+          try {
+            sessionStorage.setItem('bros_gallery_cache', JSON.stringify(data));
+          } catch {}
         } else {
           console.error('API Error:', data);
           setImages([]);
@@ -247,7 +261,7 @@ export default function PublicGalleryPage() {
                     />
                   ) : (
                     <a href={img.url} target="_blank" rel="noreferrer">
-                      <img src={img.url} alt={img.caption || 'Gallery Image'} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                      <img src={img.url} alt={img.caption || 'Gallery Image'} loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
                     </a>
                   )}
                   <a

@@ -91,21 +91,24 @@ function MaintenanceAdminContent() {
 
     // ⚡ Instant Optimistic Update
     setFeedbacks((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              status: newStatus,
-              remark: isResolving ? (remark !== undefined && remark !== '' ? remark : item.remark) : item.remark,
-              resolvedBy: isResolving ? resolvedBy : (isPending ? null : item.resolvedBy),
-              resolvedByEmail: isResolving ? (isMasterAdmin ? 'admin@kgp' : adminEmail) : (isPending ? null : item.resolvedByEmail),
-              resolvedByRole: isResolving ? resolvedByRole : (isPending ? null : item.resolvedByRole),
-              resolvedAt: isResolving ? now : (isPending ? null : item.resolvedAt),
-              adminResolved: isResolving ? true : (isPending ? false : item.adminResolved),
-              userResolved: isPending ? false : item.userResolved,
-            }
-          : item
-      )
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        const willAdminResolved = isResolving ? true : (isPending ? false : item.adminResolved);
+        const willUserResolved = isPending ? false : item.userResolved;
+        const willStatusResolved = willAdminResolved && (willUserResolved || Boolean(item.overriddenBy));
+
+        return {
+          ...item,
+          status: willStatusResolved ? 'RESOLVED' : 'PENDING',
+          adminResolved: willAdminResolved,
+          userResolved: willUserResolved,
+          remark: isResolving ? (remark !== undefined && remark !== '' ? remark : item.remark) : item.remark,
+          resolvedBy: isResolving ? resolvedBy : (isPending ? null : item.resolvedBy),
+          resolvedByEmail: isResolving ? (isMasterAdmin ? 'admin@kgp' : adminEmail) : (isPending ? null : item.resolvedByEmail),
+          resolvedByRole: isResolving ? resolvedByRole : (isPending ? null : item.resolvedByRole),
+          resolvedAt: isResolving ? now : (isPending ? null : item.resolvedAt),
+        };
+      })
     );
 
     const updatePayload: any = {

@@ -60,9 +60,7 @@ export async function GET(request: Request) {
           },
         ];
 
-        for (const ev of dummyEvents) {
-          await prisma.activityParticipant.create({ data: ev });
-        }
+        await prisma.activityParticipant.createMany({ data: dummyEvents });
 
         activities = await prisma.activityParticipant.findMany({
           where: {

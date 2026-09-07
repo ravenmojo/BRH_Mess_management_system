@@ -22,7 +22,11 @@ export async function GET(request: Request) {
       }
     });
 
-    return NextResponse.json(polls);
+    return NextResponse.json(polls, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120',
+      },
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

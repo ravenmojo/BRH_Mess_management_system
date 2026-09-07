@@ -17,12 +17,27 @@ export default function PublicPollPage() {
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
 
   const loadPoll = () => {
+    try {
+      const cached = sessionStorage.getItem('bros_poll_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed?.id) {
+          setPoll(parsed);
+          setLoading(false);
+        }
+      }
+    } catch {}
+
     fetch('/api/poll')
       .then(res => res.json())
       .then(data => {
         if (data && data.length > 0) {
           const active = data.find((p: any) => p.isActive);
-          setPoll(active || data[0]);
+          const chosen = active || data[0];
+          setPoll(chosen);
+          try {
+            sessionStorage.setItem('bros_poll_cache', JSON.stringify(chosen));
+          } catch {}
         } else {
           setPoll(null);
         }

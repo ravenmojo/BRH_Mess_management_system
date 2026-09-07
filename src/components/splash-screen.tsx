@@ -21,15 +21,15 @@ export function SplashScreen() {
 
     setIsVisible(true);
 
-    // Timeline for cinematic, ultra-smooth progression (~2.6s total)
-    const t0 = setTimeout(() => setPhase('emblem'), 60);
-    const t1 = setTimeout(() => setPhase('letters'), 400);
-    const t2 = setTimeout(() => setPhase('tagline'), 950);
-    const t3 = setTimeout(() => setPhase('exit'), 2200);
+    // Streamlined timeline for snappy, responsive entrance (~1.3s total, down from 2.8s)
+    const t0 = setTimeout(() => setPhase('emblem'), 40);
+    const t1 = setTimeout(() => setPhase('letters'), 220);
+    const t2 = setTimeout(() => setPhase('tagline'), 520);
+    const t3 = setTimeout(() => setPhase('exit'), 1050);
     const t4 = setTimeout(() => {
       setIsVisible(false);
       sessionStorage.setItem('bros_splash_seen', 'true');
-    }, 2800);
+    }, 1400);
 
     return () => {
       clearTimeout(t0);
@@ -40,13 +40,22 @@ export function SplashScreen() {
     };
   }, []);
 
+  const handleDismiss = () => {
+    setPhase('exit');
+    setTimeout(() => {
+      setIsVisible(false);
+      sessionStorage.setItem('bros_splash_seen', 'true');
+    }, 200);
+  };
+
   if (!mounted || !isVisible) return null;
 
   const letters = ['B', 'R', 'O', 'S'];
 
   const splashContent = (
     <div
-      className={`fixed inset-0 z-[9999999] flex flex-col items-center justify-center bg-[#030712] select-none overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+      onClick={handleDismiss}
+      className={`fixed inset-0 z-[9999999] flex flex-col items-center justify-center bg-[#030712] select-none overflow-hidden cursor-pointer transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
         phase === 'exit'
           ? 'opacity-0 scale-[1.04] filter blur-sm pointer-events-none'
           : 'opacity-100 scale-100'
@@ -169,6 +178,7 @@ export function SplashScreen() {
         <div className="w-24 h-1 bg-slate-800 rounded-full overflow-hidden">
           <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full animate-[shimmer_1.5s_infinite_linear]" style={{ width: '100%' }} />
         </div>
+        <span className="text-[9px] font-medium tracking-wider text-slate-500 uppercase">Tap to skip</span>
       </div>
     </div>
   );

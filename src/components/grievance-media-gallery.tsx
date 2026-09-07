@@ -81,7 +81,7 @@ export function GrievanceMediaGallery({ mediaUrl, capturedAt, createdAt }: Griev
                 <video src={url} className="w-full h-full object-cover" controls preload="metadata" />
               ) : (
                 <a href={url} target="_blank" rel="noreferrer" className="w-full h-full block">
-                  <img src={url} alt={`Media ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                  <img src={url} alt={`Media ${idx + 1}`} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
                 </a>
               )}
               <div className="absolute top-1 right-1 flex items-center space-x-1 z-10 pointer-events-auto">

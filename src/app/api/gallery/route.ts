@@ -10,35 +10,41 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');
 
-    // Auto-purge Mess Duty Gallery images older than 30 days
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    try {
-      const expiredImages = await prisma.galleryImage.findMany({
-        where: { createdAt: { lt: thirtyDaysAgo } }
-      });
-      if (expiredImages.length > 0) {
-        for (const img of expiredImages) {
-          if (img.url) {
-            deleteFromCloudinary(img.url).catch(() => {});
-          }
-        }
-        await prisma.galleryImage.deleteMany({
-          where: { createdAt: { lt: thirtyDaysAgo } }
+    // Auto-purge Mess Duty Gallery images older than 30 days (non-blocking background task)
+    (async () => {
+      try {
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const expiredImages = await prisma.galleryImage.findMany({
+          where: { createdAt: { lt: thirtyDaysAgo } },
+          take: 20,
         });
-      }
-    } catch (purgeErr) {
-      console.warn('Gallery 30-day auto-purge check warning:', purgeErr);
-    }
+        if (expiredImages.length > 0) {
+          for (const img of expiredImages) {
+            if (img.url) {
+              deleteFromCloudinary(img.url).catch(() => {});
+            }
+          }
+          await prisma.galleryImage.deleteMany({
+            where: { id: { in: expiredImages.map((i) => i.id) } },
+          }).catch(() => {});
+        }
+      } catch (purgeErr) {}
+    })();
 
     const images = await prisma.galleryImage.findMany({
       where: {
         status: 'APPROVED',
         ...(category ? { category } : {})
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      take: 100,
     });
 
-    return NextResponse.json(images);
+    return NextResponse.json(images, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120',
+      },
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

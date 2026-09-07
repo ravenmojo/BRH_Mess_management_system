@@ -125,17 +125,24 @@ export async function GET(request: Request) {
       ? Math.round((overallResolved / overallSubmitted) * 100)
       : 0;
 
-    return NextResponse.json({
-      overall: {
-        totalSubmitted: overallSubmitted,
-        totalResolved: overallResolved,
-        totalEscalated: overallEscalated,
-        totalTwoWayVerified: overallTwoWayVerified,
-        resolutionRatePercent: overallResolutionRate,
-        avgResolutionHours: overallAvgHours,
+    return NextResponse.json(
+      {
+        overall: {
+          totalSubmitted: overallSubmitted,
+          totalResolved: overallResolved,
+          totalEscalated: overallEscalated,
+          totalTwoWayVerified: overallTwoWayVerified,
+          resolutionRatePercent: overallResolutionRate,
+          avgResolutionHours: overallAvgHours,
+        },
+        categoryStats,
       },
-      categoryStats,
-    });
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+        },
+      }
+    );
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
