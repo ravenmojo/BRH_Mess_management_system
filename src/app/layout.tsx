@@ -10,6 +10,7 @@ import { BackButton } from '@/components/back-button';
 import { InstallPwaPrompt } from '@/components/install-pwa-prompt';
 import { SwipeNavigationProvider } from '@/components/swipe-navigation-provider';
 import { SplashScreen } from '@/components/splash-screen';
+import { Footer } from '@/components/footer';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -94,6 +95,7 @@ export default function RootLayout({
             <SwipeNavigationProvider>
               {children}
             </SwipeNavigationProvider>
+            <Footer />
           </main>
           <BottomNav />
         </ThemeProvider>

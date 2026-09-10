@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Send, CheckCircle2, Clock, ShieldCheck, ShowerHead, Droplet, Zap, Hammer, Sparkles, Wrench, AlertTriangle, Paperclip, Loader2, Dumbbell, ArrowRight, ArrowLeft, Check, ChevronDown } from 'lucide-react';
-import { Footer } from '@/components/footer';
 import { uploadToCloudinary } from '@/lib/cloudinary-upload';
 import { useRouter } from 'next/navigation';
 import { OtpVerificationModal } from '@/components/otp-modal';
@@ -536,8 +535,6 @@ export default function MaintenancePage() {
           <span>Access Maintenance Admin Panel</span>
         </Link>
       </div>
-
-      <Footer />
 
       <OtpVerificationModal
         isOpen={isOtpModalOpen}

@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Footer } from '@/components/footer';
 import { OtpVerificationModal } from '@/components/otp-modal';
 import { Loader2, ShieldCheck, CheckCircle2, Lock, Unlock, Vote, AlertCircle } from 'lucide-react';
 
@@ -105,7 +104,6 @@ export default function PublicPollPage() {
         <Vote className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">No Active Polls</h2>
         <p className="text-sm text-slate-500">There are currently no polls running for the upcoming month.</p>
-        <Footer />
       </div>
     );
   }
@@ -219,8 +217,6 @@ export default function PublicPollPage() {
           }}
         />
       )}
-
-      <Footer />
     </div>
   );
 }

@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Footer } from '@/components/footer';
 import {
   Calendar,
   CheckCircle2,
@@ -317,8 +316,6 @@ export default function StudentDashboard() {
           <span>Access Mess Admin Panel</span>
         </Link>
       </div>
-
-      <Footer />
     </div>
   );
 }

@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Camera, Loader2, Video, Upload, X, AlertTriangle, Clock, Download, ShieldCheck, KeyRound, CheckCircle2 } from 'lucide-react';
-import { Footer } from '@/components/footer';
 import { uploadToCloudinary } from '@/lib/cloudinary-upload';
 import { OtpVerificationModal } from '@/components/otp-modal';
 
@@ -297,8 +296,6 @@ export default function PublicGalleryPage() {
           })}
         </div>
       )}
-
-      <Footer />
 
       {/* UPLOAD MODAL */}
       {showUpload && (

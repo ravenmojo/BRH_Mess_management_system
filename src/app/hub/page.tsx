@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { Film, Lightbulb, Users, Phone, Trophy, Send, Loader2, Star, ShieldCheck, AlertTriangle, Download, Video, Image as ImageIcon, Calendar, Clock } from 'lucide-react';
 import Link from 'next/link';
-import { Footer } from '@/components/footer';
 import { OtpVerificationModal } from '@/components/otp-modal';
 
 // Smart room number formatter
@@ -548,8 +547,6 @@ export default function HubPage() {
           <span>Access Hall Info Admin Panel</span>
         </Link>
       </div>
-
-      <Footer />
 
       <OtpVerificationModal
         isOpen={isOtpModalOpen}
