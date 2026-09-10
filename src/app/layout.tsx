@@ -11,6 +11,7 @@ import { InstallPwaPrompt } from '@/components/install-pwa-prompt';
 import { SwipeNavigationProvider } from '@/components/swipe-navigation-provider';
 import { SplashScreen } from '@/components/splash-screen';
 import { Footer } from '@/components/footer';
+import { PullToRefresh } from '@/components/pull-to-refresh';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -90,13 +91,15 @@ export default function RootLayout({
               </div>
             </div>
           </header>
-          <main className="max-w-md mx-auto px-4 pt-3.5 pb-8 relative z-10">
-            <BackButton />
-            <SwipeNavigationProvider>
-              {children}
-            </SwipeNavigationProvider>
-            <Footer />
-          </main>
+          <PullToRefresh>
+            <main className="max-w-md mx-auto px-4 pt-3.5 pb-8 relative z-10">
+              <BackButton />
+              <SwipeNavigationProvider>
+                {children}
+              </SwipeNavigationProvider>
+              <Footer />
+            </main>
+          </PullToRefresh>
           <BottomNav />
         </ThemeProvider>
       </body>

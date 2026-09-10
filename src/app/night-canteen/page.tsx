@@ -81,6 +81,12 @@ export default function NightCanteenPage() {
       setEmail(savedEmail);
     }
     fetchCanteenFeedbacks();
+
+    const handlePullRefresh = () => {
+      fetchCanteenFeedbacks();
+    };
+    window.addEventListener('app-pull-refresh', handlePullRefresh);
+    return () => window.removeEventListener('app-pull-refresh', handlePullRefresh);
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

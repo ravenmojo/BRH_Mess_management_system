@@ -147,6 +147,12 @@ export default function MaintenancePage() {
     }
 
     loadFeedbacks();
+
+    const handlePullRefresh = () => {
+      loadFeedbacks();
+    };
+    window.addEventListener('app-pull-refresh', handlePullRefresh);
+    return () => window.removeEventListener('app-pull-refresh', handlePullRefresh);
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

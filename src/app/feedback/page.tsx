@@ -52,6 +52,12 @@ export default function StudentFeedbackPage() {
     }
 
     loadFeedbacks();
+
+    const handlePullRefresh = () => {
+      loadFeedbacks();
+    };
+    window.addEventListener('app-pull-refresh', handlePullRefresh);
+    return () => window.removeEventListener('app-pull-refresh', handlePullRefresh);
   }, []);
 
   const loadFeedbacks = () => {
