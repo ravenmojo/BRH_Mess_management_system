@@ -29,10 +29,12 @@ import {
   Calculator,
   Gamepad2,
   Dices,
-  Target
+  Target,
+  ArrowRightLeft,
+  HandCoins
 } from 'lucide-react';
 
-// Secured access hash
+// Secured access hash for "poker@brh"
 const ACCESS_PASS_HASH = '0417301e2cf799166eed8cd914a6e5ccead1bbfdbc5e5df1b74d6f12abf64ee3';
 const STORAGE_KEY = 'brh_games_ledger_v1';
 const LEGACY_STORAGE_KEY = typeof atob !== 'undefined' ? atob('YnJoX3Bva2VyX3NoZWV0X3Yx') : '';
@@ -55,7 +57,7 @@ export interface GamePlayer {
   id: string;
   name: string;
   initialBuyIn: number;
-  rebuys: number;
+  rebuys: number; // can be positive (top-up) or negative (cashed-out)
 }
 
 export interface GameRound {
@@ -65,12 +67,25 @@ export interface GameRound {
   diffs: Record<string, number>; // playerId -> +/- amount
 }
 
+export interface GameLoan {
+  id: string;
+  lenderId: string;   // player giving chips
+  lenderName: string;
+  borrowerId: string; // player receiving chips
+  borrowerName: string;
+  amount: number;     // ₹
+  timestamp: number;
+  settled: boolean;   // whether debt has been settled/repaid
+  transferChips: boolean; // whether chips transferred between table balances
+}
+
 export interface GameScoresheet {
   id: string;
   createdAt: number;
   updatedAt: number;
   players: GamePlayer[];
   rounds: GameRound[];
+  loans?: GameLoan[];
 }
 
 export function GameNightLedger() {
@@ -96,12 +111,20 @@ export function GameNightLedger() {
 
   // Active Round Recording Modal / Section
   const [isRecordingRound, setIsRecordingRound] = useState<boolean>(false);
-  // map of playerId -> { sign: '+' | '-', val: string }
   const [roundInputs, setRoundInputs] = useState<Record<string, { sign: '+' | '-'; val: string }>>({});
 
-  // Re-buy / Top-up modal
-  const [rebuyPlayerId, setRebuyPlayerId] = useState<string | null>(null);
-  const [rebuyAmount, setRebuyAmount] = useState<number>(500);
+  // Top-up (Re-buy / Cash-out) modal
+  const [topupPlayerId, setTopupPlayerId] = useState<string | null>(null);
+  const [topupType, setTopupType] = useState<'ADD' | 'DEDUCT'>('ADD');
+  const [topupAmount, setTopupAmount] = useState<string>('500');
+
+  // Loan Modal State
+  const [isLoanModalOpen, setIsLoanModalOpen] = useState<boolean>(false);
+  const [loanLenderId, setLoanLenderId] = useState<string>('');
+  const [loanBorrowerId, setLoanBorrowerId] = useState<string>('');
+  const [loanAmount, setLoanAmount] = useState<string>('200');
+  const [loanTransferChips, setLoanTransferChips] = useState<boolean>(true);
+  const [loanError, setLoanError] = useState<string>('');
 
   // Late Player Joining modal (during active session)
   const [isAddPlayerModalOpen, setIsAddPlayerModalOpen] = useState<boolean>(false);
@@ -114,6 +137,7 @@ export function GameNightLedger() {
 
   // UI Toggles
   const [showRoundHistory, setShowRoundHistory] = useState<boolean>(false);
+  const [showLoansSection, setShowLoansSection] = useState<boolean>(false);
   const [showConfirmNewSheet, setShowConfirmNewSheet] = useState<boolean>(false);
   const [copiedToast, setCopiedToast] = useState<boolean>(false);
   const [timeRemainingText, setTimeRemainingText] = useState<string>('');
@@ -139,6 +163,8 @@ export function GameNightLedger() {
             setSheet(null);
             setHasExpiredNotice(true);
           } else {
+            // Ensure loans array exists
+            if (!parsed.loans) parsed.loans = [];
             setSheet(parsed);
           }
         }
@@ -172,7 +198,7 @@ export function GameNightLedger() {
     };
 
     updateRemaining();
-    const interval = setInterval(updateRemaining, 60000); // every minute
+    const interval = setInterval(updateRemaining, 60000);
     return () => clearInterval(interval);
   }, [sheet]);
 
@@ -265,37 +291,92 @@ export function GameNightLedger() {
         rebuys: 0,
       })),
       rounds: [],
+      loans: [],
     };
     saveSheet(newSheet);
     setHasExpiredNotice(false);
     setShowConfirmNewSheet(false);
   };
 
-  // Computed Player Stats
+  // =========================================================================
+  // Computed Player Stats - KEPT IN FIXED SEAT ORDER (DO NOT SORT EVERY ROUND!)
+  // =========================================================================
   const playerStats = useMemo(() => {
     if (!sheet) return [];
+    const loansList = sheet.loans || [];
+
     return sheet.players.map((player) => {
+      // 1. Round profits and losses
       let netProfitLoss = 0;
       sheet.rounds.forEach((round) => {
         const diff = round.diffs[player.id] || 0;
         netProfitLoss += diff;
       });
+
+      // 2. Loans chip transfers
+      // If player borrowed chips (transferChips = true), their table balance increases
+      // If player lent chips (transferChips = true), their table balance decreases
+      let loanChipDelta = 0;
+      let totalDebtOwed = 0; // how much this player owes others
+      let totalLentPending = 0; // how much others owe this player
+
+      loansList.forEach((loan) => {
+        if (loan.borrowerId === player.id) {
+          if (loan.transferChips) {
+            loanChipDelta += loan.amount;
+          }
+          if (!loan.settled) {
+            totalDebtOwed += loan.amount;
+          }
+        }
+        if (loan.lenderId === player.id) {
+          if (loan.transferChips) {
+            loanChipDelta -= loan.amount;
+          }
+          if (!loan.settled) {
+            totalLentPending += loan.amount;
+          }
+        }
+      });
+
       const totalBuyIn = player.initialBuyIn + (player.rebuys || 0);
-      const currentBalance = totalBuyIn + netProfitLoss;
+      const currentBalance = totalBuyIn + netProfitLoss + loanChipDelta;
+
       return {
         ...player,
         totalBuyIn,
         netProfitLoss,
+        loanChipDelta,
+        totalDebtOwed,
+        totalLentPending,
         currentBalance,
       };
-    }).sort((a, b) => b.currentBalance - a.currentBalance); // ranked from top chip leader
+    });
+    // NOTE: Order is 100% FIXED to sheet.players (No jumping rows after rounds!)
   }, [sheet]);
+
+  // Highest balance to identify chip leader without rearranging rows
+  const highestBalance = useMemo(() => {
+    if (playerStats.length === 0) return -Infinity;
+    const maxVal = Math.max(...playerStats.map((p) => p.currentBalance));
+    return maxVal;
+  }, [playerStats]);
 
   // Total Pot / Points in play
   const totalChipsInPlay = useMemo(() => {
     if (!sheet) return 0;
     return sheet.players.reduce((sum, p) => sum + p.initialBuyIn + (p.rebuys || 0), 0);
   }, [sheet]);
+
+  // Active unsettled loans
+  const activeLoans = useMemo(() => {
+    if (!sheet || !sheet.loans) return [];
+    return sheet.loans;
+  }, [sheet]);
+
+  const unsettledLoansCount = useMemo(() => {
+    return activeLoans.filter((l) => !l.settled).length;
+  }, [activeLoans]);
 
   // Round Input Handling
   const handleOpenRoundModal = () => {
@@ -320,7 +401,6 @@ export function GameNightLedger() {
       clean = clean.replace(/^\++/, '');
     }
 
-    // Keep numbers and single decimal
     clean = clean.replace(/[^0-9.]/g, '');
 
     setRoundInputs((prev) => ({
@@ -338,20 +418,6 @@ export function GameNightLedger() {
       },
     }));
   };
-
-  // Compute table round net sum for zero-sum check
-  const roundNetSum = useMemo(() => {
-    if (!sheet || !isRecordingRound) return 0;
-    let sum = 0;
-    sheet.players.forEach((p) => {
-      const item = roundInputs[p.id];
-      if (item && item.val) {
-        const num = parseFloat(item.val) || 0;
-        sum += item.sign === '-' ? -num : num;
-      }
-    });
-    return Math.round(sum * 100) / 100;
-  }, [sheet, isRecordingRound, roundInputs]);
 
   // Auto-balance button: sets this player's value so that total table round net sum becomes 0
   const handleAutoBalance = (targetPlayerId: string) => {
@@ -385,6 +451,20 @@ export function GameNightLedger() {
     });
     setRoundInputs(resetInputs);
   };
+
+  // Compute table round net sum for zero-sum check
+  const roundNetSum = useMemo(() => {
+    if (!sheet || !isRecordingRound) return 0;
+    let sum = 0;
+    sheet.players.forEach((p) => {
+      const item = roundInputs[p.id];
+      if (item && item.val) {
+        const num = parseFloat(item.val) || 0;
+        sum += item.sign === '-' ? -num : num;
+      }
+    });
+    return Math.round(sum * 100) / 100;
+  }, [sheet, isRecordingRound, roundInputs]);
 
   const handleSaveRound = () => {
     if (!sheet) return;
@@ -426,15 +506,26 @@ export function GameNightLedger() {
     saveSheet(updated);
   };
 
-  // Re-buy / Top-up handler
-  const handleExecuteRebuy = () => {
-    if (!sheet || !rebuyPlayerId) return;
-    const amt = Number(rebuyAmount) || 0;
-    if (amt <= 0) return;
+  // =========================================================================
+  // Top-up (Rebuy / Cash-Out) Handler - SUPPORTS NEGATIVE TOP-UP
+  // =========================================================================
+  const handleOpenTopup = (playerId: string) => {
+    setTopupPlayerId(playerId);
+    setTopupType('ADD');
+    setTopupAmount('500');
+  };
+
+  const handleExecuteTopup = () => {
+    if (!sheet || !topupPlayerId) return;
+    const num = Math.abs(parseFloat(topupAmount) || 0);
+    if (num === 0) return;
+
+    // Positive or negative top-up
+    const signedDelta = topupType === 'DEDUCT' ? -num : num;
 
     const updatedPlayers = sheet.players.map((p) => {
-      if (p.id === rebuyPlayerId) {
-        return { ...p, rebuys: (p.rebuys || 0) + amt };
+      if (p.id === topupPlayerId) {
+        return { ...p, rebuys: (p.rebuys || 0) + signedDelta };
       }
       return p;
     });
@@ -446,7 +537,95 @@ export function GameNightLedger() {
     };
 
     saveSheet(updatedSheet);
-    setRebuyPlayerId(null);
+    setTopupPlayerId(null);
+  };
+
+  // =========================================================================
+  // Loan / Debt Handler (Player to Player)
+  // =========================================================================
+  const handleOpenLoanModal = (defaultBorrowerOrLenderId?: string) => {
+    if (!sheet || sheet.players.length < 2) return;
+    setLoanError('');
+    setLoanAmount('200');
+    setLoanTransferChips(true);
+
+    if (defaultBorrowerOrLenderId) {
+      setLoanBorrowerId(defaultBorrowerOrLenderId);
+      const other = sheet.players.find((p) => p.id !== defaultBorrowerOrLenderId);
+      setLoanLenderId(other?.id || '');
+    } else {
+      setLoanLenderId(sheet.players[0]?.id || '');
+      setLoanBorrowerId(sheet.players[1]?.id || '');
+    }
+    setIsLoanModalOpen(true);
+  };
+
+  const handleCreateLoan = () => {
+    if (!sheet) return;
+    if (!loanLenderId || !loanBorrowerId) {
+      setLoanError('Please select both a lender and borrower.');
+      return;
+    }
+    if (loanLenderId === loanBorrowerId) {
+      setLoanError('Lender and borrower cannot be the same person.');
+      return;
+    }
+    const amt = parseFloat(loanAmount);
+    if (!amt || amt <= 0) {
+      setLoanError('Please enter a valid loan amount greater than ₹0.');
+      return;
+    }
+
+    const lender = sheet.players.find((p) => p.id === loanLenderId);
+    const borrower = sheet.players.find((p) => p.id === loanBorrowerId);
+
+    const newLoan: GameLoan = {
+      id: 'loan_' + Date.now(),
+      lenderId: loanLenderId,
+      lenderName: lender?.name || 'Lender',
+      borrowerId: loanBorrowerId,
+      borrowerName: borrower?.name || 'Borrower',
+      amount: amt,
+      timestamp: Date.now(),
+      settled: false,
+      transferChips: loanTransferChips,
+    };
+
+    const existingLoans = sheet.loans || [];
+    const updatedSheet: GameScoresheet = {
+      ...sheet,
+      updatedAt: Date.now(),
+      loans: [...existingLoans, newLoan],
+    };
+
+    saveSheet(updatedSheet);
+    setIsLoanModalOpen(false);
+  };
+
+  const handleToggleSettleLoan = (loanId: string) => {
+    if (!sheet || !sheet.loans) return;
+    const updatedLoans = sheet.loans.map((l) => {
+      if (l.id === loanId) {
+        return { ...l, settled: !l.settled };
+      }
+      return l;
+    });
+
+    saveSheet({
+      ...sheet,
+      updatedAt: Date.now(),
+      loans: updatedLoans,
+    });
+  };
+
+  const handleDeleteLoan = (loanId: string) => {
+    if (!sheet || !sheet.loans) return;
+    const updatedLoans = sheet.loans.filter((l) => l.id !== loanId);
+    saveSheet({
+      ...sheet,
+      updatedAt: Date.now(),
+      loans: updatedLoans,
+    });
   };
 
   // Add Late Player (mid-game join)
@@ -496,15 +675,27 @@ export function GameNightLedger() {
   // Copy Summary to Clipboard
   const handleCopySummary = () => {
     if (!sheet) return;
+    const activeUnsettled = (sheet.loans || []).filter((l) => !l.settled);
+
     const lines = [
       `🎯 BRH GAME NIGHT - SESSION SCORES 🎯`,
       `Rounds: ${sheet.rounds.length} | Total Pool: ₹${totalChipsInPlay}`,
       `---------------------------------`,
       ...playerStats.map((p, idx) => {
         const signStr = p.netProfitLoss >= 0 ? `+₹${p.netProfitLoss}` : `-₹${Math.abs(p.netProfitLoss)}`;
-        return `${idx + 1}. ${p.name}: ₹${p.currentBalance} (${signStr}) [Starting: ₹${p.totalBuyIn}]`;
+        let extra = '';
+        if (p.totalDebtOwed > 0) extra += ` (Owes ₹${p.totalDebtOwed})`;
+        if (p.totalLentPending > 0) extra += ` (Lent ₹${p.totalLentPending})`;
+        return `${idx + 1}. ${p.name}: ₹${p.currentBalance} [P/L: ${signStr}] (Buy-in: ₹${p.totalBuyIn})${extra}`;
       }),
       `---------------------------------`,
+      ...(activeUnsettled.length > 0
+        ? [
+            `🤝 Active Debts to Settle:`,
+            ...activeUnsettled.map((l) => `• ${l.borrowerName} owes ${l.lenderName}: ₹${l.amount}`),
+            `---------------------------------`,
+          ]
+        : []),
       `Recorded via BRH Hall Info Hub`,
     ];
     navigator.clipboard.writeText(lines.join('\n'));
@@ -680,34 +871,34 @@ export function GameNightLedger() {
           </div>
         </div>
 
-        {/* Players List Inputs */}
-        <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+        {/* Players List Inputs - SPACIOUS & DECLUTTERED */}
+        <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
           <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider px-1">
-            <span>Seat & Player Name</span>
-            <span>Starting Amount (₹)</span>
+            <span>Seat & Full Player Name</span>
+            <span>Starting Stack (₹)</span>
           </div>
 
           {setupPlayers.map((player, idx) => (
             <div
               key={player.id}
-              className="flex items-center space-x-2 p-2 bg-white/80 dark:bg-slate-800/70 rounded-xl border border-slate-200/80 dark:border-slate-700/70 shadow-xs"
+              className="flex items-center space-x-2.5 p-2.5 bg-white/80 dark:bg-slate-800/70 rounded-xl border border-slate-200/80 dark:border-slate-700/70 shadow-xs"
             >
-              <span className="w-6 text-center text-xs font-bold text-slate-400">
+              <span className="w-6 text-center text-xs font-bold text-slate-400 shrink-0">
                 #{idx + 1}
               </span>
               <input
                 type="text"
-                placeholder={`Player ${idx + 1}`}
+                placeholder={`Player ${idx + 1} Name`}
                 value={player.name}
-                maxLength={20}
+                maxLength={30}
                 onChange={(e) => {
                   const updated = [...setupPlayers];
                   updated[idx].name = e.target.value;
                   setSetupPlayers(updated);
                 }}
-                className="flex-1 px-3 py-1.5 bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="flex-1 min-w-0 px-3 py-1.5 bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
-              <div className="flex items-center space-x-1">
+              <div className="flex items-center space-x-1 shrink-0">
                 <span className="text-xs font-bold text-slate-400">₹</span>
                 <input
                   type="number"
@@ -726,7 +917,7 @@ export function GameNightLedger() {
                 <button
                   type="button"
                   onClick={() => handleRemoveSetupPlayer(player.id)}
-                  className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
+                  className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors shrink-0"
                   title="Remove player"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -767,7 +958,7 @@ export function GameNightLedger() {
   // VIEW C: ACTIVE SCORESHEET IN PROGRESS
   // ==========================================
   return (
-    <div className="glass-card rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-indigo-500/30 dark:border-indigo-500/20 shadow-xl space-y-4 bg-gradient-to-br from-slate-900/10 via-white/50 dark:via-slate-900/50 to-indigo-950/20">
+    <div className="glass-card rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-indigo-500/30 dark:border-indigo-500/20 shadow-xl space-y-4 bg-gradient-to-br from-slate-900/10 via-white/50 dark:via-slate-900/50 to-indigo-950/20">
       {/* Top Banner & Quick Controls */}
       <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200/70 dark:border-slate-800/80">
         <div className="flex items-center space-x-2.5">
@@ -808,6 +999,20 @@ export function GameNightLedger() {
           )}
 
           <button
+            onClick={() => handleOpenLoanModal()}
+            className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-xl text-xs font-bold transition-all touch-spring border border-amber-200 dark:border-amber-800 flex items-center space-x-1"
+            title="Record player-to-player loan"
+          >
+            <HandCoins className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Loan</span>
+            {unsettledLoansCount > 0 && (
+              <span className="w-4 h-4 rounded-full bg-amber-500 text-white text-[9px] flex items-center justify-center font-bold ml-0.5">
+                {unsettledLoansCount}
+              </span>
+            )}
+          </button>
+
+          <button
             onClick={handleCopySummary}
             className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition-all touch-spring border border-slate-200/80 dark:border-slate-700"
             title="Copy scores to clipboard"
@@ -833,7 +1038,7 @@ export function GameNightLedger() {
 
       {copiedToast && (
         <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs font-bold text-center animate-in fade-in">
-          Scores copied to clipboard! Ready to paste in group 🎯
+          Scores & debts copied to clipboard! Ready to paste in WhatsApp group 🎯
         </div>
       )}
 
@@ -859,27 +1064,26 @@ export function GameNightLedger() {
 
         <div className="p-2.5 rounded-2xl bg-white/70 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/70 text-center shadow-xs">
           <div className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">
-            Session Leader
+            Chip Leader
           </div>
           <div className="text-xs sm:text-sm font-black text-amber-600 dark:text-amber-400 truncate">
-            👑 {playerStats[0]?.name || 'N/A'}
+            👑 {playerStats.find((p) => p.currentBalance === highestBalance && p.netProfitLoss > 0)?.name || 'N/A'}
           </div>
         </div>
       </div>
 
-      {/* Main Players Balance Table */}
+      {/* ========================================================================= */}
+      {/* Main Players Balance Cards - SPACIOUS & DECLUTTERED (FIXED SEAT ORDER)     */}
+      {/* ========================================================================= */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider px-2">
-          <span>Rank & Player</span>
-          <div className="flex items-center space-x-6">
-            <span className="hidden sm:inline">P / L</span>
-            <span>Total Balance</span>
-          </div>
+          <span>Seat & Player</span>
+          <span>Current Balance</span>
         </div>
 
-        <div className="space-y-1.5">
-          {playerStats.map((player, rankIdx) => {
-            const isLeader = rankIdx === 0 && player.netProfitLoss > 0;
+        <div className="space-y-2">
+          {playerStats.map((player, seatIdx) => {
+            const isLeader = highestBalance > player.totalBuyIn && player.currentBalance === highestBalance;
             const isProfit = player.netProfitLoss > 0;
             const isLoss = player.netProfitLoss < 0;
             const isEditing = editingPlayerId === player.id;
@@ -887,32 +1091,28 @@ export function GameNightLedger() {
             return (
               <div
                 key={player.id}
-                className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-2 ${
+                className={`p-3 rounded-2xl border transition-all space-y-2 shadow-xs ${
                   isLeader
-                    ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-300/80 dark:border-amber-800/70 shadow-xs'
-                    : 'bg-white/80 dark:bg-slate-800/70 border-slate-200/80 dark:border-slate-700/70'
+                    ? 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-300/80 dark:border-amber-800/70'
+                    : 'bg-white/90 dark:bg-slate-800/80 border-slate-200/80 dark:border-slate-700/70'
                 }`}
               >
-                {/* Left: Player Info */}
-                <div className="flex items-center space-x-2.5 min-w-0 flex-1">
-                  <div
-                    className={`w-7 h-7 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${
-                      isLeader
-                        ? 'bg-amber-500 text-white shadow-sm'
-                        : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                    }`}
-                  >
-                    {isLeader ? '👑' : rankIdx + 1}
-                  </div>
-                  <div className="min-w-0 flex-1">
+                {/* Row 1: Full-width Player Name and Prominent Balance */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+                    <span className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-700/80 text-slate-500 dark:text-slate-400 font-bold text-[11px] flex items-center justify-center shrink-0">
+                      #{seatIdx + 1}
+                    </span>
+
+                    {/* Generous breathing room for player names */}
                     {isEditing ? (
-                      <div className="flex items-center space-x-1.5">
+                      <div className="flex items-center space-x-1.5 flex-1 min-w-0">
                         <input
                           type="text"
                           value={editPlayerNameInput}
-                          maxLength={20}
+                          maxLength={30}
                           onChange={(e) => setEditPlayerNameInput(e.target.value)}
-                          className="px-2 py-0.5 bg-white dark:bg-slate-900 border border-indigo-400 rounded-md text-xs font-bold text-slate-900 dark:text-white"
+                          className="flex-1 min-w-0 px-2 py-1 bg-white dark:bg-slate-900 border border-indigo-400 rounded-md text-xs sm:text-sm font-bold text-slate-900 dark:text-white"
                           autoFocus
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') handleSaveRename(player.id);
@@ -922,54 +1122,69 @@ export function GameNightLedger() {
                         <button
                           type="button"
                           onClick={() => handleSaveRename(player.id)}
-                          className="p-1 text-emerald-600 hover:text-emerald-700"
+                          className="p-1 text-emerald-600 hover:text-emerald-700 shrink-0"
                         >
-                          <Check className="w-3.5 h-3.5" />
+                          <Check className="w-4 h-4" />
                         </button>
                         <button
                           type="button"
                           onClick={() => setEditingPlayerId(null)}
-                          className="p-1 text-slate-400 hover:text-slate-600"
+                          className="p-1 text-slate-400 hover:text-slate-600 shrink-0"
                         >
-                          <X className="w-3.5 h-3.5" />
+                          <X className="w-4 h-4" />
                         </button>
                       </div>
                     ) : (
-                      <div className="flex items-center space-x-1.5 group">
-                        <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm truncate">
+                      <div className="flex items-center space-x-1.5 min-w-0 flex-1 group">
+                        <span className="font-bold text-slate-900 dark:text-white text-sm sm:text-base break-words">
                           {player.name}
                         </span>
+                        {isLeader && (
+                          <span title="Table Chip Leader" className="text-sm shrink-0">
+                            👑
+                          </span>
+                        )}
                         <button
                           type="button"
                           onClick={() => {
                             setEditingPlayerId(player.id);
                             setEditPlayerNameInput(player.name);
                           }}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 text-slate-400 hover:text-indigo-600"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-400 hover:text-indigo-600 shrink-0"
                           title="Rename player"
                         >
                           <Pencil className="w-3 h-3" />
                         </button>
                       </div>
                     )}
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
-                      Invested: ₹{player.totalBuyIn}
-                      {player.rebuys > 0 && <span className="text-indigo-500 ml-1">(+₹{player.rebuys} top-up)</span>}
+                  </div>
+
+                  {/* Bold, prominent total balance */}
+                  <div className="text-right shrink-0">
+                    <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
+                      ₹{player.currentBalance}
                     </div>
                   </div>
                 </div>
 
-                {/* Right: Profit/Loss & Total Balance */}
-                <div className="flex items-center space-x-3 text-right shrink-0">
-                  {/* P/L Badge */}
-                  <div className="flex flex-col items-end">
+                {/* Row 2: Secondary Metadata, Profit/Loss Pill, Loans, & Actions */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-slate-700/60 text-xs">
+                  {/* Left: Investment, P/L, and Loan Badges */}
+                  <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                    <span className="text-slate-500 dark:text-slate-400 font-medium">
+                      Buy-in: ₹{player.initialBuyIn}
+                      {player.rebuys > 0 && <span className="text-indigo-500 ml-1">(+₹{player.rebuys} top-up)</span>}
+                      {player.rebuys < 0 && <span className="text-amber-500 ml-1">(-₹{Math.abs(player.rebuys)} out)</span>}
+                    </span>
+
+                    {/* Net P/L Badge */}
                     <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center space-x-0.5 ${
+                      className={`px-2 py-0.5 rounded-full font-bold flex items-center space-x-0.5 ${
                         isProfit
                           ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                           : isLoss
                           ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                          : 'bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400'
                       }`}
                     >
                       {isProfit && <TrendingUp className="w-2.5 h-2.5 mr-0.5" />}
@@ -979,27 +1194,41 @@ export function GameNightLedger() {
                         {isProfit ? `+₹${player.netProfitLoss}` : isLoss ? `-₹${Math.abs(player.netProfitLoss)}` : '₹0'}
                       </span>
                     </span>
+
+                    {/* Loan Tags */}
+                    {player.totalDebtOwed > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-bold text-[10px]">
+                        Owes ₹{player.totalDebtOwed}
+                      </span>
+                    )}
+                    {player.totalLentPending > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-bold text-[10px]">
+                        Lent ₹{player.totalLentPending}
+                      </span>
+                    )}
                   </div>
 
-                  {/* Current Balance (Automated Total) */}
-                  <div className="min-w-[70px] text-right">
-                    <div className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
-                      ₹{player.currentBalance}
-                    </div>
-                  </div>
+                  {/* Right: Quick Action Buttons */}
+                  <div className="flex items-center space-x-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenLoanModal(player.id)}
+                      className="px-2 py-1 bg-slate-100 dark:bg-slate-700/70 hover:bg-amber-50 dark:hover:bg-amber-950/60 text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 rounded-lg font-bold text-[11px] transition-colors flex items-center space-x-1"
+                      title="Loan chips to/from this player"
+                    >
+                      <HandCoins className="w-3 h-3" />
+                      <span>Loan</span>
+                    </button>
 
-                  {/* Rebuy / Top-up Quick Action */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRebuyPlayerId(player.id);
-                      setRebuyAmount(player.initialBuyIn || 500);
-                    }}
-                    className="p-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-[10px] font-bold"
-                    title="Add Top-up / Re-buy"
-                  >
-                    +Topup
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenTopup(player.id)}
+                      className="px-2 py-1 bg-slate-100 dark:bg-slate-700/70 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg font-bold text-[11px] transition-colors"
+                      title="Add top-up chips or cash out"
+                    >
+                      ±Top-up
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -1019,6 +1248,80 @@ export function GameNightLedger() {
           <span>Record Round {sheet.rounds.length + 1}</span>
         </button>
       </div>
+
+      {/* ========================================================================= */}
+      {/* SECTION: PLAYER-TO-PLAYER LOANS & DEBTS DRAWER                            */}
+      {/* ========================================================================= */}
+      {activeLoans.length > 0 && (
+        <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/70">
+          <button
+            type="button"
+            onClick={() => setShowLoansSection(!showLoansSection)}
+            className="w-full flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white py-1"
+          >
+            <div className="flex items-center space-x-1.5">
+              <HandCoins className="w-3.5 h-3.5 text-amber-500" />
+              <span>Player Loans & Debts ({activeLoans.length})</span>
+              {unsettledLoansCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-[10px] font-bold">
+                  {unsettledLoansCount} pending
+                </span>
+              )}
+            </div>
+            {showLoansSection ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+
+          {showLoansSection && (
+            <div className="mt-2 space-y-2 animate-in fade-in">
+              {activeLoans.map((loan) => (
+                <div
+                  key={loan.id}
+                  className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 ${
+                    loan.settled
+                      ? 'bg-slate-50/70 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 opacity-60'
+                      : 'bg-amber-50/50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/70'
+                  }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="font-bold text-slate-900 dark:text-white flex items-center space-x-1 flex-wrap">
+                      <span className="text-rose-600 dark:text-rose-400">{loan.borrowerName}</span>
+                      <span className="text-slate-400 font-normal">owes</span>
+                      <span className="text-emerald-600 dark:text-emerald-400">{loan.lenderName}</span>
+                      <span className="font-black text-amber-700 dark:text-amber-300 ml-1">₹{loan.amount}</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-0.5 flex items-center space-x-2">
+                      <span>{new Date(loan.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      {loan.transferChips && <span className="text-indigo-500 font-semibold">• Chips transferred</span>}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleSettleLoan(loan.id)}
+                      className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                        loan.settled
+                          ? 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                          : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                      }`}
+                    >
+                      {loan.settled ? 'Settled ✓' : 'Mark Repaid'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteLoan(loan.id)}
+                      className="p-1 text-slate-400 hover:text-rose-500 rounded-lg transition-colors"
+                      title="Delete / cancel loan"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Round History Accordion */}
       {sheet.rounds.length > 0 && (
@@ -1118,7 +1421,7 @@ export function GameNightLedger() {
               Enter profit (+) or loss (-) for each player. Unchanged players can be left blank (0).
             </p>
 
-            {/* Players Round Input List */}
+            {/* Players Round Input List - SPACIOUS NAME AREA */}
             <div className="space-y-2 overflow-y-auto flex-1 pr-1">
               {sheet.players.map((player) => {
                 const item = roundInputs[player.id] || { sign: '+', val: '' };
@@ -1130,7 +1433,7 @@ export function GameNightLedger() {
                     className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/80 dark:border-slate-700/60 gap-2"
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                      <div className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white break-words">
                         {player.name}
                       </div>
                       <div className="text-[10px] text-slate-400">
@@ -1222,49 +1525,84 @@ export function GameNightLedger() {
       )}
 
       {/* ========================================================= */}
-      {/* MODAL 2: REBUY / TOP-UP MODAL                             */}
+      {/* MODAL 2: TOP-UP / CASH-OUT MODAL (SUPPORTS NEGATIVE TOP-UP) */}
       {/* ========================================================= */}
-      {rebuyPlayerId && (
+      {topupPlayerId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-sm animate-in fade-in">
           <div className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="font-black text-slate-900 dark:text-white text-sm">
-                Add Chips / Top-up
+                Stack Adjustment / Top-up
               </h4>
-              <button onClick={() => setRebuyPlayerId(null)} className="text-slate-400">
+              <button onClick={() => setTopupPlayerId(null)} className="text-slate-400">
                 <X className="w-4 h-4" />
               </button>
             </div>
             <p className="text-xs text-slate-500">
-              Player: <strong className="text-slate-900 dark:text-white">{sheet.players.find((p) => p.id === rebuyPlayerId)?.name}</strong>
+              Player: <strong className="text-slate-900 dark:text-white">{sheet.players.find((p) => p.id === topupPlayerId)?.name}</strong>
             </p>
+
+            {/* Positive vs Negative toggle */}
+            <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setTopupType('ADD')}
+                className={`py-1.5 rounded-lg transition-all ${
+                  topupType === 'ADD'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                }`}
+              >
+                + Top-up (Add)
+              </button>
+              <button
+                type="button"
+                onClick={() => setTopupType('DEDUCT')}
+                className={`py-1.5 rounded-lg transition-all ${
+                  topupType === 'DEDUCT'
+                    ? 'bg-rose-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                }`}
+              >
+                – Cash-out (Deduct)
+              </button>
+            </div>
+
             <div>
               <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                Top-up Amount (₹):
+                Amount (₹):
               </label>
               <input
                 type="number"
-                min="50"
+                min="10"
                 step="50"
-                value={rebuyAmount}
-                onChange={(e) => setRebuyAmount(Math.max(0, parseInt(e.target.value) || 0))}
+                value={topupAmount}
+                onChange={(e) => setTopupAmount(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold"
               />
+              <p className="text-[10px] text-slate-400 mt-1">
+                {topupType === 'ADD'
+                  ? 'Adds chips to player stack and total buy-in.'
+                  : 'Deducts chips from player stack (e.g. early cash out or correction).'}
+              </p>
             </div>
+
             <div className="flex space-x-2 pt-2">
               <button
                 type="button"
-                onClick={() => setRebuyPlayerId(null)}
+                onClick={() => setTopupPlayerId(null)}
                 className="flex-1 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={handleExecuteRebuy}
-                className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/30"
+                onClick={handleExecuteTopup}
+                className={`flex-1 py-2 text-white rounded-xl text-xs font-bold shadow-md transition-all ${
+                  topupType === 'ADD' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'
+                }`}
               >
-                Confirm Top-up
+                {topupType === 'ADD' ? 'Confirm Top-up' : 'Confirm Cash-out'}
               </button>
             </div>
           </div>
@@ -1272,7 +1610,119 @@ export function GameNightLedger() {
       )}
 
       {/* ========================================================= */}
-      {/* MODAL 3: ADD LATE PLAYER MODAL                            */}
+      {/* MODAL 3: PLAYER-TO-PLAYER LOAN MODAL                      */}
+      {/* ========================================================= */}
+      {isLoanModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <HandCoins className="w-4 h-4 text-amber-500" />
+                <h4 className="font-black text-slate-900 dark:text-white text-sm">
+                  Record Player Loan
+                </h4>
+              </div>
+              <button onClick={() => setIsLoanModalOpen(false)} className="text-slate-400">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Record chips loaned from one player to another. Chips move between table balances and debts are tracked.
+            </p>
+
+            <div className="space-y-3">
+              {/* Lender */}
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  Lender (Giving chips):
+                </label>
+                <select
+                  value={loanLenderId}
+                  onChange={(e) => setLoanLenderId(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                >
+                  {sheet.players.map((p) => (
+                    <option key={p.id} value={p.id} disabled={p.id === loanBorrowerId}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Borrower */}
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  Borrower (Receiving chips):
+                </label>
+                <select
+                  value={loanBorrowerId}
+                  onChange={(e) => setLoanBorrowerId(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                >
+                  {sheet.players.map((p) => (
+                    <option key={p.id} value={p.id} disabled={p.id === loanLenderId}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Amount */}
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  Loan Amount (₹):
+                </label>
+                <input
+                  type="number"
+                  min="10"
+                  step="50"
+                  value={loanAmount}
+                  onChange={(e) => setLoanAmount(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold"
+                />
+              </div>
+
+              {/* Transfer chips option */}
+              <label className="flex items-center space-x-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  checked={loanTransferChips}
+                  onChange={(e) => setLoanTransferChips(e.target.checked)}
+                  className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                />
+                <span>Transfer chips between table balances now</span>
+              </label>
+
+              {loanError && (
+                <div className="text-rose-500 text-xs font-bold animate-in fade-in">
+                  {loanError}
+                </div>
+              )}
+            </div>
+
+            <div className="flex space-x-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsLoanModalOpen(false)}
+                className="flex-1 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateLoan}
+                className="flex-1 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-md shadow-amber-600/30"
+              >
+                Confirm Loan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL 4: ADD LATE PLAYER MODAL                            */}
       {/* ========================================================= */}
       {isAddPlayerModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-sm animate-in fade-in">
@@ -1294,7 +1744,7 @@ export function GameNightLedger() {
                   type="text"
                   placeholder="e.g. Siddharth"
                   value={newPlayerName}
-                  maxLength={20}
+                  maxLength={30}
                   onChange={(e) => setNewPlayerName(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold"
                 />
@@ -1334,7 +1784,7 @@ export function GameNightLedger() {
       )}
 
       {/* ========================================================= */}
-      {/* MODAL 4: CONFIRM NEW SHEET (RESET)                        */}
+      {/* MODAL 5: CONFIRM NEW SHEET (RESET)                        */}
       {/* ========================================================= */}
       {showConfirmNewSheet && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-sm animate-in fade-in">
@@ -1346,7 +1796,7 @@ export function GameNightLedger() {
               </h4>
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              Are you sure? Current player balances and round history will be permanently reset.
+              Are you sure? Current player balances, round history, and loan records will be permanently reset.
             </p>
             <div className="flex space-x-2 pt-2">
               <button
@@ -1371,5 +1821,3 @@ export function GameNightLedger() {
     </div>
   );
 }
-
-
