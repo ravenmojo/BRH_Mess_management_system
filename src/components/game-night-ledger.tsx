@@ -21,10 +21,9 @@ import {
   ChevronUp,
   Sparkles,
   UserPlus,
-  Pencil,
   X,
-  TrendingUp,
-  TrendingDown,
+  ArrowUp,
+  ArrowDown,
   Equal,
   Calculator,
   Gamepad2,
@@ -73,7 +72,7 @@ export interface GameLoan {
   lenderName: string;
   borrowerId: string; // player receiving chips
   borrowerName: string;
-  amount: number;     // ₹
+  amount: number;     // points
   timestamp: number;
   settled: boolean;   // whether debt has been settled/repaid
   transferChips: boolean; // whether chips transferred between table balances
@@ -111,7 +110,7 @@ export function GameNightLedger() {
 
   // Active Round Recording Modal / Section
   const [isRecordingRound, setIsRecordingRound] = useState<boolean>(false);
-  const [roundInputs, setRoundInputs] = useState<Record<string, { sign: '+' | '-'; val: string }>>({});
+  const [roundInputs, setRoundInputs] = useState<Record<string, { sign: '+' | '-'; val: string; isAuto?: boolean }>>({});
 
   // Top-up (Re-buy / Cash-out) modal
   const [topupPlayerId, setTopupPlayerId] = useState<string | null>(null);
@@ -378,12 +377,67 @@ export function GameNightLedger() {
     return activeLoans.filter((l) => !l.settled).length;
   }, [activeLoans]);
 
+  // Helper to automatically calculate the last unfilled player's value so round sums to 0
+  const recomputeAutoLast = (
+    currentInputs: Record<string, { sign: '+' | '-'; val: string; isAuto?: boolean }>,
+    players: GamePlayer[]
+  ): Record<string, { sign: '+' | '-'; val: string; isAuto?: boolean }> => {
+    const nextInputs: Record<string, { sign: '+' | '-'; val: string; isAuto?: boolean }> = { ...currentInputs };
+
+    // Players with a manually entered non-empty value
+    const manualPlayers = players.filter((p) => {
+      const item = nextInputs[p.id];
+      return item && !item.isAuto && item.val !== undefined && item.val.trim() !== '';
+    });
+
+    // Players that are either empty or currently marked as auto-calculated
+    const unfilledPlayers = players.filter((p) => {
+      const item = nextInputs[p.id];
+      return !item || item.isAuto || !item.val || item.val.trim() === '';
+    });
+
+    // If exactly 1 player is left unfilled and at least 1 other player has a value
+    if (players.length >= 2 && manualPlayers.length === players.length - 1 && unfilledPlayers.length === 1) {
+      const lastPlayer = unfilledPlayers[0];
+
+      let sum = 0;
+      manualPlayers.forEach((p) => {
+        const item = nextInputs[p.id];
+        const num = parseFloat(item?.val || '0') || 0;
+        sum += item?.sign === '-' ? -num : num;
+      });
+
+      const needed = -sum;
+      const targetSign: '+' | '-' = needed >= 0 ? '+' : '-';
+      const absVal = Math.round(Math.abs(needed) * 100) / 100;
+
+      nextInputs[lastPlayer.id] = {
+        sign: targetSign,
+        val: String(absVal),
+        isAuto: true,
+      };
+    } else {
+      // If not in the single unfilled player state, clear any previously auto-calculated player
+      players.forEach((p) => {
+        if (nextInputs[p.id]?.isAuto) {
+          nextInputs[p.id] = {
+            sign: nextInputs[p.id]?.sign || '+',
+            val: '',
+            isAuto: false,
+          };
+        }
+      });
+    }
+
+    return nextInputs;
+  };
+
   // Round Input Handling
   const handleOpenRoundModal = () => {
     if (!sheet) return;
-    const initialInputs: Record<string, { sign: '+' | '-'; val: string }> = {};
+    const initialInputs: Record<string, { sign: '+' | '-'; val: string; isAuto?: boolean }> = {};
     sheet.players.forEach((p) => {
-      initialInputs[p.id] = { sign: '+', val: '' };
+      initialInputs[p.id] = { sign: '+', val: '', isAuto: false };
     });
     setRoundInputs(initialInputs);
     setIsRecordingRound(true);
@@ -403,20 +457,48 @@ export function GameNightLedger() {
 
     clean = clean.replace(/[^0-9.]/g, '');
 
-    setRoundInputs((prev) => ({
-      ...prev,
-      [playerId]: { sign: currentSign, val: clean },
-    }));
+    setRoundInputs((prev) => {
+      const updated = {
+        ...prev,
+        [playerId]: {
+          sign: currentSign,
+          val: clean,
+          isAuto: false, // User typed manually
+        },
+      };
+      return recomputeAutoLast(updated, sheet?.players || []);
+    });
+  };
+
+  // Open number pad immediately on clicking + or -
+  const handleSetSignAndFocus = (playerId: string, sign: '+' | '-') => {
+    setRoundInputs((prev) => {
+      const updated = {
+        ...prev,
+        [playerId]: {
+          sign,
+          val: prev[playerId]?.val || '',
+          isAuto: false,
+        },
+      };
+      return recomputeAutoLast(updated, sheet?.players || []);
+    });
+
+    // Programmatically focus input so mobile virtual numeric keyboard appears instantly
+    setTimeout(() => {
+      const el = document.getElementById(`round-input-${playerId}`) as HTMLInputElement | null;
+      if (el) {
+        el.focus();
+        if (el.value) {
+          el.setSelectionRange(el.value.length, el.value.length);
+        }
+      }
+    }, 20);
   };
 
   const toggleSign = (playerId: string) => {
-    setRoundInputs((prev) => ({
-      ...prev,
-      [playerId]: {
-        sign: prev[playerId]?.sign === '-' ? '+' : '-',
-        val: prev[playerId]?.val || '',
-      },
-    }));
+    const nextSign = roundInputs[playerId]?.sign === '-' ? '+' : '-';
+    handleSetSignAndFocus(playerId, nextSign);
   };
 
   // Auto-balance button: sets this player's value so that total table round net sum becomes 0
@@ -439,15 +521,15 @@ export function GameNightLedger() {
 
     setRoundInputs((prev) => ({
       ...prev,
-      [targetPlayerId]: { sign: targetSign, val: targetVal === '0' ? '' : targetVal },
+      [targetPlayerId]: { sign: targetSign, val: targetVal === '0' ? '' : targetVal, isAuto: true },
     }));
   };
 
   const handleClearAllRoundInputs = () => {
     if (!sheet) return;
-    const resetInputs: Record<string, { sign: '+' | '-'; val: string }> = {};
+    const resetInputs: Record<string, { sign: '+' | '-'; val: string; isAuto?: boolean }> = {};
     sheet.players.forEach((p) => {
-      resetInputs[p.id] = { sign: '+', val: '' };
+      resetInputs[p.id] = { sign: '+', val: '', isAuto: false };
     });
     setRoundInputs(resetInputs);
   };
@@ -572,7 +654,7 @@ export function GameNightLedger() {
     }
     const amt = parseFloat(loanAmount);
     if (!amt || amt <= 0) {
-      setLoanError('Please enter a valid loan amount greater than ₹0.');
+      setLoanError('Please enter a valid loan amount greater than 0.');
       return;
     }
 
@@ -679,20 +761,20 @@ export function GameNightLedger() {
 
     const lines = [
       `🎯 BRH GAME NIGHT - SESSION SCORES 🎯`,
-      `Rounds: ${sheet.rounds.length} | Total Pool: ₹${totalChipsInPlay}`,
+      `Rounds: ${sheet.rounds.length} | Total Pool: ${totalChipsInPlay} pts`,
       `---------------------------------`,
       ...playerStats.map((p, idx) => {
-        const signStr = p.netProfitLoss >= 0 ? `+₹${p.netProfitLoss}` : `-₹${Math.abs(p.netProfitLoss)}`;
+        const signStr = p.netProfitLoss >= 0 ? `+${p.netProfitLoss}` : `-${Math.abs(p.netProfitLoss)}`;
         let extra = '';
-        if (p.totalDebtOwed > 0) extra += ` (Owes ₹${p.totalDebtOwed})`;
-        if (p.totalLentPending > 0) extra += ` (Lent ₹${p.totalLentPending})`;
-        return `${idx + 1}. ${p.name}: ₹${p.currentBalance} [P/L: ${signStr}] (Buy-in: ₹${p.totalBuyIn})${extra}`;
+        if (p.totalDebtOwed > 0) extra += ` (Owes ${p.totalDebtOwed} pts)`;
+        if (p.totalLentPending > 0) extra += ` (Lent ${p.totalLentPending} pts)`;
+        return `${idx + 1}. ${p.name}: ${p.currentBalance} pts [P/L: ${signStr}] (Base: ${p.totalBuyIn} pts)${extra}`;
       }),
       `---------------------------------`,
       ...(activeUnsettled.length > 0
         ? [
             `🤝 Active Debts to Settle:`,
-            ...activeUnsettled.map((l) => `• ${l.borrowerName} owes ${l.lenderName}: ₹${l.amount}`),
+            ...activeUnsettled.map((l) => `• ${l.borrowerName} owes ${l.lenderName}: ${l.amount} pts`),
             `---------------------------------`,
           ]
         : []),
@@ -714,36 +796,37 @@ export function GameNightLedger() {
   }
 
   // ==========================================
+  // ==========================================
   // VIEW A: LOCKED GATE
   // ==========================================
   if (!isAuthenticated) {
     return (
-      <div className="glass-card rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-indigo-500/30 dark:border-indigo-500/20 shadow-lg relative overflow-hidden bg-gradient-to-br from-indigo-950/20 via-slate-900/40 to-purple-950/20">
+      <div className="glass-card rounded-2xl sm:rounded-3xl p-5 sm:p-7 border border-indigo-500/30 dark:border-indigo-500/20 shadow-xl relative overflow-hidden bg-gradient-to-br from-indigo-950/20 via-slate-900/40 to-purple-950/20 space-y-4">
         <div className="flex items-start justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 shadow-inner">
-              <Gamepad2 className="w-5 h-5 text-indigo-400" />
+          <div className="flex items-center space-x-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 shadow-inner">
+              <Gamepad2 className="w-6 h-6 text-indigo-400" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                <span className="text-xs font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                   Recreation Mini-App
                 </span>
-                <span className="text-xs">🎯 🎲 🎮</span>
+                <span className="text-sm">🎯 🎲 🎮</span>
               </div>
-              <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5">
+              <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-1">
                 BRH Indoor Games Ledger
               </h3>
             </div>
           </div>
         </div>
 
-        <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
           Session tally, round points ledger and automated profit/loss balance tracker for hall recreation games.
         </p>
 
         {/* Password Unlock Box */}
-        <form onSubmit={handleAuthSubmit} className="mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-800/80 space-y-3">
+        <form onSubmit={handleAuthSubmit} className="pt-3 border-t border-slate-200/60 dark:border-slate-800/80 space-y-3">
           <div className="flex items-center space-x-2">
             <div className="relative flex-1">
               <input
@@ -755,12 +838,12 @@ export function GameNightLedger() {
                   setPasswordInput(e.target.value);
                   setAuthError('');
                 }}
-                className="w-full px-3.5 py-2.5 bg-white/70 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 pr-10"
+                className="w-full px-4 py-3 bg-white/70 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 pr-11"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -768,16 +851,16 @@ export function GameNightLedger() {
             <button
               id="games-ledger-unlock-btn"
               type="submit"
-              className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/30 flex items-center space-x-1.5 touch-spring shrink-0"
+              className="px-5 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl text-sm font-black shadow-md shadow-indigo-600/30 flex items-center space-x-2 touch-spring shrink-0"
             >
-              <Unlock className="w-3.5 h-3.5" />
+              <Unlock className="w-4 h-4" />
               <span>Unlock</span>
             </button>
           </div>
 
           {authError && (
-            <div className="text-rose-500 dark:text-rose-400 text-[11px] font-semibold flex items-center space-x-1.5 animate-in fade-in">
-              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            <div className="text-rose-500 dark:text-rose-400 text-xs font-bold flex items-center space-x-1.5 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{authError}</span>
             </div>
           )}
@@ -791,25 +874,25 @@ export function GameNightLedger() {
   // ==========================================
   if (!sheet) {
     return (
-      <div className="glass-card rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-indigo-500/30 dark:border-indigo-500/20 shadow-xl space-y-4 bg-gradient-to-br from-slate-900/10 via-white/40 dark:via-slate-900/40 to-indigo-900/10">
+      <div className="glass-card rounded-2xl sm:rounded-3xl p-5 sm:p-7 border border-indigo-500/30 dark:border-indigo-500/20 shadow-xl space-y-5 bg-gradient-to-br from-slate-900/10 via-white/40 dark:via-slate-900/40 to-indigo-900/10">
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200/70 dark:border-slate-800/80">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black shadow-md shadow-indigo-600/30">
-              <Gamepad2 className="w-5 h-5" />
+        <div className="flex items-center justify-between pb-3.5 border-b border-slate-200/70 dark:border-slate-800/80">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-black shadow-md shadow-indigo-600/30">
+              <Gamepad2 className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-black text-slate-900 dark:text-white text-sm sm:text-base leading-tight">
+              <h3 className="font-black text-slate-900 dark:text-white text-base sm:text-lg leading-tight">
                 New Game Session Ledger
               </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                 Configure participants (up to 10) & starting buy-ins / points
               </p>
             </div>
           </div>
           <button
             onClick={handleLock}
-            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             title="Lock Ledger"
           >
             <Lock className="w-4 h-4" />
@@ -817,27 +900,27 @@ export function GameNightLedger() {
         </div>
 
         {hasExpiredNotice && (
-          <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/60 rounded-xl text-amber-800 dark:text-amber-300 text-xs flex items-center space-x-2">
+          <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/60 rounded-xl text-amber-800 dark:text-amber-300 text-xs sm:text-sm font-semibold flex items-center space-x-2">
             <Clock className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
             <span>Previous session survived 24 hours and has expired. Ready for a new game!</span>
           </div>
         )}
 
         {/* Quick Player Count & Default Buy-in */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-100/70 dark:bg-slate-800/50 rounded-2xl border border-slate-200/80 dark:border-slate-700/60 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-slate-100/70 dark:bg-slate-800/50 rounded-2xl border border-slate-200/80 dark:border-slate-700/60">
           <div>
-            <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+            <label className="font-extrabold text-xs sm:text-sm text-slate-700 dark:text-slate-300 block mb-2">
               Number of Players (2 to 10):
             </label>
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1.5">
               {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
                 <button
                   key={num}
                   type="button"
                   onClick={() => handleSetPlayerCount(num)}
-                  className={`w-7 h-7 rounded-lg text-xs font-bold transition-all ${
+                  className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl text-sm font-black transition-all ${
                     setupPlayers.length === num
-                      ? 'bg-indigo-600 text-white shadow-sm'
+                      ? 'bg-indigo-600 text-white shadow-sm scale-105'
                       : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600'
                   }`}
                 >
@@ -848,8 +931,8 @@ export function GameNightLedger() {
           </div>
 
           <div>
-            <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
-              Default Buy-in / Stack (₹):
+            <label className="font-extrabold text-xs sm:text-sm text-slate-700 dark:text-slate-300 block mb-2">
+              Default Stack / Points:
             </label>
             <div className="flex items-center space-x-2">
               <input
@@ -858,12 +941,12 @@ export function GameNightLedger() {
                 step="50"
                 value={defaultBuyIn}
                 onChange={(e) => setDefaultBuyIn(Math.max(0, parseInt(e.target.value) || 0))}
-                className="w-24 px-2.5 py-1.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs font-bold"
+                className="w-28 px-3 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-sm font-black"
               />
               <button
                 type="button"
                 onClick={handleApplyDefaultBuyIn}
-                className="px-2.5 py-1.5 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-lg text-xs font-semibold"
+                className="px-3 py-2 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-xl text-xs sm:text-sm font-bold transition-colors"
               >
                 Apply All
               </button>
@@ -872,18 +955,18 @@ export function GameNightLedger() {
         </div>
 
         {/* Players List Inputs - SPACIOUS & DECLUTTERED */}
-        <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
-          <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider px-1">
+        <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
+          <div className="flex items-center justify-between text-xs font-black text-slate-500 uppercase tracking-wider px-1">
             <span>Seat & Full Player Name</span>
-            <span>Starting Stack (₹)</span>
+            <span>Starting Stack (pts)</span>
           </div>
 
           {setupPlayers.map((player, idx) => (
             <div
               key={player.id}
-              className="flex items-center space-x-2.5 p-2.5 bg-white/80 dark:bg-slate-800/70 rounded-xl border border-slate-200/80 dark:border-slate-700/70 shadow-xs"
+              className="flex items-center space-x-3 p-3 bg-white/80 dark:bg-slate-800/70 rounded-2xl border border-slate-200/80 dark:border-slate-700/70 shadow-xs"
             >
-              <span className="w-6 text-center text-xs font-bold text-slate-400 shrink-0">
+              <span className="w-8 text-center text-sm font-black text-slate-400 shrink-0">
                 #{idx + 1}
               </span>
               <input
@@ -896,10 +979,10 @@ export function GameNightLedger() {
                   updated[idx].name = e.target.value;
                   setSetupPlayers(updated);
                 }}
-                className="flex-1 min-w-0 px-3 py-1.5 bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="flex-1 min-w-0 px-3.5 py-2 bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
-              <div className="flex items-center space-x-1 shrink-0">
-                <span className="text-xs font-bold text-slate-400">₹</span>
+              <div className="flex items-center space-x-1.5 shrink-0">
+                <span className="text-xs font-black text-slate-400 uppercase">pts</span>
                 <input
                   type="number"
                   min="0"
@@ -910,17 +993,17 @@ export function GameNightLedger() {
                     updated[idx].buyIn = Math.max(0, parseInt(e.target.value) || 0);
                     setSetupPlayers(updated);
                   }}
-                  className="w-20 px-2 py-1.5 bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-900 dark:text-slate-100 text-right focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-24 px-3 py-2 bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-black text-slate-900 dark:text-slate-100 text-right focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
               {setupPlayers.length > 2 && (
                 <button
                   type="button"
                   onClick={() => handleRemoveSetupPlayer(player.id)}
-                  className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors shrink-0"
+                  className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors shrink-0"
                   title="Remove player"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="w-4 h-4" />
                 </button>
               )}
             </div>
@@ -928,14 +1011,14 @@ export function GameNightLedger() {
         </div>
 
         {/* Add Player & Launch Buttons */}
-        <div className="flex items-center gap-2 pt-2">
+        <div className="flex items-center gap-3 pt-2">
           {setupPlayers.length < 10 && (
             <button
               type="button"
               onClick={handleAddSetupPlayer}
-              className="flex-1 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all touch-spring"
+              className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-2 transition-all touch-spring"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-4 h-4" />
               <span>Add Player ({setupPlayers.length}/10)</span>
             </button>
           )}
@@ -944,9 +1027,9 @@ export function GameNightLedger() {
             id="games-ledger-start-game-btn"
             type="button"
             onClick={handleStartGame}
-            className="flex-1 py-2.5 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-black shadow-md shadow-emerald-600/30 flex items-center justify-center space-x-1.5 transition-all touch-spring"
+            className="flex-1 py-3 px-5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs sm:text-sm font-black shadow-md shadow-emerald-600/30 flex items-center justify-center space-x-2 transition-all touch-spring"
           >
-            <Sparkles className="w-3.5 h-3.5" />
+            <Sparkles className="w-4 h-4" />
             <span>Launch Game Ledger</span>
           </button>
         </div>
@@ -958,32 +1041,32 @@ export function GameNightLedger() {
   // VIEW C: ACTIVE SCORESHEET IN PROGRESS
   // ==========================================
   return (
-    <div className="glass-card rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-indigo-500/30 dark:border-indigo-500/20 shadow-xl space-y-4 bg-gradient-to-br from-slate-900/10 via-white/50 dark:via-slate-900/50 to-indigo-950/20">
+    <div className="glass-card rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-7 border border-indigo-500/30 dark:border-indigo-500/20 shadow-xl space-y-5 bg-gradient-to-br from-slate-900/10 via-white/50 dark:via-slate-900/50 to-indigo-950/20">
       {/* Top Banner & Quick Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200/70 dark:border-slate-800/80">
-        <div className="flex items-center space-x-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 text-white flex items-center justify-center font-black shadow-md shadow-indigo-600/30">
-            <Gamepad2 className="w-5 h-5" />
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-slate-200/70 dark:border-slate-800/80">
+        <div className="flex items-center space-x-3">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-600 text-white flex items-center justify-center font-black shadow-md shadow-indigo-600/30">
+            <Gamepad2 className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <h3 className="font-black text-slate-900 dark:text-white text-sm sm:text-base leading-tight">
+              <h3 className="font-black text-slate-900 dark:text-white text-base sm:text-xl leading-tight">
                 BRH Game Room Ledger
               </h3>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center space-x-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center space-x-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span>Round {sheet.rounds.length}</span>
               </span>
             </div>
-            <div className="flex items-center space-x-2 text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-              <Clock className="w-3 h-3 text-indigo-500" />
+            <div className="flex items-center space-x-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+              <Clock className="w-3.5 h-3.5 text-indigo-500" />
               <span>Survives 24 hrs ({timeRemainingText || 'active'})</span>
             </div>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center space-x-1.5">
+        <div className="flex items-center space-x-2">
           {sheet.players.length < 10 && (
             <button
               onClick={() => {
@@ -991,22 +1074,23 @@ export function GameNightLedger() {
                 setNewPlayerBuyIn(sheet.players[0]?.initialBuyIn || 500);
                 setIsAddPlayerModalOpen(true);
               }}
-              className="p-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-xl text-xs font-bold transition-all touch-spring border border-indigo-200 dark:border-indigo-800"
+              className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-xl text-xs sm:text-sm font-bold transition-all touch-spring border border-indigo-200 dark:border-indigo-800 flex items-center space-x-1.5"
               title="Add late player (up to 10)"
             >
-              <UserPlus className="w-3.5 h-3.5" />
+              <UserPlus className="w-4 h-4" />
+              <span className="hidden sm:inline">Add Player</span>
             </button>
           )}
 
           <button
             onClick={() => handleOpenLoanModal()}
-            className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-xl text-xs font-bold transition-all touch-spring border border-amber-200 dark:border-amber-800 flex items-center space-x-1"
+            className="px-3 py-2 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-xl text-xs sm:text-sm font-bold transition-all touch-spring border border-amber-200 dark:border-amber-800 flex items-center space-x-1.5"
             title="Record player-to-player loan"
           >
-            <HandCoins className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Loan</span>
+            <HandCoins className="w-4 h-4" />
+            <span>Loan</span>
             {unsettledLoansCount > 0 && (
-              <span className="w-4 h-4 rounded-full bg-amber-500 text-white text-[9px] flex items-center justify-center font-bold ml-0.5">
+              <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-xs flex items-center justify-center font-bold ml-0.5">
                 {unsettledLoansCount}
               </span>
             )}
@@ -1014,15 +1098,16 @@ export function GameNightLedger() {
 
           <button
             onClick={handleCopySummary}
-            className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition-all touch-spring border border-slate-200/80 dark:border-slate-700"
+            className="p-2 sm:px-3 sm:py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs sm:text-sm font-bold transition-all touch-spring border border-slate-200/80 dark:border-slate-700 flex items-center space-x-1.5"
             title="Copy scores to clipboard"
           >
-            {copiedToast ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Share2 className="w-3.5 h-3.5" />}
+            {copiedToast ? <Check className="w-4 h-4 text-emerald-500" /> : <Share2 className="w-4 h-4" />}
+            <span className="hidden sm:inline">Share</span>
           </button>
           <button
             id="games-ledger-new-sheet-btn"
             onClick={() => setShowConfirmNewSheet(true)}
-            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 rounded-xl text-xs font-bold transition-all touch-spring"
+            className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 rounded-xl text-xs sm:text-sm font-bold transition-all touch-spring"
           >
             New Sheet
           </button>
@@ -1031,42 +1116,42 @@ export function GameNightLedger() {
             className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             title="Lock Ledger"
           >
-            <Lock className="w-3.5 h-3.5" />
+            <Lock className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {copiedToast && (
-        <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs font-bold text-center animate-in fade-in">
+        <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm font-bold text-center animate-in fade-in">
           Scores & debts copied to clipboard! Ready to paste in WhatsApp group 🎯
         </div>
       )}
 
       {/* Summary KPI Badges */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="p-2.5 rounded-2xl bg-white/70 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/70 text-center shadow-xs">
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">
+      <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+        <div className="p-3 sm:p-4 rounded-2xl bg-white/70 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/70 text-center shadow-xs">
+          <div className="text-[11px] sm:text-xs font-black text-slate-500 uppercase tracking-tight">
             Total Pool In Play
           </div>
-          <div className="text-sm sm:text-base font-black text-indigo-600 dark:text-indigo-400">
-            ₹{totalChipsInPlay}
+          <div className="text-base sm:text-xl font-black text-indigo-600 dark:text-indigo-400 mt-0.5">
+            {totalChipsInPlay} pts
           </div>
         </div>
 
-        <div className="p-2.5 rounded-2xl bg-white/70 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/70 text-center shadow-xs">
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">
+        <div className="p-3 sm:p-4 rounded-2xl bg-white/70 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/70 text-center shadow-xs">
+          <div className="text-[11px] sm:text-xs font-black text-slate-500 uppercase tracking-tight">
             Active Players
           </div>
-          <div className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
+          <div className="text-base sm:text-xl font-black text-slate-900 dark:text-white mt-0.5">
             {sheet.players.length} / 10
           </div>
         </div>
 
-        <div className="p-2.5 rounded-2xl bg-white/70 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/70 text-center shadow-xs">
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">
+        <div className="p-3 sm:p-4 rounded-2xl bg-white/70 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/70 text-center shadow-xs">
+          <div className="text-[11px] sm:text-xs font-black text-slate-500 uppercase tracking-tight">
             Chip Leader
           </div>
-          <div className="text-xs sm:text-sm font-black text-amber-600 dark:text-amber-400 truncate">
+          <div className="text-xs sm:text-base font-black text-amber-600 dark:text-amber-400 truncate mt-0.5">
             👑 {playerStats.find((p) => p.currentBalance === highestBalance && p.netProfitLoss > 0)?.name || 'N/A'}
           </div>
         </div>
@@ -1075,13 +1160,13 @@ export function GameNightLedger() {
       {/* ========================================================================= */}
       {/* Main Players Balance Cards - SPACIOUS & DECLUTTERED (FIXED SEAT ORDER)     */}
       {/* ========================================================================= */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider px-2">
-          <span>Seat & Player</span>
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between text-xs sm:text-sm font-black text-slate-500 uppercase tracking-wider px-2">
+          <span>Seat & Interactive Player Name</span>
           <span>Current Balance</span>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {playerStats.map((player, seatIdx) => {
             const isLeader = highestBalance > player.totalBuyIn && player.currentBalance === highestBalance;
             const isProfit = player.netProfitLoss > 0;
@@ -1091,7 +1176,7 @@ export function GameNightLedger() {
             return (
               <div
                 key={player.id}
-                className={`p-3 rounded-2xl border transition-all space-y-2 shadow-xs ${
+                className={`p-3.5 sm:p-4 rounded-2xl border transition-all space-y-2.5 shadow-xs ${
                   isLeader
                     ? 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-300/80 dark:border-amber-800/70'
                     : 'bg-white/90 dark:bg-slate-800/80 border-slate-200/80 dark:border-slate-700/70'
@@ -1100,86 +1185,110 @@ export function GameNightLedger() {
                 {/* Row 1: Full-width Player Name and Prominent Balance */}
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center space-x-2.5 min-w-0 flex-1">
-                    <span className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-700/80 text-slate-500 dark:text-slate-400 font-bold text-[11px] flex items-center justify-center shrink-0">
+                    <span className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-700/80 text-slate-600 dark:text-slate-300 font-black text-xs sm:text-sm flex items-center justify-center shrink-0">
                       #{seatIdx + 1}
                     </span>
 
-                    {/* Generous breathing room for player names */}
+                    {/* Interactive Player Name - Tap to enter edit mode */}
                     {isEditing ? (
                       <div className="flex items-center space-x-1.5 flex-1 min-w-0">
                         <input
                           type="text"
+                          ref={(input) => {
+                            if (input) {
+                              input.focus();
+                              input.select();
+                            }
+                          }}
                           value={editPlayerNameInput}
                           maxLength={30}
                           onChange={(e) => setEditPlayerNameInput(e.target.value)}
-                          className="flex-1 min-w-0 px-2 py-1 bg-white dark:bg-slate-900 border border-indigo-400 rounded-md text-xs sm:text-sm font-bold text-slate-900 dark:text-white"
+                          className="flex-1 min-w-0 px-3 py-1.5 bg-white dark:bg-slate-900 border-2 border-indigo-500 rounded-xl text-base sm:text-lg font-bold text-slate-900 dark:text-white shadow-inner focus:outline-none focus:ring-2 focus:ring-indigo-400"
                           autoFocus
+                          onFocus={(e) => e.target.select()}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') handleSaveRename(player.id);
                             if (e.key === 'Escape') setEditingPlayerId(null);
                           }}
+                          onBlur={() => handleSaveRename(player.id)}
                         />
                         <button
                           type="button"
-                          onClick={() => handleSaveRename(player.id)}
-                          className="p-1 text-emerald-600 hover:text-emerald-700 shrink-0"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleSaveRename(player.id);
+                          }}
+                          onTouchStart={(e) => {
+                            e.preventDefault();
+                            handleSaveRename(player.id);
+                          }}
+                          className="w-8 h-8 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shrink-0 shadow-xs cursor-pointer"
+                          title="Save Name"
                         >
                           <Check className="w-4 h-4" />
                         </button>
                         <button
                           type="button"
-                          onClick={() => setEditingPlayerId(null)}
-                          className="p-1 text-slate-400 hover:text-slate-600 shrink-0"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setEditingPlayerId(null);
+                          }}
+                          onTouchStart={(e) => {
+                            e.preventDefault();
+                            setEditingPlayerId(null);
+                          }}
+                          className="w-8 h-8 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center justify-center shrink-0 cursor-pointer"
+                          title="Cancel"
                         >
                           <X className="w-4 h-4" />
                         </button>
                       </div>
                     ) : (
-                      <div className="flex items-center space-x-1.5 min-w-0 flex-1 group">
-                        <span className="font-bold text-slate-900 dark:text-white text-sm sm:text-base break-words">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingPlayerId(player.id);
+                          setEditPlayerNameInput(player.name);
+                        }}
+                        className="group/name relative inline-flex items-center gap-2 px-3 py-1.5 -ml-1.5 rounded-xl bg-slate-100/90 dark:bg-slate-800/90 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 border border-slate-300/80 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 shadow-2xs hover:shadow-xs active:scale-[0.98] transition-all text-left cursor-pointer"
+                        title="Tap to rename player"
+                      >
+                        <span className="font-black text-slate-900 dark:text-white text-base sm:text-lg tracking-tight group-hover/name:text-indigo-600 dark:group-hover/name:text-indigo-400 transition-colors border-b-2 border-dotted border-slate-400 dark:border-slate-500 group-hover/name:border-indigo-500">
                           {player.name}
                         </span>
                         {isLeader && (
-                          <span title="Table Chip Leader" className="text-sm shrink-0">
+                          <span title="Table Chip Leader" className="text-base shrink-0">
                             👑
                           </span>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingPlayerId(player.id);
-                            setEditPlayerNameInput(player.name);
-                          }}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-400 hover:text-indigo-600 shrink-0"
-                          title="Rename player"
-                        >
-                          <Pencil className="w-3 h-3" />
-                        </button>
-                      </div>
+                        <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-indigo-100/80 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 opacity-70 group-hover/name:opacity-100 transition-opacity shrink-0">
+                          Tap to edit
+                        </span>
+                      </button>
                     )}
                   </div>
 
                   {/* Bold, prominent total balance */}
                   <div className="text-right shrink-0">
-                    <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
-                      ₹{player.currentBalance}
+                    <div className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                      {player.currentBalance} pts
                     </div>
                   </div>
                 </div>
 
                 {/* Row 2: Secondary Metadata, Profit/Loss Pill, Loans, & Actions */}
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-slate-700/60 text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 border-t border-slate-100 dark:border-slate-700/60 text-xs sm:text-sm">
                   {/* Left: Investment, P/L, and Loan Badges */}
-                  <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                    <span className="text-slate-500 dark:text-slate-400 font-medium">
-                      Buy-in: ₹{player.initialBuyIn}
-                      {player.rebuys > 0 && <span className="text-indigo-500 ml-1">(+₹{player.rebuys} top-up)</span>}
-                      {player.rebuys < 0 && <span className="text-amber-500 ml-1">(-₹{Math.abs(player.rebuys)} out)</span>}
+                  <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+                    <span className="text-slate-500 dark:text-slate-400 font-semibold">
+                      Base: {player.initialBuyIn}
+                      {player.rebuys > 0 && <span className="text-indigo-500 ml-1">(+{player.rebuys} top-up)</span>}
+                      {player.rebuys < 0 && <span className="text-amber-500 ml-1">(-{Math.abs(player.rebuys)} out)</span>}
                     </span>
 
                     {/* Net P/L Badge */}
                     <span
-                      className={`px-2 py-0.5 rounded-full font-bold flex items-center space-x-0.5 ${
+                      className={`px-2.5 py-1 rounded-full font-black flex items-center space-x-1 ${
                         isProfit
                           ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                           : isLoss
@@ -1187,43 +1296,43 @@ export function GameNightLedger() {
                           : 'bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400'
                       }`}
                     >
-                      {isProfit && <TrendingUp className="w-2.5 h-2.5 mr-0.5" />}
-                      {isLoss && <TrendingDown className="w-2.5 h-2.5 mr-0.5" />}
-                      {!isProfit && !isLoss && <Equal className="w-2.5 h-2.5 mr-0.5" />}
+                      {isProfit && <ArrowUp className="w-3.5 h-3.5 mr-0.5" />}
+                      {isLoss && <ArrowDown className="w-3.5 h-3.5 mr-0.5" />}
+                      {!isProfit && !isLoss && <Equal className="w-3.5 h-3.5 mr-0.5" />}
                       <span>
-                        {isProfit ? `+₹${player.netProfitLoss}` : isLoss ? `-₹${Math.abs(player.netProfitLoss)}` : '₹0'}
+                        {isProfit ? `+${player.netProfitLoss}` : isLoss ? `-${Math.abs(player.netProfitLoss)}` : '0'}
                       </span>
                     </span>
 
                     {/* Loan Tags */}
                     {player.totalDebtOwed > 0 && (
-                      <span className="px-1.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-bold text-[10px]">
-                        Owes ₹{player.totalDebtOwed}
+                      <span className="px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-black text-xs">
+                        Owes {player.totalDebtOwed} pts
                       </span>
                     )}
                     {player.totalLentPending > 0 && (
-                      <span className="px-1.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-bold text-[10px]">
-                        Lent ₹{player.totalLentPending}
+                      <span className="px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-black text-xs">
+                        Lent {player.totalLentPending} pts
                       </span>
                     )}
                   </div>
 
                   {/* Right: Quick Action Buttons */}
-                  <div className="flex items-center space-x-1 shrink-0">
+                  <div className="flex items-center space-x-1.5 shrink-0">
                     <button
                       type="button"
                       onClick={() => handleOpenLoanModal(player.id)}
-                      className="px-2 py-1 bg-slate-100 dark:bg-slate-700/70 hover:bg-amber-50 dark:hover:bg-amber-950/60 text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 rounded-lg font-bold text-[11px] transition-colors flex items-center space-x-1"
+                      className="px-3 py-1.5 bg-slate-100 dark:bg-slate-700/70 hover:bg-amber-50 dark:hover:bg-amber-950/60 text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 rounded-xl font-bold text-xs sm:text-sm transition-colors flex items-center space-x-1"
                       title="Loan chips to/from this player"
                     >
-                      <HandCoins className="w-3 h-3" />
+                      <HandCoins className="w-3.5 h-3.5" />
                       <span>Loan</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => handleOpenTopup(player.id)}
-                      className="px-2 py-1 bg-slate-100 dark:bg-slate-700/70 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg font-bold text-[11px] transition-colors"
+                      className="px-3 py-1.5 bg-slate-100 dark:bg-slate-700/70 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl font-bold text-xs sm:text-sm transition-colors"
                       title="Add top-up chips or cash out"
                     >
                       ±Top-up
@@ -1242,10 +1351,10 @@ export function GameNightLedger() {
           id="games-ledger-record-round-btn"
           type="button"
           onClick={handleOpenRoundModal}
-          className="w-full py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-2xl text-xs sm:text-sm font-black shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2 transition-all touch-spring"
+          className="w-full py-3.5 sm:py-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-2xl text-sm sm:text-base font-black shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2 transition-all touch-spring"
         >
-          <Plus className="w-4 h-4" />
-          <span>Record Round {sheet.rounds.length + 1}</span>
+          <Plus className="w-5 h-5" />
+          <span>Record Round #{sheet.rounds.length + 1}</span>
         </button>
       </div>
 
@@ -1287,7 +1396,7 @@ export function GameNightLedger() {
                       <span className="text-rose-600 dark:text-rose-400">{loan.borrowerName}</span>
                       <span className="text-slate-400 font-normal">owes</span>
                       <span className="text-emerald-600 dark:text-emerald-400">{loan.lenderName}</span>
-                      <span className="font-black text-amber-700 dark:text-amber-300 ml-1">₹{loan.amount}</span>
+                      <span className="font-black text-amber-700 dark:text-amber-300 ml-1">{loan.amount} pts</span>
                     </div>
                     <div className="text-[10px] text-slate-400 mt-0.5 flex items-center space-x-2">
                       <span>{new Date(loan.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
@@ -1417,62 +1526,83 @@ export function GameNightLedger() {
               </div>
             </div>
 
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
               Enter profit (+) or loss (-) for each player. Unchanged players can be left blank (0).
             </p>
 
-            {/* Players Round Input List - SPACIOUS NAME AREA */}
-            <div className="space-y-2 overflow-y-auto flex-1 pr-1">
+            {/* Players Round Input List - SPACIOUS NAME AREA & NUMBER PAD TRIGGERS */}
+            <div className="space-y-2.5 overflow-y-auto flex-1 pr-1">
               {sheet.players.map((player) => {
-                const item = roundInputs[player.id] || { sign: '+', val: '' };
+                const item = roundInputs[player.id] || { sign: '+', val: '', isAuto: false };
                 const isPositive = item.sign === '+';
 
                 return (
                   <div
                     key={player.id}
-                    className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/80 dark:border-slate-700/60 gap-2"
+                    className={`flex items-center justify-between p-3.5 sm:p-4 rounded-2xl border transition-all gap-3 ${
+                      item.isAuto
+                        ? 'bg-indigo-50/40 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800/60'
+                        : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200/80 dark:border-slate-700/60'
+                    }`}
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white break-words">
-                        {player.name}
+                      <div className="flex items-center space-x-2 flex-wrap">
+                        <span className="font-black text-sm sm:text-base text-slate-900 dark:text-white break-words">
+                          {player.name}
+                        </span>
+                        {item.isAuto && (
+                          <span className="px-2 py-0.5 text-[10px] sm:text-xs font-black uppercase tracking-wider bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 rounded-md animate-pulse">
+                            Auto
+                          </span>
+                        )}
                       </div>
-                      <div className="text-[10px] text-slate-400">
-                        Current Bal: ₹{playerStats.find((s) => s.id === player.id)?.currentBalance ?? player.initialBuyIn}
+                      <div className="text-xs sm:text-sm text-slate-400 font-medium mt-0.5">
+                        Current Bal: {playerStats.find((s) => s.id === player.id)?.currentBalance ?? player.initialBuyIn} pts
                       </div>
                     </div>
 
-                    {/* Auto-balance & Sign Toggle & Value Input */}
-                    <div className="flex items-center space-x-1.5 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => handleAutoBalance(player.id)}
-                        className="px-1.5 py-1 text-[10px] font-bold bg-slate-200/80 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-colors"
-                        title="Auto-fill balance so round total sums to 0"
-                      >
-                        Auto
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => toggleSign(player.id)}
-                        className={`w-7 h-7 rounded-xl font-black text-xs flex items-center justify-center transition-all ${
-                          isPositive
-                            ? 'bg-emerald-600 text-white shadow-xs'
-                            : 'bg-rose-600 text-white shadow-xs'
-                        }`}
-                        title="Toggle Profit (+) or Loss (-)"
-                      >
-                        {isPositive ? '+' : '–'}
-                      </button>
+                    {/* Dedicated + / – triggers (immediately opens numeric keyboard) & Value Input */}
+                    <div className="flex items-center space-x-2 shrink-0">
+                      {/* Sign Selection Buttons */}
+                      <div className="flex items-center bg-slate-200/80 dark:bg-slate-700/80 p-0.5 rounded-xl">
+                        <button
+                          type="button"
+                          onClick={() => handleSetSignAndFocus(player.id, '+')}
+                          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl font-black text-base sm:text-lg flex items-center justify-center transition-all ${
+                            isPositive
+                              ? 'bg-emerald-600 text-white shadow-xs'
+                              : 'text-slate-500 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400'
+                          }`}
+                          title="Profit (+): Opens number pad"
+                        >
+                          +
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetSignAndFocus(player.id, '-')}
+                          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl font-black text-base sm:text-lg flex items-center justify-center transition-all ${
+                            !isPositive
+                              ? 'bg-rose-600 text-white shadow-xs'
+                              : 'text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400'
+                          }`}
+                          title="Loss (-): Opens number pad"
+                        >
+                          –
+                        </button>
+                      </div>
 
                       <div className="relative">
                         <input
+                          id={`round-input-${player.id}`}
                           type="text"
                           inputMode="numeric"
-                          placeholder="0"
+                          pattern="[0-9]*"
+                          autoComplete="off"
+                          placeholder={item.isAuto ? 'Auto' : '0'}
                           value={item.val}
+                          onFocus={(e) => e.target.select()}
                           onChange={(e) => handleInputChange(player.id, e.target.value)}
-                          className={`w-24 px-2.5 py-1.5 text-xs font-bold rounded-xl border focus:outline-none focus:ring-2 text-right ${
+                          className={`w-28 sm:w-32 px-3 py-2 text-base sm:text-lg font-black rounded-xl border focus:outline-none focus:ring-2 text-right transition-colors ${
                             isPositive
                               ? 'bg-emerald-50/50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 focus:ring-emerald-500'
                               : 'bg-rose-50/50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800 focus:ring-rose-500'
@@ -1487,27 +1617,27 @@ export function GameNightLedger() {
 
             {/* Table Zero-Sum Indicator */}
             <div
-              className={`p-2.5 rounded-xl text-xs font-bold flex items-center justify-between border ${
+              className={`p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm font-black flex items-center justify-between border ${
                 roundNetSum === 0
                   ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800'
                   : 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-800'
               }`}
             >
-              <span className="flex items-center space-x-1">
-                <Calculator className="w-3.5 h-3.5" />
+              <span className="flex items-center space-x-1.5">
+                <Calculator className="w-4 h-4" />
                 <span>Round Table Net:</span>
               </span>
               <span>
-                {roundNetSum === 0 ? '₹0 (Zero-Sum Balanced ✅)' : `${roundNetSum > 0 ? '+' : ''}₹${roundNetSum} (⚠️ Unbalanced)`}
+                {roundNetSum === 0 ? '0 (Zero-Sum Balanced ✅)' : `${roundNetSum > 0 ? '+' : ''}${roundNetSum} pts (⚠️ Unbalanced)`}
               </span>
             </div>
 
             {/* Actions */}
-            <div className="flex items-center space-x-2 pt-1">
+            <div className="flex items-center space-x-2.5 pt-1">
               <button
                 type="button"
                 onClick={() => setIsRecordingRound(false)}
-                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl transition-colors"
+                className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-sm rounded-xl transition-colors"
               >
                 Cancel
               </button>
@@ -1515,7 +1645,7 @@ export function GameNightLedger() {
                 id="games-ledger-submit-round-btn"
                 type="button"
                 onClick={handleSaveRound}
-                className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-600/30 transition-all touch-spring"
+                className="flex-1 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-sm rounded-xl shadow-md shadow-emerald-600/30 transition-all touch-spring"
               >
                 Submit Round
               </button>
@@ -1529,25 +1659,25 @@ export function GameNightLedger() {
       {/* ========================================================= */}
       {topupPlayerId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="font-black text-slate-900 dark:text-white text-sm">
+              <h4 className="font-black text-slate-900 dark:text-white text-base sm:text-lg">
                 Stack Adjustment / Top-up
               </h4>
-              <button onClick={() => setTopupPlayerId(null)} className="text-slate-400">
-                <X className="w-4 h-4" />
+              <button onClick={() => setTopupPlayerId(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <X className="w-5 h-5" />
               </button>
             </div>
-            <p className="text-xs text-slate-500">
-              Player: <strong className="text-slate-900 dark:text-white">{sheet.players.find((p) => p.id === topupPlayerId)?.name}</strong>
+            <p className="text-xs sm:text-sm text-slate-500">
+              Player: <strong className="text-slate-900 dark:text-white text-sm sm:text-base">{sheet.players.find((p) => p.id === topupPlayerId)?.name}</strong>
             </p>
 
             {/* Positive vs Negative toggle */}
-            <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-bold">
+            <div className="grid grid-cols-2 gap-2 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs sm:text-sm font-black">
               <button
                 type="button"
                 onClick={() => setTopupType('ADD')}
-                className={`py-1.5 rounded-lg transition-all ${
+                className={`py-2 rounded-lg transition-all ${
                   topupType === 'ADD'
                     ? 'bg-emerald-600 text-white shadow-xs'
                     : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
@@ -1558,7 +1688,7 @@ export function GameNightLedger() {
               <button
                 type="button"
                 onClick={() => setTopupType('DEDUCT')}
-                className={`py-1.5 rounded-lg transition-all ${
+                className={`py-2 rounded-lg transition-all ${
                   topupType === 'DEDUCT'
                     ? 'bg-rose-600 text-white shadow-xs'
                     : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
@@ -1569,8 +1699,8 @@ export function GameNightLedger() {
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                Amount (₹):
+              <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
+                Points / Stack Adjustment:
               </label>
               <input
                 type="number"
@@ -1578,27 +1708,27 @@ export function GameNightLedger() {
                 step="50"
                 value={topupAmount}
                 onChange={(e) => setTopupAmount(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-base sm:text-lg font-black"
               />
-              <p className="text-[10px] text-slate-400 mt-1">
+              <p className="text-xs text-slate-400 mt-1">
                 {topupType === 'ADD'
                   ? 'Adds chips to player stack and total buy-in.'
                   : 'Deducts chips from player stack (e.g. early cash out or correction).'}
               </p>
             </div>
 
-            <div className="flex space-x-2 pt-2">
+            <div className="flex space-x-2.5 pt-2">
               <button
                 type="button"
                 onClick={() => setTopupPlayerId(null)}
-                className="flex-1 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold"
+                className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs sm:text-sm font-bold"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleExecuteTopup}
-                className={`flex-1 py-2 text-white rounded-xl text-xs font-bold shadow-md transition-all ${
+                className={`flex-1 py-3 text-white rounded-xl text-xs sm:text-sm font-black shadow-md transition-all ${
                   topupType === 'ADD' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'
                 }`}
               >
@@ -1614,33 +1744,33 @@ export function GameNightLedger() {
       {/* ========================================================= */}
       {isLoanModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <HandCoins className="w-4 h-4 text-amber-500" />
-                <h4 className="font-black text-slate-900 dark:text-white text-sm">
+                <HandCoins className="w-5 h-5 text-amber-500" />
+                <h4 className="font-black text-slate-900 dark:text-white text-base sm:text-lg">
                   Record Player Loan
                 </h4>
               </div>
-              <button onClick={() => setIsLoanModalOpen(false)} className="text-slate-400">
-                <X className="w-4 h-4" />
+              <button onClick={() => setIsLoanModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
               Record chips loaned from one player to another. Chips move between table balances and debts are tracked.
             </p>
 
-            <div className="space-y-3">
+            <div className="space-y-3.5">
               {/* Lender */}
               <div>
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 block mb-1">
                   Lender (Giving chips):
                 </label>
                 <select
                   value={loanLenderId}
                   onChange={(e) => setLoanLenderId(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm sm:text-base font-bold"
                 >
                   {sheet.players.map((p) => (
                     <option key={p.id} value={p.id} disabled={p.id === loanBorrowerId}>
@@ -1652,13 +1782,13 @@ export function GameNightLedger() {
 
               {/* Borrower */}
               <div>
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 block mb-1">
                   Borrower (Receiving chips):
                 </label>
                 <select
                   value={loanBorrowerId}
                   onChange={(e) => setLoanBorrowerId(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm sm:text-base font-bold"
                 >
                   {sheet.players.map((p) => (
                     <option key={p.id} value={p.id} disabled={p.id === loanLenderId}>
@@ -1670,8 +1800,8 @@ export function GameNightLedger() {
 
               {/* Amount */}
               <div>
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                  Loan Amount (₹):
+                <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  Loan Points:
                 </label>
                 <input
                   type="number"
@@ -1679,12 +1809,12 @@ export function GameNightLedger() {
                   step="50"
                   value={loanAmount}
                   onChange={(e) => setLoanAmount(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-base sm:text-lg font-black"
                 />
               </div>
 
               {/* Transfer chips option */}
-              <label className="flex items-center space-x-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer pt-1">
+              <label className="flex items-center space-x-2 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 cursor-pointer pt-1">
                 <input
                   type="checkbox"
                   checked={loanTransferChips}
@@ -1695,24 +1825,24 @@ export function GameNightLedger() {
               </label>
 
               {loanError && (
-                <div className="text-rose-500 text-xs font-bold animate-in fade-in">
+                <div className="text-rose-500 text-xs sm:text-sm font-bold animate-in fade-in">
                   {loanError}
                 </div>
               )}
             </div>
 
-            <div className="flex space-x-2 pt-2">
+            <div className="flex space-x-2.5 pt-2">
               <button
                 type="button"
                 onClick={() => setIsLoanModalOpen(false)}
-                className="flex-1 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold"
+                className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs sm:text-sm font-bold"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleCreateLoan}
-                className="flex-1 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-md shadow-amber-600/30"
+                className="flex-1 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs sm:text-sm font-black shadow-md shadow-amber-600/30"
               >
                 Confirm Loan
               </button>
@@ -1726,18 +1856,18 @@ export function GameNightLedger() {
       {/* ========================================================= */}
       {isAddPlayerModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="font-black text-slate-900 dark:text-white text-sm">
+              <h4 className="font-black text-slate-900 dark:text-white text-base sm:text-lg">
                 Add Late Player ({sheet.players.length}/10)
               </h4>
-              <button onClick={() => setIsAddPlayerModalOpen(false)} className="text-slate-400">
-                <X className="w-4 h-4" />
+              <button onClick={() => setIsAddPlayerModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-3.5">
               <div>
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 block mb-1">
                   Player Name:
                 </label>
                 <input
@@ -1746,12 +1876,12 @@ export function GameNightLedger() {
                   value={newPlayerName}
                   maxLength={30}
                   onChange={(e) => setNewPlayerName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm sm:text-base font-bold"
                 />
               </div>
               <div>
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                  Starting Buy-in / Stack (₹):
+                <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  Starting Stack (pts):
                 </label>
                 <input
                   type="number"
@@ -1759,22 +1889,22 @@ export function GameNightLedger() {
                   step="50"
                   value={newPlayerBuyIn}
                   onChange={(e) => setNewPlayerBuyIn(Math.max(0, parseInt(e.target.value) || 0))}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm sm:text-base font-black"
                 />
               </div>
             </div>
-            <div className="flex space-x-2 pt-2">
+            <div className="flex space-x-2.5 pt-2">
               <button
                 type="button"
                 onClick={() => setIsAddPlayerModalOpen(false)}
-                className="flex-1 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold"
+                className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs sm:text-sm font-bold"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleAddLatePlayer}
-                className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/30"
+                className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs sm:text-sm font-black shadow-md shadow-indigo-600/30"
               >
                 Add Player
               </button>
@@ -1788,21 +1918,21 @@ export function GameNightLedger() {
       {/* ========================================================= */}
       {showConfirmNewSheet && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
             <div className="flex items-center space-x-2 text-rose-500">
-              <AlertCircle className="w-5 h-5 shrink-0" />
-              <h4 className="font-black text-slate-900 dark:text-white text-sm">
+              <AlertCircle className="w-6 h-6 shrink-0" />
+              <h4 className="font-black text-slate-900 dark:text-white text-base sm:text-lg">
                 Start New Session?
               </h4>
             </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
               Are you sure? Current player balances, round history, and loan records will be permanently reset.
             </p>
-            <div className="flex space-x-2 pt-2">
+            <div className="flex space-x-2.5 pt-2">
               <button
                 type="button"
                 onClick={() => setShowConfirmNewSheet(false)}
-                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold"
+                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs sm:text-sm font-bold"
               >
                 Keep Current
               </button>
@@ -1810,7 +1940,7 @@ export function GameNightLedger() {
                 id="games-ledger-confirm-new-sheet-btn"
                 type="button"
                 onClick={handleResetToNewSheet}
-                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md shadow-rose-600/30"
+                className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs sm:text-sm font-black shadow-md shadow-rose-600/30"
               >
                 Yes, Start New
               </button>
