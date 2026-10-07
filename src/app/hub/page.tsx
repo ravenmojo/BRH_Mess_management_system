@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Film, Lightbulb, Users, Phone, Trophy, Send, Loader2, Star, ShieldCheck, AlertTriangle, Download, Video, Image as ImageIcon, Calendar, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { OtpVerificationModal } from '@/components/otp-modal';
+import { PokerScoreKeeper } from '@/components/poker-score-keeper';
 
 // Smart room number formatter
 function formatRoomNo(value: string): string {
@@ -269,9 +270,21 @@ export default function HubPage() {
 
             {/* ACTIVITIES TAB */}
             {activeTab === 'ACTIVITIES' && (
-              <div className="space-y-3">
-                {data.activities.length > 0 ? (
-                  data.activities.map((act: any) => {
+              <div className="space-y-4">
+                {/* Poker Scorekeeper Mini App */}
+                <PokerScoreKeeper />
+
+                {/* Hall Events & Programs */}
+                <div className="pt-1 space-y-3">
+                  <div className="flex items-center justify-between px-1">
+                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center space-x-1.5">
+                      <Users className="w-3.5 h-3.5" />
+                      <span>Hall Events & Activities</span>
+                    </h3>
+                  </div>
+
+                  {data.activities.length > 0 ? (
+                    data.activities.map((act: any) => {
                     const eventDate = act.eventDate ? new Date(act.eventDate) : null;
                     const isConcluded = eventDate ? eventDate.getTime() < Date.now() : false;
 
@@ -348,6 +361,7 @@ export default function HubPage() {
                     No active hall events scheduled at the moment.
                   </div>
                 )}
+                </div>
               </div>
             )}
 
