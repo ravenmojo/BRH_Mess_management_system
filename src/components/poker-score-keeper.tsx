@@ -29,10 +29,21 @@ import {
   Calculator
 } from 'lucide-react';
 
-const POKER_PASSWORD = 'poker@brh';
+const POKER_PASS_HASH = '0417301e2cf799166eed8cd914a6e5ccead1bbfdbc5e5df1b74d6f12abf64ee3';
 const STORAGE_KEY = 'brh_poker_sheet_v1';
 const AUTH_KEY = 'brh_poker_auth';
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+
+async function sha256Hex(text: string): Promise<string> {
+  if (typeof crypto !== 'undefined' && crypto.subtle) {
+    const enc = new TextEncoder().encode(text);
+    const buf = await crypto.subtle.digest('SHA-256', enc);
+    return Array.from(new Uint8Array(buf))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+  return '';
+}
 
 export interface PokerPlayer {
   id: string;
@@ -105,7 +116,7 @@ export function PokerScoreKeeper() {
   useEffect(() => {
     try {
       const savedAuth = sessionStorage.getItem(AUTH_KEY);
-      if (savedAuth === POKER_PASSWORD) {
+      if (savedAuth === 'unlocked' || savedAuth === POKER_PASS_HASH) {
         setIsAuthenticated(true);
       }
 
@@ -172,15 +183,25 @@ export function PokerScoreKeeper() {
   };
 
   // Auth Submit
-  const handleAuthSubmit = (e?: React.FormEvent) => {
+  const handleAuthSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (passwordInput.trim() === POKER_PASSWORD) {
-      setIsAuthenticated(true);
-      setAuthError('');
-      sessionStorage.setItem(AUTH_KEY, POKER_PASSWORD);
-    } else {
-      setAuthError('Incorrect passcode. Access is restricted to BRH Poker room.');
+    const cleanInput = passwordInput.trim();
+    if (!cleanInput) {
+      setAuthError('Please enter the passcode.');
+      return;
     }
+
+    try {
+      const hash = await sha256Hex(cleanInput);
+      if (hash === POKER_PASS_HASH) {
+        setIsAuthenticated(true);
+        setAuthError('');
+        sessionStorage.setItem(AUTH_KEY, 'unlocked');
+        return;
+      }
+    } catch { }
+
+    setAuthError('Incorrect passcode. Access is restricted to BRH Poker room.');
   };
 
   const handleLock = () => {
@@ -492,7 +513,7 @@ export function PokerScoreKeeper() {
   }
 
   // ==========================================
-  // VIEW A: LOCKED GATE (Password: poker@brh)
+  // VIEW A: LOCKED GATE
   // ==========================================
   if (!isAuthenticated) {
     return (
@@ -527,7 +548,7 @@ export function PokerScoreKeeper() {
               <input
                 id="poker-password-input"
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Enter password (poker@brh)..."
+                placeholder="Enter passcode to unlock..."
                 value={passwordInput}
                 onChange={(e) => {
                   setPasswordInput(e.target.value);
