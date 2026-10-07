@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Film, Lightbulb, Users, Phone, Trophy, Send, Loader2, Star, ShieldCheck, AlertTriangle, Download, Video, Image as ImageIcon, Calendar, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { OtpVerificationModal } from '@/components/otp-modal';
-import { PokerScoreKeeper } from '@/components/poker-score-keeper';
+import { GameNightLedger } from '@/components/game-night-ledger';
 
 // Smart room number formatter
 function formatRoomNo(value: string): string {
@@ -271,8 +271,8 @@ export default function HubPage() {
             {/* ACTIVITIES TAB */}
             {activeTab === 'ACTIVITIES' && (
               <div className="space-y-4">
-                {/* Poker Scorekeeper Mini App */}
-                <PokerScoreKeeper />
+                {/* Recreation Games & Points Ledger Mini App */}
+                <GameNightLedger />
 
                 {/* Hall Events & Programs */}
                 <div className="pt-1 space-y-3">

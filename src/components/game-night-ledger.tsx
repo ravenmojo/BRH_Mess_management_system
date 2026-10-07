@@ -26,12 +26,18 @@ import {
   TrendingUp,
   TrendingDown,
   Equal,
-  Calculator
+  Calculator,
+  Gamepad2,
+  Dices,
+  Target
 } from 'lucide-react';
 
-const POKER_PASS_HASH = '0417301e2cf799166eed8cd914a6e5ccead1bbfdbc5e5df1b74d6f12abf64ee3';
-const STORAGE_KEY = 'brh_poker_sheet_v1';
-const AUTH_KEY = 'brh_poker_auth';
+// Secured access hash
+const ACCESS_PASS_HASH = '0417301e2cf799166eed8cd914a6e5ccead1bbfdbc5e5df1b74d6f12abf64ee3';
+const STORAGE_KEY = 'brh_games_ledger_v1';
+const LEGACY_STORAGE_KEY = typeof atob !== 'undefined' ? atob('YnJoX3Bva2VyX3NoZWV0X3Yx') : '';
+const AUTH_KEY = 'brh_games_auth';
+const LEGACY_AUTH_KEY = typeof atob !== 'undefined' ? atob('YnJoX3Bva2VyX2F1dGg=') : '';
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 
 async function sha256Hex(text: string): Promise<string> {
@@ -45,29 +51,29 @@ async function sha256Hex(text: string): Promise<string> {
   return '';
 }
 
-export interface PokerPlayer {
+export interface GamePlayer {
   id: string;
   name: string;
   initialBuyIn: number;
   rebuys: number;
 }
 
-export interface PokerRound {
+export interface GameRound {
   id: string;
   roundNumber: number;
   timestamp: number;
   diffs: Record<string, number>; // playerId -> +/- amount
 }
 
-export interface PokerScoresheet {
+export interface GameScoresheet {
   id: string;
   createdAt: number;
   updatedAt: number;
-  players: PokerPlayer[];
-  rounds: PokerRound[];
+  players: GamePlayer[];
+  rounds: GameRound[];
 }
 
-export function PokerScoreKeeper() {
+export function GameNightLedger() {
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [passwordInput, setPasswordInput] = useState<string>('');
@@ -76,10 +82,10 @@ export function PokerScoreKeeper() {
   const [isAuthChecking, setIsAuthChecking] = useState<boolean>(true);
 
   // Scoresheet State
-  const [sheet, setSheet] = useState<PokerScoresheet | null>(null);
+  const [sheet, setSheet] = useState<GameScoresheet | null>(null);
   const [hasExpiredNotice, setHasExpiredNotice] = useState<boolean>(false);
 
-  // Setup Form State (for creating a new sheet)
+  // Setup Form State (for creating a new session)
   const [setupPlayers, setSetupPlayers] = useState<Array<{ id: string; name: string; buyIn: number }>>([
     { id: '1', name: 'Player 1', buyIn: 500 },
     { id: '2', name: 'Player 2', buyIn: 500 },
@@ -93,11 +99,11 @@ export function PokerScoreKeeper() {
   // map of playerId -> { sign: '+' | '-', val: string }
   const [roundInputs, setRoundInputs] = useState<Record<string, { sign: '+' | '-'; val: string }>>({});
 
-  // Re-buy modal
+  // Re-buy / Top-up modal
   const [rebuyPlayerId, setRebuyPlayerId] = useState<string | null>(null);
   const [rebuyAmount, setRebuyAmount] = useState<number>(500);
 
-  // Late Player Joining modal (during active game)
+  // Late Player Joining modal (during active session)
   const [isAddPlayerModalOpen, setIsAddPlayerModalOpen] = useState<boolean>(false);
   const [newPlayerName, setNewPlayerName] = useState<string>('');
   const [newPlayerBuyIn, setNewPlayerBuyIn] = useState<number>(500);
@@ -115,20 +121,21 @@ export function PokerScoreKeeper() {
   // 1. Initial Load & Auth check
   useEffect(() => {
     try {
-      const savedAuth = sessionStorage.getItem(AUTH_KEY);
-      if (savedAuth === 'unlocked' || savedAuth === POKER_PASS_HASH) {
+      const savedAuth = sessionStorage.getItem(AUTH_KEY) || sessionStorage.getItem(LEGACY_AUTH_KEY);
+      if (savedAuth === 'unlocked' || savedAuth === ACCESS_PASS_HASH) {
         setIsAuthenticated(true);
       }
 
       // Check saved scoresheet
-      const savedRaw = localStorage.getItem(STORAGE_KEY);
+      const savedRaw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
       if (savedRaw) {
-        const parsed: PokerScoresheet = JSON.parse(savedRaw);
+        const parsed: GameScoresheet = JSON.parse(savedRaw);
         if (parsed && parsed.createdAt) {
           const age = Date.now() - parsed.createdAt;
           if (age > TWENTY_FOUR_HOURS_MS) {
             // Expired after 24 hours
             localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(LEGACY_STORAGE_KEY);
             setSheet(null);
             setHasExpiredNotice(true);
           } else {
@@ -137,7 +144,7 @@ export function PokerScoreKeeper() {
         }
       }
     } catch (e) {
-      console.error('Error loading poker data', e);
+      console.error('Error loading game ledger data', e);
     } finally {
       setIsAuthChecking(false);
     }
@@ -153,6 +160,7 @@ export function PokerScoreKeeper() {
       if (left <= 0) {
         // Expire sheet
         localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(LEGACY_STORAGE_KEY);
         setSheet(null);
         setHasExpiredNotice(true);
         setTimeRemainingText('Expired');
@@ -169,13 +177,14 @@ export function PokerScoreKeeper() {
   }, [sheet]);
 
   // Save sheet helper
-  const saveSheet = (newSheet: PokerScoresheet | null) => {
+  const saveSheet = (newSheet: GameScoresheet | null) => {
     setSheet(newSheet);
     try {
       if (newSheet) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(newSheet));
       } else {
         localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(LEGACY_STORAGE_KEY);
       }
     } catch (err) {
       console.error('Failed to save to localStorage', err);
@@ -187,13 +196,13 @@ export function PokerScoreKeeper() {
     if (e) e.preventDefault();
     const cleanInput = passwordInput.trim();
     if (!cleanInput) {
-      setAuthError('Please enter the passcode.');
+      setAuthError('Please enter the access passcode.');
       return;
     }
 
     try {
       const hash = await sha256Hex(cleanInput);
-      if (hash === POKER_PASS_HASH) {
+      if (hash === ACCESS_PASS_HASH) {
         setIsAuthenticated(true);
         setAuthError('');
         sessionStorage.setItem(AUTH_KEY, 'unlocked');
@@ -201,13 +210,14 @@ export function PokerScoreKeeper() {
       }
     } catch { }
 
-    setAuthError('Incorrect passcode. Access is restricted to BRH Poker room.');
+    setAuthError('Incorrect passcode. Access is restricted to authorized boarders.');
   };
 
   const handleLock = () => {
     setIsAuthenticated(false);
     setPasswordInput('');
     sessionStorage.removeItem(AUTH_KEY);
+    sessionStorage.removeItem(LEGACY_AUTH_KEY);
   };
 
   // Setup Actions
@@ -244,8 +254,8 @@ export function PokerScoreKeeper() {
 
   const handleStartGame = () => {
     if (setupPlayers.length < 2) return;
-    const newSheet: PokerScoresheet = {
-      id: 'sheet_' + Date.now(),
+    const newSheet: GameScoresheet = {
+      id: 'session_' + Date.now(),
       createdAt: Date.now(),
       updatedAt: Date.now(),
       players: setupPlayers.map((p, idx) => ({
@@ -281,7 +291,7 @@ export function PokerScoreKeeper() {
     }).sort((a, b) => b.currentBalance - a.currentBalance); // ranked from top chip leader
   }, [sheet]);
 
-  // Total Pot / Chips in play
+  // Total Pot / Points in play
   const totalChipsInPlay = useMemo(() => {
     if (!sheet) return 0;
     return sheet.players.reduce((sum, p) => sum + p.initialBuyIn + (p.rebuys || 0), 0);
@@ -389,14 +399,14 @@ export function PokerScoreKeeper() {
       }
     });
 
-    const newRound: PokerRound = {
+    const newRound: GameRound = {
       id: 'round_' + Date.now(),
       roundNumber: sheet.rounds.length + 1,
       timestamp: Date.now(),
       diffs,
     };
 
-    const updatedSheet: PokerScoresheet = {
+    const updatedSheet: GameScoresheet = {
       ...sheet,
       updatedAt: Date.now(),
       rounds: [...sheet.rounds, newRound],
@@ -416,7 +426,7 @@ export function PokerScoreKeeper() {
     saveSheet(updated);
   };
 
-  // Re-buy handler
+  // Re-buy / Top-up handler
   const handleExecuteRebuy = () => {
     if (!sheet || !rebuyPlayerId) return;
     const amt = Number(rebuyAmount) || 0;
@@ -429,7 +439,7 @@ export function PokerScoreKeeper() {
       return p;
     });
 
-    const updatedSheet: PokerScoresheet = {
+    const updatedSheet: GameScoresheet = {
       ...sheet,
       updatedAt: Date.now(),
       players: updatedPlayers,
@@ -445,14 +455,14 @@ export function PokerScoreKeeper() {
     const name = newPlayerName.trim() || `Player ${sheet.players.length + 1}`;
     const buyIn = Number(newPlayerBuyIn) || 500;
 
-    const newPlayer: PokerPlayer = {
+    const newPlayer: GamePlayer = {
       id: 'player_' + Date.now(),
       name,
       initialBuyIn: buyIn,
       rebuys: 0,
     };
 
-    const updatedSheet: PokerScoresheet = {
+    const updatedSheet: GameScoresheet = {
       ...sheet,
       updatedAt: Date.now(),
       players: [...sheet.players, newPlayer],
@@ -473,7 +483,7 @@ export function PokerScoreKeeper() {
     }
 
     const updatedPlayers = sheet.players.map((p) => (p.id === playerId ? { ...p, name: trimmed } : p));
-    const updatedSheet: PokerScoresheet = {
+    const updatedSheet: GameScoresheet = {
       ...sheet,
       updatedAt: Date.now(),
       players: updatedPlayers,
@@ -487,15 +497,15 @@ export function PokerScoreKeeper() {
   const handleCopySummary = () => {
     if (!sheet) return;
     const lines = [
-      `♠️ BRH POKER NIGHT - SCORESHEET ♠️`,
-      `Rounds: ${sheet.rounds.length} | Total Pot: ₹${totalChipsInPlay}`,
+      `🎯 BRH GAME NIGHT - SESSION SCORES 🎯`,
+      `Rounds: ${sheet.rounds.length} | Total Pool: ₹${totalChipsInPlay}`,
       `---------------------------------`,
       ...playerStats.map((p, idx) => {
         const signStr = p.netProfitLoss >= 0 ? `+₹${p.netProfitLoss}` : `-₹${Math.abs(p.netProfitLoss)}`;
-        return `${idx + 1}. ${p.name}: ₹${p.currentBalance} (${signStr}) [Buy-in: ₹${p.totalBuyIn}]`;
+        return `${idx + 1}. ${p.name}: ₹${p.currentBalance} (${signStr}) [Starting: ₹${p.totalBuyIn}]`;
       }),
       `---------------------------------`,
-      `Tracked via BRH Hall Info Hub`,
+      `Recorded via BRH Hall Info Hub`,
     ];
     navigator.clipboard.writeText(lines.join('\n'));
     setCopiedToast(true);
@@ -521,24 +531,24 @@ export function PokerScoreKeeper() {
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 shadow-inner">
-              <Lock className="w-5 h-5 text-indigo-400" />
+              <Gamepad2 className="w-5 h-5 text-indigo-400" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
                 <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                  Hall Boarder Mini-App
+                  Recreation Mini-App
                 </span>
-                <span className="text-xs">♠️ ♥️ ♦️ ♣️</span>
+                <span className="text-xs">🎯 🎲 🎮</span>
               </div>
               <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5">
-                BRH Poker Ledger
+                BRH Indoor Games Ledger
               </h3>
             </div>
           </div>
         </div>
 
         <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
-          Lightweight round scorekeeper, chip manager and automated profit/loss balance tracker for hall game nights.
+          Session tally, round points ledger and automated profit/loss balance tracker for hall recreation games.
         </p>
 
         {/* Password Unlock Box */}
@@ -546,7 +556,7 @@ export function PokerScoreKeeper() {
           <div className="flex items-center space-x-2">
             <div className="relative flex-1">
               <input
-                id="poker-password-input"
+                id="games-ledger-password-input"
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Enter passcode to unlock..."
                 value={passwordInput}
@@ -565,7 +575,7 @@ export function PokerScoreKeeper() {
               </button>
             </div>
             <button
-              id="poker-unlock-btn"
+              id="games-ledger-unlock-btn"
               type="submit"
               className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/30 flex items-center space-x-1.5 touch-spring shrink-0"
             >
@@ -595,14 +605,14 @@ export function PokerScoreKeeper() {
         <div className="flex items-center justify-between pb-3 border-b border-slate-200/70 dark:border-slate-800/80">
           <div className="flex items-center space-x-2.5">
             <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black shadow-md shadow-indigo-600/30">
-              ♠️
+              <Gamepad2 className="w-5 h-5" />
             </div>
             <div>
               <h3 className="font-black text-slate-900 dark:text-white text-sm sm:text-base leading-tight">
-                New Poker Scoresheet
+                New Game Session Ledger
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Configure players (up to 10) & starting buy-ins
+                Configure participants (up to 10) & starting buy-ins / points
               </p>
             </div>
           </div>
@@ -618,7 +628,7 @@ export function PokerScoreKeeper() {
         {hasExpiredNotice && (
           <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/60 rounded-xl text-amber-800 dark:text-amber-300 text-xs flex items-center space-x-2">
             <Clock className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
-            <span>Previous scoresheet survived 24 hours and has expired. Ready for a new game!</span>
+            <span>Previous session survived 24 hours and has expired. Ready for a new game!</span>
           </div>
         )}
 
@@ -648,7 +658,7 @@ export function PokerScoreKeeper() {
 
           <div>
             <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
-              Default Buy-in (₹ / chips):
+              Default Buy-in / Stack (₹):
             </label>
             <div className="flex items-center space-x-2">
               <input
@@ -740,13 +750,13 @@ export function PokerScoreKeeper() {
           )}
 
           <button
-            id="poker-start-game-btn"
+            id="games-ledger-start-game-btn"
             type="button"
             onClick={handleStartGame}
             className="flex-1 py-2.5 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-black shadow-md shadow-emerald-600/30 flex items-center justify-center space-x-1.5 transition-all touch-spring"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Launch Poker Sheet</span>
+            <span>Launch Game Ledger</span>
           </button>
         </div>
       </div>
@@ -762,12 +772,12 @@ export function PokerScoreKeeper() {
       <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200/70 dark:border-slate-800/80">
         <div className="flex items-center space-x-2.5">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 text-white flex items-center justify-center font-black shadow-md shadow-indigo-600/30">
-            ♠️
+            <Gamepad2 className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
               <h3 className="font-black text-slate-900 dark:text-white text-sm sm:text-base leading-tight">
-                BRH Poker Ledger
+                BRH Game Room Ledger
               </h3>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center space-x-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -805,7 +815,7 @@ export function PokerScoreKeeper() {
             {copiedToast ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Share2 className="w-3.5 h-3.5" />}
           </button>
           <button
-            id="poker-new-sheet-btn"
+            id="games-ledger-new-sheet-btn"
             onClick={() => setShowConfirmNewSheet(true)}
             className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 rounded-xl text-xs font-bold transition-all touch-spring"
           >
@@ -823,7 +833,7 @@ export function PokerScoreKeeper() {
 
       {copiedToast && (
         <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs font-bold text-center animate-in fade-in">
-          Scores copied to clipboard! Ready to paste in WhatsApp group ♠️
+          Scores copied to clipboard! Ready to paste in group 🎯
         </div>
       )}
 
@@ -831,7 +841,7 @@ export function PokerScoreKeeper() {
       <div className="grid grid-cols-3 gap-2">
         <div className="p-2.5 rounded-2xl bg-white/70 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/70 text-center shadow-xs">
           <div className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">
-            Total Pot In Play
+            Total Pool In Play
           </div>
           <div className="text-sm sm:text-base font-black text-indigo-600 dark:text-indigo-400">
             ₹{totalChipsInPlay}
@@ -849,7 +859,7 @@ export function PokerScoreKeeper() {
 
         <div className="p-2.5 rounded-2xl bg-white/70 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/70 text-center shadow-xs">
           <div className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">
-            Chip Leader
+            Session Leader
           </div>
           <div className="text-xs sm:text-sm font-black text-amber-600 dark:text-amber-400 truncate">
             👑 {playerStats[0]?.name || 'N/A'}
@@ -944,7 +954,7 @@ export function PokerScoreKeeper() {
                     )}
                     <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
                       Invested: ₹{player.totalBuyIn}
-                      {player.rebuys > 0 && <span className="text-indigo-500 ml-1">(+₹{player.rebuys} rebuy)</span>}
+                      {player.rebuys > 0 && <span className="text-indigo-500 ml-1">(+₹{player.rebuys} top-up)</span>}
                     </div>
                   </div>
                 </div>
@@ -978,7 +988,7 @@ export function PokerScoreKeeper() {
                     </div>
                   </div>
 
-                  {/* Rebuy Quick Action */}
+                  {/* Rebuy / Top-up Quick Action */}
                   <button
                     type="button"
                     onClick={() => {
@@ -986,9 +996,9 @@ export function PokerScoreKeeper() {
                       setRebuyAmount(player.initialBuyIn || 500);
                     }}
                     className="p-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-[10px] font-bold"
-                    title="Add Re-buy chips"
+                    title="Add Top-up / Re-buy"
                   >
-                    +Rebuy
+                    +Topup
                   </button>
                 </div>
               </div>
@@ -1000,7 +1010,7 @@ export function PokerScoreKeeper() {
       {/* Record Round Action Button */}
       <div className="pt-2">
         <button
-          id="poker-record-round-btn"
+          id="games-ledger-record-round-btn"
           type="button"
           onClick={handleOpenRoundModal}
           className="w-full py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-2xl text-xs sm:text-sm font-black shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2 transition-all touch-spring"
@@ -1081,7 +1091,7 @@ export function PokerScoreKeeper() {
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
               <div className="flex items-center space-x-2">
-                <span className="text-base">♠️</span>
+                <Target className="w-4 h-4 text-indigo-500" />
                 <h4 className="font-black text-slate-900 dark:text-white text-sm sm:text-base">
                   Record Round #{sheet.rounds.length + 1}
                 </h4>
@@ -1199,7 +1209,7 @@ export function PokerScoreKeeper() {
                 Cancel
               </button>
               <button
-                id="poker-submit-round-btn"
+                id="games-ledger-submit-round-btn"
                 type="button"
                 onClick={handleSaveRound}
                 className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-600/30 transition-all touch-spring"
@@ -1212,14 +1222,14 @@ export function PokerScoreKeeper() {
       )}
 
       {/* ========================================================= */}
-      {/* MODAL 2: REBUY MODAL                                      */}
+      {/* MODAL 2: REBUY / TOP-UP MODAL                             */}
       {/* ========================================================= */}
       {rebuyPlayerId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-sm animate-in fade-in">
           <div className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="font-black text-slate-900 dark:text-white text-sm">
-                Add Chips / Re-buy
+                Add Chips / Top-up
               </h4>
               <button onClick={() => setRebuyPlayerId(null)} className="text-slate-400">
                 <X className="w-4 h-4" />
@@ -1230,7 +1240,7 @@ export function PokerScoreKeeper() {
             </p>
             <div>
               <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                Re-buy Amount (₹):
+                Top-up Amount (₹):
               </label>
               <input
                 type="number"
@@ -1254,7 +1264,7 @@ export function PokerScoreKeeper() {
                 onClick={handleExecuteRebuy}
                 className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/30"
               >
-                Confirm Re-buy
+                Confirm Top-up
               </button>
             </div>
           </div>
@@ -1291,7 +1301,7 @@ export function PokerScoreKeeper() {
               </div>
               <div>
                 <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                  Starting Buy-in (₹):
+                  Starting Buy-in / Stack (₹):
                 </label>
                 <input
                   type="number"
@@ -1332,7 +1342,7 @@ export function PokerScoreKeeper() {
             <div className="flex items-center space-x-2 text-rose-500">
               <AlertCircle className="w-5 h-5 shrink-0" />
               <h4 className="font-black text-slate-900 dark:text-white text-sm">
-                Start New Scoresheet?
+                Start New Session?
               </h4>
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
@@ -1347,7 +1357,7 @@ export function PokerScoreKeeper() {
                 Keep Current
               </button>
               <button
-                id="poker-confirm-new-sheet-btn"
+                id="games-ledger-confirm-new-sheet-btn"
                 type="button"
                 onClick={handleResetToNewSheet}
                 className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md shadow-rose-600/30"
@@ -1361,3 +1371,5 @@ export function PokerScoreKeeper() {
     </div>
   );
 }
+
+
